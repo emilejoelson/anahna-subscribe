@@ -1,8 +1,8 @@
 import { gql } from "apollo-server-express";
 import userTypes from "./definitions/user";
-import riderTypes from "./definitions/rider";
 import configurationTypeDefs from "./definitions/configuration";
 import restaurantTypes from "./definitions/restaurant";
+import authTypes from "./definitions/auth";
 const rootTypeDef = gql`
   type Query {
     _: String
@@ -20,7 +20,7 @@ const rootTypeDef = gql`
 export default [
   rootTypeDef,
   userTypes,
-  riderTypes,
   configurationTypeDefs,
   restaurantTypes,
+  authTypes,
 ];

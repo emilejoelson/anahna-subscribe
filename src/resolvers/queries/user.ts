@@ -1,4 +1,3 @@
-// resolvers/queries/user.ts
 import User from '../../models/User';
 import { GraphQLError } from 'graphql';
 
