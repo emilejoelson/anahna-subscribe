@@ -1,32 +1,16 @@
-const { REDIS_HOST, REDIS_PASSWORD, REDIS_PORT } = require('../config')
+const Queue = require('bull');
 
-const Queue = require('bull')
-const { sendNotificationToUser } = require('../helpers/notifications')
-
-const JOB_TYPE = {
-  REVIEW_ORDER_NOTIFICATION: 'REVIEW_ORDER_NOTIFICATION'
-}
-const QUEUE_NAME = 'NOTIFICATION_QUEUE'
-
-const notificationsQueue = new Queue(QUEUE_NAME, {
+const orderQueue = new Queue('orders', {
   redis: {
-    host: REDIS_HOST,
-    password: REDIS_PASSWORD,
-    port: REDIS_PORT
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379
   }
-})
+});
 
-notificationsQueue.process(JOB_TYPE.REVIEW_ORDER_NOTIFICATION, async job => {
-  console.log(`Processing job ${job.id} with data:`, job.data)
-  const { user, order, message, type } = job.data
-
-  sendNotificationToUser(user, order, message, type)
-})
-
-const JOB_DELAY_DEFAULT = 30000 // Delay time in milliseconds
+orderQueue.on('error', error => {
+  console.error('Order queue error:', error);
+});
 
 module.exports = {
-  JOB_TYPE,
-  JOB_DELAY_DEFAULT,
-  notificationsQueue
-}
+  orderQueue
+};

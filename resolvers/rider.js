@@ -17,12 +17,14 @@ const { sendNotificationToUser, sendNotificationToRider } = require('../helpers/
 const {
   sendNotificationToCustomerWeb
 } = require('../helpers/firebase-web-notifications')
-const { order_status } = require('../../helpers/enum')
+const { order_status, ORDER_STATUS } = require('../helpers/enum')
 const {
   notificationsQueue,
   JOB_TYPE,
   JOB_DELAY_DEFAULT
 } = require('../../queue')
+const { orderQueue } = require('../queue')
+
 module.exports = {
   Subscription: {
     subscriptionRiderLocation: {
