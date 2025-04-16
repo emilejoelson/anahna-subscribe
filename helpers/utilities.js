@@ -1,3 +1,28 @@
+const { Expo } = require('expo-server-sdk');
+
+const expo = new Expo();
+
+const sendNotificationMobile = async (messages) => {
+  try {
+    const chunks = expo.chunkPushNotifications(messages);
+    const tickets = [];
+    
+    for (let chunk of chunks) {
+      try {
+        const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+        tickets.push(...ticketChunk);
+      } catch (error) {
+        console.error('Error sending chunk:', error);
+      }
+    }
+    
+    return tickets;
+  } catch (error) {
+    console.error('Error in sendNotificationMobile:', error);
+    throw error;
+  }
+};
+
 const sendNotification = async (orderId) => {
   try {
     console.log('Sending notification for order:', orderId);
@@ -26,5 +51,6 @@ const deg2rad = (deg) => {
 
 module.exports = {
   sendNotification,
-  calculateDistance
+  calculateDistance,
+  sendNotificationMobile
 };
