@@ -1,5 +1,5 @@
 const Order = require('../models/order');
-const Message = require('../../models/message');
+const Message = require('../models/message');
 const User = require('../../models/user');
 const { transformMessage, transformOrder } = require('./merge');
 const {
