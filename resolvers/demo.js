@@ -1,6 +1,6 @@
-const Order = require('../../models/order')
-const Restaurant = require('../../models/restaurant')
-const Rider = require('../../models/rider')
+const Order = require('../models/order')
+const Restaurant = require('../models/restaurant')
+const Rider = require('../models/rider')
 
 module.exports = {
   Mutation: {},
