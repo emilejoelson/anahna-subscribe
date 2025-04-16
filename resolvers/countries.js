@@ -1,5 +1,5 @@
 const { ApolloError } = require('apollo-server-express');
-const Country = require('../models/country');
+const Country = require('../../models/country');
 
 const resolvers = {
   Query: {

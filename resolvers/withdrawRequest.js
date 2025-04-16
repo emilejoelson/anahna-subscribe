@@ -1,6 +1,6 @@
-const { WITHDRAW_REQUEST_STATUS } = require('../helpers/enum')
-const Rider = require('../models/rider')
-const WithdrawRequest = require('../models/withdrawRequest')
+const { WITHDRAW_REQUEST_STATUS } = require('../../helpers/enum')
+const Rider = require('../../models/rider')
+const WithdrawRequest = require('../../models/withdrawRequest')
 const { transformWithDrawRequest, transformRider } = require('./merge')
 module.exports = {
   Query: {

@@ -6,17 +6,15 @@ const bannerSchema = new Schema({
     type: String,
     required: true
   },
-  description: String,
-  file: {
+  image: {
     type: String,
     required: true
   },
   action: {
     type: String,
-    required: true
+    enum: ['CUISINE', 'RESTAURANT', 'LINK', 'NONE']
   },
-  screen: String,
-  parameters: Schema.Types.Mixed,
+  targetId: String,
   isActive: {
     type: Boolean,
     default: true

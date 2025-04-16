@@ -1,20 +1,20 @@
-const Order = require('../models/order');
-const Message = require('../models/message');
-const User = require('../models/user');
+const Order = require('../../models/order');
+const Message = require('../../models/message');
+const User = require('../../models/user');
 const { transformMessage, transformOrder } = require('./merge');
 const {
   sendNotificationToRider,
   sendNotificationToUser
-} = require('../helpers/notifications');
+} = require('../../helpers/notifications');
 const {
   sendNotificationToCustomerWeb
-} = require('../helpers/firebase-web-notifications');
+} = require('../../helpers/firebase-web-notifications');
 const { withFilter } = require('graphql-subscriptions');
 const {
   pubsub,
   SUBSCRIPTION_MESSAGE,
   publishNewMessage
-} = require('../helpers/pubsub');
+} = require('../../helpers/pubsub');
 
 const MessagingResolver = {
   Subscription: {

@@ -1,6 +1,6 @@
 const { Expo } = require('expo-server-sdk');
-const User = require('../models/user');
-const { sendNotificationMobile } = require('../helpers/utilities');
+const User = require('../../models/user');
+const { sendNotificationMobile } = require('../../helpers/utilities');
 
 module.exports = {
   Mutation: {

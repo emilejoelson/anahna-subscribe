@@ -6,6 +6,8 @@ const cuisineSchema = new Schema({
     type: String,
     required: true
   },
+  description: String,
+  image: String,
   isActive: {
     type: Boolean,
     default: true

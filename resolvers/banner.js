@@ -1,5 +1,5 @@
-const { BANNER_ACTIONS } = require('../helpers/enum');
-const Banner = require('../models/banner');
+const { BANNER_ACTIONS } = require('../../helpers/enum');
+const Banner = require('../../models/banner');
 
 module.exports = {
   Query: {

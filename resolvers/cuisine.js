@@ -1,4 +1,4 @@
-const Cuisine = require('../models/cuisine');
+const Cuisine = require('../../models/cuisine');
 
 module.exports = {
   Query: {
