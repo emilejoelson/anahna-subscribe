@@ -1,5 +1,5 @@
-const Earnings = require('../../models/earnings');
-const Rider = require('../../models/rider');
+const Earnings = require('../models/earnings');
+const Rider = require('../models/rider');
 const { transformEarnings } = require('../resolvers/merge');
 
 module.exports = {

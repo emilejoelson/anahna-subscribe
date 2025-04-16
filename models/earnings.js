@@ -17,13 +17,11 @@ const earningsSchema = new Schema({
   },
   orderStatus: {
     type: String,
-    required: true,
-    enum: ['DELIVERED', 'CANCELLED']
+    required: true
   },
   paymentMethod: {
     type: String,
-    required: true,
-    enum: ['CASH', 'CARD', 'WALLET']
+    required: true
   },
   deliveryTime: {
     type: Date,
