@@ -15,15 +15,18 @@ const ownerSchema = new Schema({
     type: String,
     required: true
   },
-  phone: String,
-  isActive: {
-    type: Boolean,
-    default: true
+  phone: {
+    type: String,
+    required: true
   },
   restaurants: [{
     type: Schema.Types.ObjectId,
     ref: 'Restaurant'
-  }]
+  }],
+  isActive: {
+    type: Boolean,
+    default: true
+  }
 }, {
   timestamps: true
 });

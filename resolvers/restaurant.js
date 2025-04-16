@@ -1,17 +1,17 @@
 const jwt = require('jsonwebtoken')
 var randomstring = require('randomstring')
 const mongoose = require('mongoose')
-const Restaurant = require('../../models/restaurant')
-const Owner = require('../../models/owner')
-const Offer = require('../../models/offer')
-const Order = require('../../models/order')
-const Point = require('../../models/point')
-const Sections = require('../../models/section')
-const Zone = require('../../models/zone')
-const User = require('../../models/user')
+const Restaurant = require('../models/restaurant')
+const Owner = require('../models/owner')
+const Offer = require('../models/offer')
+const Order = require('../models/order')
+const Point = require('../models/point')
+const Sections = require('../models/section')
+const Zone = require('../models/zone')
+const User = require('../models/user')
 const {
   sendNotificationToCustomerWeb
-} = require('../../helpers/firebase-web-notifications')
+} = require('../helpers/firebase-web-notifications')
 const {
   transformRestaurant,
   transformOwner,
@@ -24,17 +24,17 @@ const {
   order_status,
   SHOP_TYPE,
   getThirtyDaysAgo
-} = require('../../helpers/enum')
+} = require('../helpers/enum')
 const {
   publishToZoneRiders,
   publishOrder,
   publishToUser
-} = require('../../helpers/pubsub')
-const { sendNotificationToZoneRiders } = require('../../helpers/notifications')
+} = require('../helpers/pubsub')
+const { sendNotificationToZoneRiders } = require('../helpers/notifications')
 const {
   sendNotificationToUser,
   sendNotificationToRider
-} = require('../../helpers/notifications')
+} = require('../helpers/notifications')
 
 module.exports = {
   Query: {

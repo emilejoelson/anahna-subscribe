@@ -1,7 +1,7 @@
-const Review = require('../../models/review')
-const Order = require('../../models/order')
+const Review = require('../models/review')
+const Order = require('../models/order')
 const { transformReview, transformOrder } = require('./merge')
-const Restaurant = require('../../models/restaurant')
+const Restaurant = require('../models/restaurant')
 module.exports = {
   Query: {
     reviews: async(_, args, context) => {

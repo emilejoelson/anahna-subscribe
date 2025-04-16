@@ -36,10 +36,6 @@ const restaurantSchema = new Schema({
     }
   },
   address: String,
-  isActive: {
-    type: Boolean,
-    default: true
-  },
   orderPrefix: {
     type: String,
     default: 'ORD'
@@ -51,6 +47,10 @@ const restaurantSchema = new Schema({
   deliveryTime: {
     type: Number,
     default: 30
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

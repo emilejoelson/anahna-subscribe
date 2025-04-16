@@ -65,6 +65,21 @@ const orderSchema = new Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  zone: {
+    type: Schema.Types.ObjectId,
+    ref: 'Zone'
+  },
+  preparationTime: Date,
+  completionTime: Date,
+  acceptedAt: Date,
+  pickedAt: Date,
+  deliveredAt: Date,
+  cancelledAt: Date,
+  reason: String,
+  isPickedUp: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

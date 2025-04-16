@@ -14,7 +14,8 @@ const reviewSchema = new Schema({
   },
   order: {
     type: Schema.Types.ObjectId,
-    ref: 'Order'
+    ref: 'Order',
+    required: true
   },
   rating: {
     type: Number,
@@ -23,6 +24,7 @@ const reviewSchema = new Schema({
     max: 5
   },
   description: String,
+  reply: String,
   isActive: {
     type: Boolean,
     default: true
