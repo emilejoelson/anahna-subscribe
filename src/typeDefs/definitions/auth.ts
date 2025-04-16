@@ -8,12 +8,13 @@ export default gql`
   }
 
   type Query {
-    refreshToken(refreshToken: String!): AuthPayload
+     refreshToken(refreshToken: String!): AuthPayload
   }
 
-  extend type Mutation {
-    signup(user: UserInput!): AuthPayload!
-    login(email: String!, password: String!): AuthPayload!
-    logout(accessToken: String!): Boolean!
-  }
+ extend type Mutation {
+  signup(user: UserInput!): AuthPayload!
+  login(email: String!, password: String!): AuthPayload!
+  logout(accessToken: String!): Boolean!
+  refreshToken(refreshToken: String!): AuthPayload
+}
 `;
