@@ -1,40 +1,43 @@
-exports.WITHDRAW_REQUEST_STATUS = {
+const BANNER_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE'
+}
+
+const WITHDRAW_REQUEST_STATUS = {
   REQUESTED: 'REQUESTED',
   APPROVED: 'APPROVED',
-  DECLINED: 'DECLINED',
-  PROCESSED: 'PROCESSED'
-};
+  REJECTED: 'REJECTED',
+  TRANSFERRED: 'TRANSFERRED'
+}
 
-exports.SHOP_TYPE = {
+const ORDER_STATUS = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+}
+
+const SHOP_TYPE = {
   RESTAURANT: 'RESTAURANT',
   GROCERY: 'GROCERY',
   PHARMACY: 'PHARMACY'
 };
 
-exports.BANNER_ACTIONS = {
+const BANNER_ACTIONS = {
   CUISINE: 'CUISINE',
   RESTAURANT: 'RESTAURANT',
   LINK: 'LINK',
   NONE: 'NONE'
 };
 
-exports.ORDER_STATUS = {
-  PENDING: 'PENDING',
-  ACCEPTED: 'ACCEPTED',
-  ASSIGNED: 'ASSIGNED',
-  PICKED: 'PICKED',
-  DELIVERED: 'DELIVERED',
-  CANCELLED: 'CANCELLED',
-  COMPLETED: 'COMPLETED'
-};
-
-exports.RIDER_STATUS = {
+const RIDER_STATUS = {
   AVAILABLE: 'AVAILABLE',
   UNAVAILABLE: 'UNAVAILABLE',
   ON_DELIVERY: 'ON_DELIVERY'
 };
 
-exports.order_status = [
+const order_status = [
   'PENDING',
   'ACCEPTED',
   'ASSIGNED',
@@ -44,13 +47,13 @@ exports.order_status = [
   'COMPLETED'
 ];
 
-exports.payment_status = [
+const payment_status = [
   'PENDING',
   'PAID',
   'FAILED'
 ];
 
-exports.months = [
+const months = [
   'January', 
   'February', 
   'March', 
@@ -64,3 +67,15 @@ exports.months = [
   'November', 
   'December'
 ];
+
+module.exports = {
+  BANNER_STATUS,
+  WITHDRAW_REQUEST_STATUS,
+  ORDER_STATUS,
+  SHOP_TYPE,
+  BANNER_ACTIONS,
+  RIDER_STATUS,
+  order_status,
+  payment_status,
+  months
+}

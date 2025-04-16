@@ -2,7 +2,11 @@ const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const config = require('./config');
 require('dotenv').config();
+
+// Set Mongoose options
+mongoose.set('strictQuery', true);
 
 const app = express();
 
@@ -11,7 +15,7 @@ app.use(express.json());
 
 // Connect to MongoDB
 mongoose
-  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/anahna', {
+  .connect(config.mongodb.uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -31,7 +35,7 @@ app.use(
   })
 );
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
