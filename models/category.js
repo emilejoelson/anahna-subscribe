@@ -6,9 +6,19 @@ const categorySchema = new Schema({
     type: String,
     required: true
   },
+  description: String,
   restaurant: {
     type: Schema.Types.ObjectId,
-    ref: 'Restaurant'
+    ref: 'Restaurant',
+    required: true
+  },
+  foods: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Food'
+  }],
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

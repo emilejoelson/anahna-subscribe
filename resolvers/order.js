@@ -38,7 +38,7 @@ const {
 } = require('../helpers/pubsub')
 const {
   sendNotificationToCustomerWeb
-} = require('../../helpers/firebase-web-notifications')
+} = require('../helpers/firebase-web-notifications')
 
 var DELIVERY_CHARGES = 0.0
 module.exports = {
