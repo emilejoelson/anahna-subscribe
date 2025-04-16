@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const ownerSchema = new Schema({
   name: {
     type: String,
-    required: true
+    default: ''
   },
   email: {
     type: String,
@@ -16,6 +16,14 @@ const ownerSchema = new Schema({
     required: true
   },
   phone: String,
+  image: String,
+  userType: {
+    type: String,
+    enum: ['ADMIN', 'VENDOR', 'RESTAURANT', 'STAFF'],
+    default: 'VENDOR'
+  },
+  userTypeId: String,
+  permissions: [String],
   restaurants: [{
     type: Schema.Types.ObjectId,
     ref: 'Restaurant'

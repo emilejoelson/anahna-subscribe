@@ -380,9 +380,13 @@ const typeDefs = gql`
     token: String!
     tokenExpiration: Int!
     email: String!
-    userType: String!
+    userType: String
     restaurants: [Restaurant]!
     pushToken: String
+    permissions: [String]
+    userTypeId: String
+    image: String
+    name: String
   }
 
   type OwnerData {
@@ -1229,6 +1233,7 @@ const typeDefs = gql`
       isActive: Boolean
     ): AuthData!
     ownerLogin(email: String!, password: String!): OwnerAuthData!
+    createAdminOwner(email: String!, password: String!): OwnerData!
     createUser(userInput: UserInput): AuthData!
     createVendor(vendorInput: VendorInput): OwnerData!
     editVendor(vendorInput: VendorInput): OwnerData!

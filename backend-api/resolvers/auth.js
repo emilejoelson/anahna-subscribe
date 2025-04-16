@@ -32,27 +32,103 @@ module.exports = {
       }
     },
 
+    createAdminOwner: async (_, { email, password }) => {
+      console.log('Creating admin owner with email:', email);
+      try {
+        const existingOwner = await Owner.findOne({ email });
+        if (existingOwner) {
+          console.log('Owner already exists with email:', email);
+          throw new Error('Email is already associated with another account');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const owner = new Owner({
+          email,
+          password: hashedPassword,
+          name: 'Admin',
+          isActive: true,
+          userType: 'ADMIN',
+          permissions: ['ADMIN']
+        });
+
+        const result = await owner.save();
+        console.log('Created admin owner:', result);
+
+        return transformOwner(result);
+      } catch (error) {
+        console.error('Error creating admin owner:', error);
+        throw error;
+      }
+    },
+
     ownerLogin: async (_, { email, password }) => {
-      console.log('Owner login');
-      const owner = await Owner.findOne({ email });
-      if (!owner) throw new Error('User does not exist');
+      console.log('Owner login attempt with email:', email);
+      try {
+        if (!email) {
+          throw new Error('Email is required');
+        }
 
-      const isMatch = await bcrypt.compare(password, owner.password);
-      if (!isMatch) throw new Error('Invalid credentials');
+        // First verify MongoDB connection
+        const count = await Owner.countDocuments();
+        console.log('Total owners in database:', count);
 
-      const token = jwt.sign(
-        {
-          userId: owner.id,
-          email: owner.email,
-          userType: owner.userType,
-        },
-        process.env.JWT_SECRET || 'customsecretkey'
-      );
+        // Try to find owner with lean() to get plain JS object
+        const owner = await Owner.findOne({ email }).lean();
+        console.log('Raw owner object:', JSON.stringify(owner, null, 2));
+        
+        if (!owner) {
+          console.log('No owner found with email:', email);
+          throw new Error('User does not exist');
+        }
 
-      return {
-        ...transformOwner(owner),
-        token,
-      };
+        if (!owner.isActive) {
+          console.log('Owner account is not active:', email); 
+          throw new Error('Account is not active');
+        }
+
+        const isMatch = await bcrypt.compare(password, owner.password);
+        console.log('Password match result:', isMatch);
+
+        if (!isMatch) {
+          throw new Error('Invalid credentials');
+        }
+
+        const token = jwt.sign(
+          {
+            userId: owner._id.toString(),
+            email: owner.email,
+            userType: owner.userType || 'VENDOR',
+          },
+          process.env.JWT_SECRET || 'customsecretkey'
+        );
+
+        const transformedOwner = await transformOwner(owner);
+        console.log('Transformed owner:', JSON.stringify(transformedOwner, null, 2));
+
+        // Ensure required fields are not null
+        const result = {
+          ...transformedOwner,
+          userId: owner._id.toString(),
+          token,
+          tokenExpiration: 1,
+          email: owner.email, // Explicitly include email
+          userType: owner.userType || 'VENDOR',
+          permissions: owner.permissions || [],
+          userTypeId: owner.userTypeId || null,
+          image: owner.image || null,
+          name: owner.name || '',
+          restaurants: transformedOwner.restaurants || []
+        };
+
+        console.log('Final response:', JSON.stringify(result, null, 2));
+        return result;
+      } catch (error) {
+        console.error('Error in ownerLogin:', error);
+        if (error.name === 'MongoError' || error.name === 'MongooseError') {
+          throw new Error('Database error occurred. Please try again.');
+        }
+        throw error;
+      }
     },
 
     login: async (_, { appleId, email, password, type, name, notificationToken }) => {
