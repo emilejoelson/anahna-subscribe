@@ -1,15 +1,15 @@
-const Food = require('../../models/food')
-const User = require('../../models/user')
-const Rider = require('../../models/rider')
-const Review = require('../../models/review')
-const Restaurant = require('../../models/restaurant')
-const Order = require('../../models/order')
-const Zone = require('../../models/zone')
-const Owner = require('../../models/owner')
+const Food = require('../models/food')
+const User = require('../models/user')
+const Rider = require('../models/rider')
+const Review = require('../models/review')
+const Restaurant = require('../models/restaurant')
+const Order = require('../models/order')
+const Zone = require('../models/zone')
+const Owner = require('../models/owner')
 const mongoose = require('mongoose')
 
-const { dateToString } = require('../../helpers/date')
-const { SHOP_TYPE } = require('../../helpers/enum')
+const { dateToString } = require('../helpers/date')
+const { SHOP_TYPE } = require('../helpers/enum')
 
 const variations = async variations => {
   try {
