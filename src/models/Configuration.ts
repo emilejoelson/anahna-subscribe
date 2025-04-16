@@ -1,4 +1,60 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
+
+export interface IConfiguration extends Document {
+  email?: string;
+  emailName?: string;
+  password?: string;
+  enableEmail?: boolean;
+  formEmail?: string;
+  sendGridApiKey?: string;
+  sendGridEnabled?: boolean;
+  sendGridEmail?: string;
+  sendGridEmailName?: string;
+  sendGridPassword?: string;
+  firebaseKey?: string;
+  authDomain?: string;
+  projectId?: string;
+  storageBucket?: string;
+  msgSenderId?: string;
+  appId?: string;
+  measurementId?: string;
+  vapidKey?: string;
+  dashboardSentryUrl?: string;
+  webSentryUrl?: string;
+  apiSentryUrl?: string;
+  customerAppSentryUrl?: string;
+  restaurantAppSentryUrl?: string;
+  riderAppSentryUrl?: string;
+  googleApiKey?: string;
+  cloudinaryUploadUrl?: string;
+  cloudinaryApiKey?: string;
+  webAmplitudeApiKey?: string;
+  appAmplitudeApiKey?: string;
+  webClientID?: string;
+  androidClientID?: string;
+  iOSClientID?: string;
+  expoClientID?: string;
+  googleMapLibraries?: string;
+  googleColor?: string;
+  termsAndConditions?: string;
+  privacyPolicy?: string;
+  testOtp?: string;
+  deliveryRate?: number;
+  costType?: string;
+  clientId?: string;
+  clientSecret?: string;
+  sandbox?: boolean;
+  publishableKey?: string;
+  secretKey?: string;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+  twilioEnabled?: boolean;
+  skipEmailVerification?: boolean;
+  skipMobileVerification?: boolean;
+  currency?: string;
+  currencySymbol?: string;
+}
 
 const ConfigurationSchema = new mongoose.Schema({
   email: String,
@@ -56,4 +112,4 @@ const ConfigurationSchema = new mongoose.Schema({
   currencySymbol: String,
 });
 
-export default mongoose.model('Configuration', ConfigurationSchema);
+export default mongoose.model<IConfiguration>('Configuration', ConfigurationSchema);
