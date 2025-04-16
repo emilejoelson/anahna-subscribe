@@ -8,17 +8,17 @@ const configurationSchema = new Schema({
   clientEmail: String,
   privateKey: String,
 
-  // Payment Configuration
-  clientId: String,
-  clientSecret: String,
-  sandbox: Boolean,
-  publishableKey: String,
-  secretKey: String,
-  
-  // Currency Configuration
-  currency: String,
-  currencySymbol: String,
-  
+  // Email Configuration
+  sendGridApiKey: String,
+  sendGridEmail: String,
+  sendGridEmailName: String,
+  formEmail: String,
+
+  // SMS Configuration
+  twilioAccountSid: String,
+  twilioAuthToken: String,
+  twilioPhoneNumber: String,
+
   // Delivery Configuration
   deliveryRate: Number,
   costType: {
@@ -26,31 +26,20 @@ const configurationSchema = new Schema({
     enum: ['fixed', 'distance'],
     default: 'fixed'
   },
-  
-  // Email Configuration
-  sendGridApiKey: String,
-  sendGridEnabled: Boolean,
-  sendGridEmail: String,
-  sendGridEmailName: String,
-  formEmail: String,
-  
-  // SMS Configuration
-  twilioAccountSid: String,
-  twilioAuthToken: String,
-  twilioPhoneNumber: String,
-  twilioEnabled: Boolean,
-  
-  // App Configuration
-  termsAndConditions: String,
-  privacyPolicy: String,
-  testOtp: String,
-  skipEmailVerification: Boolean,
-  skipMobileVerification: Boolean,
-  
-  // Demo Configuration
-  enableRiderDemo: Boolean,
-  enableRestaurantDemo: Boolean,
-  enableAdminDemo: Boolean
+
+  // Currency Configuration
+  currency: String,
+  currencySymbol: String,
+
+  // Verification Settings
+  skipEmailVerification: {
+    type: Boolean,
+    default: false
+  },
+  skipMobileVerification: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

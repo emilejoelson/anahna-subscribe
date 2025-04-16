@@ -24,6 +24,14 @@ const restaurantSchema = new Schema({
       default: [0, 0]
     }
   },
+  deliveryBounds: {
+    type: {
+      type: String,
+      enum: ['Polygon'],
+      default: 'Polygon'
+    },
+    coordinates: [[[ Number ]]]
+  },
   address: String,
   orderPrefix: String,
   orderId: {
@@ -48,5 +56,6 @@ const restaurantSchema = new Schema({
 });
 
 restaurantSchema.index({ location: '2dsphere' });
+restaurantSchema.index({ deliveryBounds: '2dsphere' });
 
 module.exports = mongoose.model('Restaurant', restaurantSchema);

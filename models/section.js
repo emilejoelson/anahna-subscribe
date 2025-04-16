@@ -6,17 +6,18 @@ const sectionSchema = new Schema({
     type: String,
     required: true
   },
-  enabled: {
-    type: Boolean,
-    default: true
-  },
+  description: String,
   restaurants: [{
     type: Schema.Types.ObjectId,
     ref: 'Restaurant'
   }],
-  isActive: {
+  enabled: {
     type: Boolean,
     default: true
+  },
+  order: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

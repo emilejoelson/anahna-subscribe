@@ -1,4 +1,4 @@
-const Taxation = require('../../models/taxation')
+const Taxation = require('../models/taxation');
 
 module.exports = {
   Query: {

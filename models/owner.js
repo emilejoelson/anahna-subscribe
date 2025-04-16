@@ -15,10 +15,7 @@ const ownerSchema = new Schema({
     type: String,
     required: true
   },
-  phone: {
-    type: String,
-    required: true
-  },
+  phone: String,
   restaurants: [{
     type: Schema.Types.ObjectId,
     ref: 'Restaurant'

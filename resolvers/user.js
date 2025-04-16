@@ -16,7 +16,7 @@ const { sendNotification } = require('../helpers/utilities')
 const { transformUser, transformRestaurants } = require('./merge')
 const { sendSMS } = require('../helpers/sms')
 const { get, post } = require('../helpers/api')
-const Configuration = require('../../models/configuration')
+const Configuration = require('../models/configuration')
 
 module.exports = {
   Query: {

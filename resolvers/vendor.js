@@ -1,5 +1,5 @@
-const Owner = require('../../models/owner')
-const Restaurant = require('../../models/restaurant')
+const Owner = require('../models/owner');
+const Restaurant = require('../models/restaurant');
 const { transformOwner } = require('./merge')
 const bcrypt = require('bcryptjs')
 

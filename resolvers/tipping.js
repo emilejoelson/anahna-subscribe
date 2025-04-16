@@ -1,4 +1,4 @@
-const Tipping = require('../../models/tipping')
+const Tipping = require('../models/tipping')
 
 module.exports = {
   Query: {

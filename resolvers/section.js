@@ -1,5 +1,5 @@
-const Section = require('../../models/section')
-const Restaurant = require('../../models/restaurant')
+const Section = require('../models/section');
+const Restaurant = require('../models/restaurant');
 const { transformSection } = require('./merge')
 module.exports = {
   Query: {

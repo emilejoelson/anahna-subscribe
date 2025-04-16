@@ -1,8 +1,8 @@
 /* eslint-disable no-tabs */
 const { AuthenticationError } = require('apollo-server-express');
-const Order = require('../../models/order');
-const Rider = require('../../models/rider');
-const Restaurant = require('../../models/restaurant');
+const Order = require('../models/order');
+const Rider = require('../models/rider');
+const Restaurant = require('../models/restaurant');
 const {
   pubsub,
   DISPATCH_ORDER,
@@ -10,14 +10,14 @@ const {
   publishToAssignedRider,
   publishToZoneRiders,
   publishToUser
-} = require('../../helpers/pubsub');
+} = require('../helpers/pubsub');
 const { transformOrder, transformRider } = require('./merge');
 const {
   sendNotificationToUser,
   sendNotificationToZoneRiders,
   sendNotificationToRider
-} = require('../../helpers/notifications');
-const { order_status } = require('../../helpers/enum');
+} = require('../helpers/notifications');
+const { order_status } = require('../helpers/enum');
 
 module.exports = {
   Subscription: {
