@@ -1,4 +1,4 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Document, Model } from 'mongoose';
 
 export interface IConfiguration extends Document {
   email?: string;
@@ -112,4 +112,4 @@ const ConfigurationSchema = new mongoose.Schema({
   currencySymbol: String,
 });
 
-export default mongoose.model<IConfiguration>('Configuration', ConfigurationSchema);
+export default mongoose.model<IConfiguration, Model<IConfiguration>>('Configuration', ConfigurationSchema);

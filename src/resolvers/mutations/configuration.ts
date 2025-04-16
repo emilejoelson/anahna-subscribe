@@ -54,7 +54,7 @@ export const Query = {
         msgSenderId: '',
         appId: '',
         measurementId: '',
-        isPaidVersion: false,
+        isPaidVersion: true,
         skipMobileVerification: false,
         skipEmailVerification: false,
         costType: '',
@@ -62,7 +62,7 @@ export const Query = {
       };
     }
     return {
-      ...configuration.toObject(),
+      ...configuration.toObject(), //
       _id: configuration.id
     };
   }
