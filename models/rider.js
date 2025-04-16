@@ -6,6 +6,11 @@ const riderSchema = new Schema({
     type: String,
     required: true
   },
+  username: {
+    type: String,
+    unique: true,
+    required: true
+  },
   email: {
     type: String,
     unique: true,
@@ -20,22 +25,21 @@ const riderSchema = new Schema({
     required: true,
     unique: true
   },
-  username: {
-    type: String,
-    unique: true,
-    required: true
+  isAvailable: {
+    type: Boolean,
+    default: false
   },
   isActive: {
     type: Boolean,
     default: true
   },
-  isAvailable: {
-    type: Boolean,
-    default: false
-  },
   currentWalletAmount: {
     type: Number,
     default: 0
+  },
+  zone: {
+    type: Schema.Types.ObjectId,
+    ref: 'Zone'
   },
   location: {
     type: {
@@ -47,11 +51,7 @@ const riderSchema = new Schema({
       default: [0, 0]
     }
   },
-  notificationToken: String,
-  zone: {
-    type: Schema.Types.ObjectId,
-    ref: 'Zone'
-  }
+  notificationToken: String
 }, {
   timestamps: true
 });

@@ -8,7 +8,7 @@ const ORDER_STATUS_CHANGED = 'ORDER_STATUS_CHANGED';
 const ASSIGN_RIDER = 'ASSIGN_RIDER';
 const SUBSCRIPTION_ORDER = 'SUBSCRIPTION_ORDER';
 
-const publishToUser = async (userId, data, type) => {
+const publishToUser = (userId, data, type) => {
   pubsub.publish(ORDER_STATUS_CHANGED, {
     orderStatusChanged: {
       ...data,
@@ -18,7 +18,7 @@ const publishToUser = async (userId, data, type) => {
   });
 };
 
-const publishToDashboard = async (restaurantId, data, type) => {
+const publishToDashboard = (restaurantId, data, type) => {
   pubsub.publish(PLACE_ORDER, {
     subscribePlaceOrder: {
       ...data,
@@ -28,13 +28,13 @@ const publishToDashboard = async (restaurantId, data, type) => {
   });
 };
 
-const publishOrder = async (data) => {
+const publishOrder = (data) => {
   pubsub.publish(SUBSCRIPTION_ORDER, {
     subscriptionOrder: data
   });
 };
 
-const publishToDispatcher = async (data) => {
+const publishToDispatcher = (data) => {
   pubsub.publish(ASSIGN_RIDER, {
     subscriptionAssignRider: data
   });

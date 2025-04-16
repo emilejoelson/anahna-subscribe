@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const orderSchema = new Schema({
+  orderId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -17,74 +22,76 @@ const orderSchema = new Schema({
     ref: 'Rider'
   },
   items: [{
-    food: {
-      type: Schema.Types.ObjectId,
-      ref: 'Food'
-    },
-    quantity: Number,
-    price: Number,
-    variations: [{
-      title: String,
-      price: Number
-    }],
-    addons: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Addon'
-    }]
+    type: Schema.Types.ObjectId,
+    ref: 'Item'
   }],
   orderAmount: {
     type: Number,
     required: true
   },
-  deliveryFee: {
+  paidAmount: {
     type: Number,
-    required: true
+    default: 0
   },
-  deliveryAddress: {
-    location: {
-      coordinates: [Number]
-    },
-    deliveryAddress: String,
-    details: String,
-    label: String
+  deliveryCharges: Number,
+  tipping: {
+    type: Number,
+    default: 0
   },
-  paymentMethod: {
-    type: String,
-    enum: ['CASH', 'CARD', 'WALLET'],
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['PENDING', 'ACCEPTED', 'ASSIGNED', 'PICKED', 'DELIVERED', 'CANCELLED'],
-    default: 'PENDING'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
+  taxationAmount: {
+    type: Number,
+    default: 0
   },
   coupon: {
     type: Schema.Types.ObjectId,
     ref: 'Coupon'
   },
-  taxationAmount: Number,
-  orderNumber: {
+  orderStatus: {
     type: String,
-    unique: true
+    enum: ['PENDING', 'ACCEPTED', 'PICKED', 'DELIVERED', 'CANCELLED'],
+    default: 'PENDING'
   },
+  paymentStatus: {
+    type: String,
+    enum: ['PENDING', 'PAID', 'FAILED'],
+    default: 'PENDING'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['COD', 'CARD', 'WALLET', 'PAYPAL', 'STRIPE'],
+    default: 'COD'
+  },
+  deliveryAddress: {
+    location: {
+      type: {
+        type: String,
+        default: 'Point'
+      },
+      coordinates: [Number]
+    },
+    deliveryAddress: String,
+    details: String
+  },
+  isPickedUp: {
+    type: Boolean,
+    default: false
+  },
+  isRinged: {
+    type: Boolean,
+    default: true
+  },
+  instructions: String,
+  completionTime: Date,
   acceptedAt: Date,
-  assignedAt: Date,
   pickedAt: Date,
   deliveredAt: Date,
   cancelledAt: Date,
-  cancelledBy: {
-    type: String,
-    enum: ['USER', 'RESTAURANT', 'RIDER', 'ADMIN']
-  },
-  cancellationReason: String
+  assignedAt: Date,
+  reason: String
 }, {
   timestamps: true
 });
 
-orderSchema.index({ location: '2dsphere' });
+orderSchema.index({ 'deliveryAddress.location': '2dsphere' });
 
 module.exports = mongoose.model('Order', orderSchema);
