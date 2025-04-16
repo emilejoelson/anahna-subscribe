@@ -1,29 +1,29 @@
 /* eslint-disable no-tabs */
 const path = require('path')
-const User = require('../../models/user')
-// const Rider = require('../../models/rider')
-const Order = require('../../models/order')
-const Item = require('../../models/item')
-const Coupon = require('../../models/coupon')
-const Point = require('../../models/point')
-const Zone = require('../../models/zone')
-const Restaurant = require('../../models/restaurant')
-const Configuration = require('../../models/configuration')
-const Paypal = require('../../models/paypal')
-const Stripe = require('../../models/stripe')
+const User = require('../models/user')
+const Rider = require('../models/rider')
+const Order = require('../models/order')
+const Item = require('../models/item')
+const Coupon = require('../models/coupon')
+const Point = require('../models/point')
+const Zone = require('../models/zone')
+const Restaurant = require('../models/restaurant')
+const Configuration = require('../models/configuration')
+const Paypal = require('../models/paypal')
+const Stripe = require('../models/stripe')
 const { transformOrder, transformReviews } = require('./merge')
 const {
   payment_status,
   order_status,
   ORDER_STATUS
-} = require('../../helpers/enum')
-const { sendEmail } = require('../../helpers/email')
+} = require('../helpers/enum')
+const { sendEmail } = require('../helpers/email')
 const {
   sendNotification,
   calculateDistance
-} = require('../../helpers/utilities')
-const { placeOrderTemplate } = require('../../helpers/templates')
-const { sendNotificationToRestaurant } = require('../../helpers/notifications')
+} = require('../helpers/utilities')
+const { placeOrderTemplate } = require('../helpers/templates')
+const { sendNotificationToRestaurant, sendNotificationToUser } = require('../helpers/notifications')
 const { withFilter } = require('graphql-subscriptions')
 const {
   pubsub,
@@ -35,8 +35,7 @@ const {
   ORDER_STATUS_CHANGED,
   ASSIGN_RIDER,
   SUBSCRIPTION_ORDER
-} = require('../../helpers/pubsub')
-const { sendNotificationToUser } = require('../../helpers/notifications')
+} = require('../helpers/pubsub')
 const {
   sendNotificationToCustomerWeb
 } = require('../../helpers/firebase-web-notifications')

@@ -17,3 +17,27 @@ exports.BANNER_ACTIONS = {
   LINK: 'LINK',
   NONE: 'NONE'
 };
+
+exports.ORDER_STATUS = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  PICKED: 'PICKED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED'
+};
+
+exports.order_status = [
+  'PENDING',
+  'ACCEPTED',
+  'PICKED',
+  'DELIVERED',
+  'CANCELLED',
+  'COMPLETED'
+];
+
+exports.payment_status = [
+  'PENDING',
+  'PAID',
+  'FAILED'
+];
