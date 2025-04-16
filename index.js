@@ -26,14 +26,41 @@ mongoose
 const rootValue = require('./resolvers');
 const schema = require('./schema');
 
+// Validate schema before setting up middleware
+if (!schema || !schema.getQueryType) {
+  throw new Error('Invalid GraphQL schema: Schema must be a valid GraphQL schema object');
+}
+
 app.use(
   '/graphql',
   graphqlHTTP({
     schema: schema,
     rootValue: rootValue,
-    graphiql: true
+    graphiql: true,
+    customFormatErrorFn: (error) => {
+      console.error('GraphQL Error:', error);
+      const isSchemaError = error.message.includes('GraphQL schema');
+      if (isSchemaError) {
+        return {
+          message: 'Internal server error',
+          type: 'SCHEMA_ERROR',
+          ...(process.env.NODE_ENV === 'development' && { details: error.message })
+        };
+      }
+      return {
+        message: error.message,
+        locations: error.locations,
+        path: error.path
+      };
+    }
   })
 );
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

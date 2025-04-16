@@ -1339,8 +1339,9 @@ const typeDefs = gql`
     ): AuthData!
     updateOrderStatusRider(id: String!, status: String!): Order!
     updatePaymentStatus(id: String, status: String): Order!
-    createOptions(optionInput: CreateOptionInput): Restaurant!
+    createOption(optionInput: CreateOptionInput): Restaurant!
     editOption(optionInput: editOptionInput): Restaurant!
+    updateOption(optionInput: editOptionInput): Restaurant!
     deleteOption(id: String!, restaurant: String!): Restaurant!
     createAddons(addonInput: AddonInput): Restaurant!
     editAddon(addonInput: editAddonInput): Restaurant!
