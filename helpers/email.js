@@ -1,51 +1,39 @@
 const nodemailer = require('nodemailer');
 
-let transporter = null;
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  auth: {
+    user: process.env.SMTP_USERNAME,
+    pass: process.env.SMTP_PASSWORD
+  }
+});
 
-const initializeEmailTransporter = (config) => {
-  transporter = nodemailer.createTransport({
-    service: 'SendGrid',
-    auth: {
-      user: config.sendGridEmail,
-      pass: config.sendGridApiKey
+const sendEmail = async (to, subject, text, html, attachment) => {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_FROM_EMAIL,
+      to,
+      subject,
+      text,
+      html
+    };
+    
+    if (attachment) {
+      mailOptions.attachments = [{
+        filename: 'logo.png',
+        path: attachment
+      }];
     }
-  });
-};
 
-const sendVerificationEmail = async (email, token) => {
-  if (!transporter) return;
-  
-  const mailOptions = {
-    from: process.env.SENDGRID_FROM_EMAIL,
-    to: email,
-    subject: 'Email Verification',
-    html: `
-      <h1>Verify Your Email</h1>
-      <p>Please use the following code to verify your email: ${token}</p>
-    `
-  };
-
-  return transporter.sendMail(mailOptions);
-};
-
-const sendPasswordResetEmail = async (email, token) => {
-  if (!transporter) return;
-
-  const mailOptions = {
-    from: process.env.SENDGRID_FROM_EMAIL,
-    to: email,
-    subject: 'Password Reset Request',
-    html: `
-      <h1>Reset Your Password</h1>
-      <p>Please use the following code to reset your password: ${token}</p>
-    `
-  };
-
-  return transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('Email sending failed:', error);
+    return false;
+  }
 };
 
 module.exports = {
-  initializeEmailTransporter,
-  sendVerificationEmail,
-  sendPasswordResetEmail
+  sendEmail
 };

@@ -6,12 +6,17 @@ const zoneSchema = new Schema({
     type: String,
     required: true
   },
+  description: String,
   location: {
     type: {
       type: String,
-      default: 'Polygon'
+      enum: ['Polygon'],
+      required: true
     },
-    coordinates: [[Number]]
+    coordinates: {
+      type: [[[Number]]],
+      required: true
+    }
   },
   isActive: {
     type: Boolean,

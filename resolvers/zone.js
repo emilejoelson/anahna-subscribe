@@ -1,4 +1,4 @@
-const Zone = require('../../models/zone')
+const Zone = require('../models/zone');
 const { transformZone } = require('./merge')
 module.exports = {
   Query: {

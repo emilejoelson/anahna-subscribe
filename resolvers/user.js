@@ -1,9 +1,10 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const path = require('path')
-const User = require('../../models/user')
-const Restaurant = require('../../models/restaurant')
-const { sendEmail, sendTextEmail } = require('../../helpers/email')
+const User = require('../models/user')
+const Restaurant = require('../models/restaurant')
+const { sendEmail } = require('../../helpers/email')
+const { sendTextEmail } = require('../../helpers/email')
 const {
   signupTemplate,
   signupText,
