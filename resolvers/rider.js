@@ -22,7 +22,7 @@ const {
   notificationsQueue,
   JOB_TYPE,
   JOB_DELAY_DEFAULT
-} = require('../../queue')
+} = require('../queue')
 const { orderQueue } = require('../queue')
 
 module.exports = {
