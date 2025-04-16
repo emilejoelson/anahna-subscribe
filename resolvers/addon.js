@@ -1,5 +1,5 @@
-const Addon = require('../../models/addon');
-const Restaurant = require('../../models/restaurant');
+const Addon = require('../models/addon');
+const Restaurant = require('../models/restaurant');
 const { transformAddon, transformRestaurant } = require('./merge');
 
 module.exports = {

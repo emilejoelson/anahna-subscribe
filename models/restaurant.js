@@ -6,8 +6,8 @@ const restaurantSchema = new Schema({
     type: String,
     required: true
   },
-  image: String,
   description: String,
+  image: String,
   owner: {
     type: Schema.Types.ObjectId,
     ref: 'Owner',
@@ -25,11 +25,6 @@ const restaurantSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Addon'
   }],
-  sections: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Section'
-  }],
-  address: String,
   location: {
     type: {
       type: String,
@@ -40,14 +35,22 @@ const restaurantSchema = new Schema({
       default: [0, 0]
     }
   },
+  address: String,
   isActive: {
     type: Boolean,
     default: true
   },
-  shopType: {
+  orderPrefix: {
     type: String,
-    enum: ['RESTAURANT', 'GROCERY', 'PHARMACY'],
-    default: 'RESTAURANT'
+    default: 'ORD'
+  },
+  orderId: {
+    type: Number,
+    default: 0
+  },
+  deliveryTime: {
+    type: Number,
+    default: 30
   }
 }, {
   timestamps: true

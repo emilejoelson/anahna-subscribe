@@ -1,31 +1,30 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const couponSchema = new Schema({
+const optionSchema = new Schema({
   title: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
-  discount: {
+  price: {
     type: Number,
     required: true,
-    min: 0,
-    max: 100
+    min: 0
   },
   restaurant: {
     type: Schema.Types.ObjectId,
     ref: 'Restaurant',
     required: true
   },
-  expiryDate: {
-    type: Date
+  addon: {
+    type: Schema.Types.ObjectId,
+    ref: 'Addon'
   },
   isActive: {
     type: Boolean,
     default: true
   },
-  minimumOrderAmount: {
+  order: {
     type: Number,
     default: 0
   }
@@ -33,4 +32,4 @@ const couponSchema = new Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Coupon', couponSchema);
+module.exports = mongoose.model('Option', optionSchema);

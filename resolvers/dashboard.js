@@ -1,5 +1,5 @@
-const Order = require('../../models/order');
-const { months } = require('../../helpers/enum');
+const Order = require('../models/order');
+const { months } = require('../helpers/enum');
 
 module.exports = {
   Query: {
