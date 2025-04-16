@@ -1,26 +1,16 @@
 const Order = require('../models/order');
 const Message = require('../models/message');
-const User = require('../../models/user');
+const User = require('../models/user');
+const { sendNotification } = require('../helpers/notifications');
 const { transformMessage, transformOrder } = require('./merge');
-const {
-  sendNotificationToRider,
-  sendNotificationToUser
-} = require('../../helpers/notifications');
-const {
-  sendNotificationToCustomerWeb
-} = require('../../helpers/firebase-web-notifications');
 const { withFilter } = require('graphql-subscriptions');
-const {
-  pubsub,
-  SUBSCRIPTION_MESSAGE,
-  publishNewMessage
-} = require('../../helpers/pubsub');
+const { pubsub, EVENTS } = require('../helpers/pubsub');
 
 const MessagingResolver = {
   Subscription: {
     subscriptionNewMessage: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator(SUBSCRIPTION_MESSAGE),
+        () => pubsub.asyncIterator(EVENTS.MESSAGE_SENT),
         (payload, { order }, context) => {
           const orderId = payload.subscriptionNewMessage.order;
           return orderId === order;
@@ -64,14 +54,14 @@ const MessagingResolver = {
         const transformedOrder = transformOrder(order);
 
         if (order.user.toString() === req.userId) {
-          sendNotificationToRider(
+          sendNotification(
             order.rider,
             transformedOrder,
             message.message,
             'chat'
           );
         } else if (order.rider.toString() === req.userId) {
-          sendNotificationToUser(
+          sendNotification(
             order.user,
             transformedOrder,
             message.message,
@@ -80,7 +70,7 @@ const MessagingResolver = {
 
           const user = await User.findById(order.user);
           if (user && user.notificationTokenWeb) {
-            sendNotificationToCustomerWeb(
+            sendNotification(
               user.notificationTokenWeb,
               'New message: ',
               message.message

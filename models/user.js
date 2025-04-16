@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+const mongoose = require('mongoose')
 
-const userSchema = new Schema({
-  name: {
+const userSchema = new mongoose.Schema({
+  username: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   email: {
     type: String,
@@ -15,23 +15,13 @@ const userSchema = new Schema({
     type: String,
     required: true
   },
-  phone: String,
-  addresses: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Address'
-  }],
-  notificationToken: String,
-  notificationTokenWeb: String,
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  isEmailVerified: {
-    type: Boolean,
-    default: false
+  role: {
+    type: String,
+    enum: ['admin', 'user'],
+    default: 'user'
   }
 }, {
   timestamps: true
-});
+})
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('User', userSchema)

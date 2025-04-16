@@ -2,52 +2,20 @@ const { PubSub } = require('graphql-subscriptions');
 
 const pubsub = new PubSub();
 
-// Subscription topics
-const PLACE_ORDER = 'PLACE_ORDER';
-const ORDER_STATUS_CHANGED = 'ORDER_STATUS_CHANGED';
-const ASSIGN_RIDER = 'ASSIGN_RIDER';
-const SUBSCRIPTION_ORDER = 'SUBSCRIPTION_ORDER';
-
-const publishToUser = (userId, data, type) => {
-  pubsub.publish(ORDER_STATUS_CHANGED, {
-    orderStatusChanged: {
-      ...data,
-      userId,
-      type
-    }
-  });
+const EVENTS = {
+  MESSAGE_SENT: 'MESSAGE_SENT',
+  ORDER_UPDATED: 'ORDER_UPDATED',
+  NOTIFICATION_CREATED: 'NOTIFICATION_CREATED'
 };
 
-const publishToDashboard = (restaurantId, data, type) => {
-  pubsub.publish(PLACE_ORDER, {
-    subscribePlaceOrder: {
-      ...data,
-      restaurantId,
-      type
-    }
-  });
-};
-
-const publishOrder = (data) => {
-  pubsub.publish(SUBSCRIPTION_ORDER, {
-    subscriptionOrder: data
-  });
-};
-
-const publishToDispatcher = (data) => {
-  pubsub.publish(ASSIGN_RIDER, {
-    subscriptionAssignRider: data
+const publishNewMessage = async (message) => {
+  await pubsub.publish(EVENTS.MESSAGE_SENT, {
+    subscriptionNewMessage: message
   });
 };
 
 module.exports = {
   pubsub,
-  publishToUser,
-  publishToDashboard,
-  publishOrder,
-  publishToDispatcher,
-  PLACE_ORDER,
-  ORDER_STATUS_CHANGED,
-  ASSIGN_RIDER,
-  SUBSCRIPTION_ORDER
+  EVENTS,
+  publishNewMessage
 };
