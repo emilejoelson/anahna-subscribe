@@ -3,17 +3,19 @@ const jwt = require('jsonwebtoken')
 const path = require('path')
 const User = require('../models/user')
 const Restaurant = require('../models/restaurant')
-const { sendEmail } = require('../../helpers/email')
-const { sendTextEmail } = require('../../helpers/email')
+const { sendEmail } = require('../helpers/email')
+const { sendTextEmail } = require('../helpers/email')
 const {
   signupTemplate,
   signupText,
+  verificationTemplate,
   resetPasswordTemplate
-} = require('../../helpers/templates')
-const { checkPhoneAlreadyUsed } = require('../../helpers/utilities')
+} = require('../helpers/templates')
+const { checkPhoneAlreadyUsed } = require('../helpers/utilities')
+const { sendNotification } = require('../helpers/utilities')
 const { transformUser, transformRestaurants } = require('./merge')
-const { sendOtpToPhone } = require('../../helpers/sms')
-const { sendUserInfoToZapier } = require('../../helpers/api')
+const { sendSMS } = require('../helpers/sms')
+const { get, post } = require('../helpers/api')
 const Configuration = require('../../models/configuration')
 
 module.exports = {
