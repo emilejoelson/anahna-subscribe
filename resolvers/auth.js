@@ -7,12 +7,8 @@ const Owner = require('../models/owner');
 const Reset = require('../models/reset');
 const Rider = require('../models/rider');
 const { transformUser, transformOwner } = require('./merge');
-const { sendEmail } = require('../../helpers/email');
-const {
-  resetPasswordTemplate,
-  resetPasswordText,
-  signupTemplate,
-} = require('../../helpers/templates');
+const { sendEmail, sendVerificationEmail, sendPasswordResetEmail } = require('../helpers/email');
+const templates = require('../helpers/templates');
 
 module.exports = {
   Mutation: {
@@ -101,7 +97,7 @@ module.exports = {
 
       if (isNewUser) {
         const attachment = path.join(__dirname, '../../public/assets/tempImages/enatega.png');
-        const signupTemp = await signupTemplate({ email: user.name, password: '' });
+        const signupTemp = await templates.signupTemplate({ email: user.name, password: '' });
         sendEmail(user.email, 'Account Creation', '', signupTemp, attachment);
       }
 
@@ -165,8 +161,8 @@ module.exports = {
       const reset = new Reset({ user: user.id, token });
       await reset.save();
 
-      const resetPasswordTemp = await resetPasswordTemplate(otp);
-      const resetPasswordTxt = resetPasswordText(otp);
+      const resetPasswordTemp = await templates.resetPasswordTemplate(otp);
+      const resetPasswordTxt = templates.resetPasswordText(otp);
       const attachment = path.join(__dirname, '../../public/assets/tempImages/enatega.png');
 
       sendEmail(user.email, 'Forgot Password', resetPasswordTxt, resetPasswordTemp, attachment);
