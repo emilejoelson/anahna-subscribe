@@ -6,12 +6,29 @@ const restaurantSchema = new Schema({
     type: String,
     required: true
   },
+  image: String,
+  description: String,
   owner: {
     type: Schema.Types.ObjectId,
     ref: 'Owner',
     required: true
   },
-  image: String,
+  categories: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Category'
+  }],
+  options: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Option'
+  }],
+  addons: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Addon'
+  }],
+  sections: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Section'
+  }],
   address: String,
   location: {
     type: {
@@ -23,21 +40,14 @@ const restaurantSchema = new Schema({
       default: [0, 0]
     }
   },
-  categories: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Category'
-  }],
-  sections: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Section'
-  }],
-  options: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Option'
-  }],
   isActive: {
     type: Boolean,
     default: true
+  },
+  shopType: {
+    type: String,
+    enum: ['RESTAURANT', 'GROCERY', 'PHARMACY'],
+    default: 'RESTAURANT'
   }
 }, {
   timestamps: true

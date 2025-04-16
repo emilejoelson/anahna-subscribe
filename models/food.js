@@ -12,15 +12,14 @@ const foodSchema = new Schema({
     type: Number,
     required: true
   },
-  category: {
-    type: Schema.Types.ObjectId,
-    ref: 'Category',
-    required: true
-  },
   restaurant: {
     type: Schema.Types.ObjectId,
     ref: 'Restaurant',
     required: true
+  },
+  category: {
+    type: Schema.Types.ObjectId,
+    ref: 'Category'
   },
   variations: [{
     title: String,
@@ -30,11 +29,11 @@ const foodSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Addon'
   }],
-  isActive: {
+  isAvailable: {
     type: Boolean,
     default: true
   },
-  isAvailable: {
+  isActive: {
     type: Boolean,
     default: true
   }

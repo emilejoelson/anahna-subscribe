@@ -1,5 +1,5 @@
-const Food = require('../../models/food');
-const Restaurant = require('../../models/restaurant');
+const Food = require('../models/food');
+const Restaurant = require('../models/restaurant');
 const Variation = require('../../models/variation');
 const { transformRestaurant } = require('./merge');
 
