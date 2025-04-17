@@ -104,7 +104,7 @@ const configurationSchema = new Schema({
     type: String,
   },
   googleMapLibraries: {
-    type: String,
+    type: [String],
   },
   googleColor: {
     type: String,

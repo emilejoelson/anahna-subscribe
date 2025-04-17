@@ -266,7 +266,7 @@ const typeDefs = gql`
     androidClientID: String
     iOSClientID: String
     expoClientID: String
-    googleMapLibraries: String
+    googleMapLibraries: [String]
     googleColor: String
     termsAndConditions: String
     privacyPolicy: String
