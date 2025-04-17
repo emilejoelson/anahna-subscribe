@@ -9,6 +9,12 @@ const cuisineSchema = new mongoose.Schema({
   image: {
     type: String
   },
+  description: {
+    type: String
+  },
+  shopType: {
+    type: String
+  },
   isActive: {
     type: Boolean,
     default: true

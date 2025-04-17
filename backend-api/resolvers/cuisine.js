@@ -5,6 +5,8 @@ module.exports = {
     cuisines: async () => {
       console.log('Fetching active cuisines');
       try {
+        // const cuisines = await Cuisine.find();// Fetch all cuisines.
+        // Fetch active cuisines.
         const cuisines = await Cuisine.find({ isActive: true }).sort({
           createdAt: -1,
         });
@@ -36,6 +38,7 @@ module.exports = {
           description: args.cuisineInput.description,
           image: args.cuisineInput.image,
           shopType: args.cuisineInput.shopType,
+          isActive: true,
         });
     
         const result = await cuisine.save();
@@ -60,6 +63,7 @@ module.exports = {
         cuisine.description = args.cuisineInput.description;
         cuisine.image = args.cuisineInput.image;
         cuisine.shopType = args.cuisineInput.shopType;
+        cuisine.isActive = true;
 
         const result = await cuisine.save();
         return {

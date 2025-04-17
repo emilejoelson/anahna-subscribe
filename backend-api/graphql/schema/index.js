@@ -961,16 +961,19 @@ input AmplitudeApiKeyConfigurationInput {
   }
 
   input CuisineInput {
+    _id: ID
     name: String!
-    description: String
-    image: String
-    shopType: String
+    description: String!
+    image: String!
+    shopType: String!
   }
 
   type Cuisine {
     _id: ID!
     name: String!
     image: String
+    description: String
+    shopType: String
     isActive: Boolean
     createdAt: String!
     updatedAt: String!
