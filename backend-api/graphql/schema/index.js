@@ -1105,6 +1105,14 @@ input AmplitudeApiKeyConfigurationInput {
     riderPassword: String
   }
 
+  type WebNotification {
+    _id: ID!
+    body: String!
+    navigateTo: String
+    read: Boolean!
+    createdAt: String!
+  }
+
   type Query {
     withdrawRequests: [WithdrawRequest!]!
     earnings: [Earnings!]!
@@ -1114,6 +1122,7 @@ input AmplitudeApiKeyConfigurationInput {
     undeliveredOrders(offset: Int): [Order!]!
     deliveredOrders(offset: Int): [Order!]!
     allOrders(page: Int): [Order!]!
+    webNotifications: [WebNotification!]!
     getDashboardTotal(
       starting_date: String
       ending_date: String

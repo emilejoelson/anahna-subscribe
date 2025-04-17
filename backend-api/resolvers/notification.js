@@ -3,6 +3,21 @@ const User = require('../models/user');
 const { sendNotificationMobile } = require('../helpers/utilities');
 
 module.exports = {
+  Query: {
+    webNotifications: async (_, args, { req }) => {
+      if (!req.userId) throw new Error('Unauthenticated');
+      
+      try {
+        const user = await User.findById(req.userId);
+        if (!user) throw new Error('User not found');
+        
+        return user.webNotifications || [];
+      } catch (error) {
+        console.error('Error fetching web notifications:', error);
+        throw error;
+      }
+    }
+  },
   Mutation: {
     sendNotificationUser: async (_, args, { req, res }) => {
       console.log('Sending notification to users');
