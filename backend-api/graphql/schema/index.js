@@ -375,17 +375,15 @@ const typeDefs = gql`
     isActive: Boolean!
   }
 
-type OwnerAuthData {
-  userId: ID!
-  token: String!
-  email: String!
-  userType: String!
-  restaurants: [Restaurant!]!
-  permissions: [String!]
-  userTypeId: ID
-  image: String
-  name: String
-}
+  type OwnerAuthData {
+    userId: ID!
+    token: String!
+    tokenExpiration: Int!
+    email: String!
+    userType: String!
+    restaurants: [Restaurant]!
+    pushToken: String
+  }
 
   type OwnerData {
     _id: ID!
@@ -951,21 +949,21 @@ type OwnerAuthData {
     message: String!
   }
 
-input CuisineInput {
-  name: String!
-  description: String
-  image: String
-  shopType: String
-}
+  input CuisineInput {
+    _id: String
+    name: String!
+    description: String
+    image: String
+    shopType: String
+  }
 
- type Cuisine {
-  _id: ID!
-  name: String!
-  image: String
-  isActive: Boolean
-  createdAt: String!
-  updatedAt: String!
-}
+  type Cuisine {
+    _id: String!
+    name: String!
+    description: String
+    image: String
+    shopType: String
+  }
 
   type Banner {
     _id: String!
@@ -1028,14 +1026,6 @@ input CuisineInput {
   input ChatMessageInput {
     message: String!
     user: ChatUserInput!
-  }
-
-   input CreateOwnerInput {
-    name: String!
-    email: String!
-    password: String!
-    phone: String
-    image: String
   }
 
   input ChatUserInput {
@@ -1220,7 +1210,6 @@ input CuisineInput {
   }
 
   type Mutation {
-     createOwner(input: CreateOwnerInput!): OwnerAuthData!
     createWithdrawRequest(amount: Float!): WithdrawRequest!
     updateWithdrawReqStatus(id: ID!, status: String!): UpdateWithdrawResponse!
     createEarning(earningsInput: EarningsInput): Earnings!

@@ -16,15 +16,6 @@ const ownerSchema = new Schema({
     required: true
   },
   phone: String,
-  image: String, // Add this field
-  userType: {
-    type: String,
-    default: 'owner'
-  },
-  permissions: {
-    type: [String],
-    default: []
-  },
   restaurants: [{
     type: Schema.Types.ObjectId,
     ref: 'Restaurant'

@@ -1,96 +1,61 @@
-const authResolver = require('./auth')
-const foodResolver = require('./food')
-const orderResolver = require('./order')
-const categoryResolver = require('./category')
-const configurationResolver = require('./configuration')
-const riderResolver = require('./rider')
-const optionResolver = require('./option')
-const addonResolver = require('./addon')
-const couponResolver = require('./coupon')
-const dashboardResolver = require('./dashboard')
-const restaurantResolver = require('./restaurant')
-const reviewResolver = require('./review')
-const offerResolver = require('./offer')
-const zoneResolver = require('./zone')
-const addressResolver = require('./address')
-const userResolver = require('./user')
-const vendorResolver = require('./vendor')
-const dispatchResolver = require('./dispatch')
-const taxationResolver = require('./taxation')
-const tippingResolver = require('./tipping')
-const sectionResolver = require('./section')
-const notificationMutation = require('./notification')
-const earningsResolver = require('./earnings')
-const withdrawRequestResolver = require('./withdrawRequest')
-const chatResolver = require('./chat')
-const countries = require('./countries')
-const cuisine = require('./cuisine')
-const banner = require('./banner')
-const demo = require('./demo')
+const auth = require('./auth');
+const restaurant = require('./restaurant');
+const user = require('./user');
+const vendor = require('./vendor');
+const category = require('./category');
+const cuisine = require('./cuisine');
+const food = require('./food');
+const order = require('./order');
+const rider = require('./rider');
+const review = require('./review');
+const configuration = require('./configuration');
+const offer = require('./offer');
+const section = require('./section');
+const zone = require('./zone');
+const earnings = require('./earnings');
+const banner = require('./banner');
+const withdrawRequest = require('./withdrawRequest');
 
-const rootResolver = {
+module.exports = {
   Query: {
-    ...dashboardResolver.Query,
-    ...orderResolver.Query,
-    ...configurationResolver.Query,
-    ...riderResolver.Query,
-    ...optionResolver.Query,
-    ...addonResolver.Query,
-    ...couponResolver.Query,
-    ...restaurantResolver.Query,
-    ...reviewResolver.Query,
-    ...offerResolver.Query,
-    ...zoneResolver.Query,
-    ...userResolver.Query,
-    ...vendorResolver.Query,
-    ...dispatchResolver.Query,
-    ...tippingResolver.Query,
-    ...taxationResolver.Query,
-    ...sectionResolver.Query,
-    ...withdrawRequestResolver.Query,
-    ...earningsResolver.Query,
-    ...chatResolver.Query,
-    ...countries.Query,
+    ...restaurant.Query,
+    ...user.Query,
+    ...vendor.Query,
+    ...category.Query,
     ...cuisine.Query,
+    ...food.Query,
+    ...order.Query,
+    ...rider.Query,
+    ...review.Query,
+    ...configuration.Query,
+    ...offer.Query,
+    ...section.Query,
+    ...zone.Query,
+    ...earnings.Query,
     ...banner.Query,
-    ...demo.Query
+    ...withdrawRequest.Query,
   },
   Mutation: {
-    ...dashboardResolver.Mutation,
-    ...authResolver.Mutation,
-    ...foodResolver.Mutation,
-    ...orderResolver.Mutation,
-    ...categoryResolver.Mutation,
-    ...configurationResolver.Mutation,
-    ...riderResolver.Mutation,
-    ...optionResolver.Mutation,
-    ...addonResolver.Mutation,
-    ...couponResolver.Mutation,
-    ...restaurantResolver.Mutation,
-    ...reviewResolver.Mutation,
-    ...offerResolver.Mutation,
-    ...zoneResolver.Mutation,
-    ...addressResolver.Mutation,
-    ...userResolver.Mutation,
-    ...vendorResolver.Mutation,
-    ...dispatchResolver.Mutation,
-    ...tippingResolver.Mutation,
-    ...taxationResolver.Mutation,
-    ...sectionResolver.Mutation,
-    ...notificationMutation.Mutation,
-    ...withdrawRequestResolver.Mutation,
-    ...earningsResolver.Mutation,
-    ...chatResolver.Mutation,
+    ...auth.Mutation,
+    ...restaurant.Mutation,
+    ...user.Mutation,
+    ...vendor.Mutation,
+    ...category.Mutation,
     ...cuisine.Mutation,
+    ...food.Mutation,
+    ...order.Mutation,
+    ...rider.Mutation,
+    ...review.Mutation,
+    ...configuration.Mutation,
+    ...offer.Mutation,
+    ...section.Mutation,
+    ...zone.Mutation,
+    ...earnings.Mutation,
     ...banner.Mutation,
-    ...demo.Mutation
+    ...withdrawRequest.Mutation,
   },
   Subscription: {
-    ...orderResolver.Subscription,
-    ...riderResolver.Subscription,
-    ...dispatchResolver.Subscription,
-    ...chatResolver.Subscription
+    ...order.Subscription,
+    ...rider.Subscription,
   }
-}
-
-module.exports = rootResolver
+};

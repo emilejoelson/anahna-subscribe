@@ -298,12 +298,20 @@ const populateOwnerRestaurant = async restaurant => {
 };
 
 const transformOwner = async owner => {
-  return {
-    ...owner._doc,
-    _id: owner.id,
-    userId: owner.id,
-    restaurants: await populateOwnerRestaurant(owner.restaurants)
-  };
+  try {
+    const restaurants = await Restaurant.find({ _id: { $in: owner.restaurants } });
+    return {
+      ...owner._doc,
+      _id: owner.id,
+      email: owner.email, // Explicitly include email field
+      restaurants: restaurants.map(restaurant => transformRestaurant(restaurant)),
+      image: owner.image,
+      userTypeId: owner.userTypeId,
+      permissions: owner.permissions || []
+    };
+  } catch (err) {
+    throw err;
+  }
 };
 
 const transformUser = async user => {

@@ -9,101 +9,9 @@ const Rider = require('../models/rider');
 const { transformUser, transformOwner } = require('./merge');
 const { sendEmail, sendVerificationEmail, sendPasswordResetEmail } = require('../helpers/email');
 const templates = require('../helpers/templates');
-const restaurant = require('../models/restaurant');
 
 module.exports = {
   Mutation: {
-    createOwner: async (_, { input }) => {
-      try {
-        const { name, email, password, phone, image } = input;
-
-        // 1. Check if the email is already taken
-        const existingOwner = await Owner.findOne({ email });
-        if (existingOwner) {
-          throw new Error('Email is already taken');
-        }
-
-        // 2. Hash the password
-        const hashedPassword = await bcrypt.hash(password, 12);
-
-        // 3. Create the new owner
-        const newOwner = new Owner({
-          name,
-          email,
-          password: hashedPassword,
-          phone,
-          image,
-          userType: 'owner', // Set the userType
-          permissions: [],  // Initialize permissions
-          restaurants: [],
-          isActive: true,
-        });
-
-        // 4. Save the owner to the database
-        const savedOwner = await newOwner.save();
-
-        // 5.  Return the new owner data (you might want to exclude the password)
-        return {
-          userId: savedOwner.id,
-          email: savedOwner.email,
-          userType: savedOwner.userType,
-          name: savedOwner.name,
-          phone: savedOwner.phone,
-          image: savedOwner.image,
-          permissions: savedOwner.permissions,
-        };
-      } catch (error) {
-        console.error('Error creating owner:', error);
-        throw new Error(`Failed to create owner: ${error.message}`); // Improved error message
-      }
-    },
-    ownerLogin: async (_, { email, password }) => {
-      console.log('Owner login');
-      try {
-        const owner = await Owner.findOne({ email });
-        if (!owner) {
-          throw new Error('User does not exist');
-        }
-    
-        const isMatch = await bcrypt.compare(password, owner.password);
-        if (!isMatch) {
-          throw new Error('Invalid credentials');
-        }
-    
-        // Ensure userType matches a key in DEFAULT_ROUTES (uppercase in this case)
-        const userType = owner.userType ? String(owner.userType).toUpperCase() : 'ADMIN'; // Or 'STAFF'
-    
-        const token = jwt.sign(
-          {
-            userId: owner.id,
-            email: owner.email,
-            userType: userType,
-          },
-          process.env.JWT_SECRET || 'customsecretkey'
-        );
-    
-        // Get restaurants data if needed
-        const restaurants = await restaurant.find({ _id: { $in: owner.restaurants || [] } });
-    
-        console.log("Logged in owner userType:", userType);
-    
-        return {
-          userId: owner.id,
-          token,
-          email: owner.email,
-          userType: userType,
-          restaurants: restaurants || [],
-          permissions: owner.permissions || [],
-          userTypeId: owner.id,
-          image: owner.image || null,
-          name: owner.name,
-        };
-      } catch (error) {
-        console.error('Owner login error:', error);
-        throw new Error(`Login failed: ${error.message}`);
-      }
-    },
-
     vendorResetPassword: async (_, { oldPassword, newPassword }, { req }) => {
       console.log('Vendor resetting password');
       if (!req.isAuth) throw new Error('Unauthenticated');
@@ -123,6 +31,106 @@ module.exports = {
         throw error;
       }
     },
+
+    createAdminOwner: async (_, { email, password }) => {
+      console.log('Creating admin owner with email:', email);
+      try {
+        const existingOwner = await Owner.findOne({ email });
+        if (existingOwner) {
+          console.log('Owner already exists with email:', email);
+          throw new Error('Email is already associated with another account');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const owner = new Owner({
+          email,
+          password: hashedPassword,
+          name: 'Admin',
+          isActive: true,
+          userType: 'ADMIN',
+          permissions: ['ADMIN']
+        });
+
+        const result = await owner.save();
+        console.log('Created admin owner:', result);
+
+        return transformOwner(result);
+      } catch (error) {
+        console.error('Error creating admin owner:', error);
+        throw error;
+      }
+    },
+
+    ownerLogin: async (_, { email, password }) => {
+      console.log('Owner login attempt with email:', email);
+      try {
+        if (!email) {
+          throw new Error('Email is required');
+        }
+
+        // First verify MongoDB connection
+        const count = await Owner.countDocuments();
+        console.log('Total owners in database:', count);
+
+        // Try to find owner with lean() to get plain JS object
+        const owner = await Owner.findOne({ email }).lean();
+        console.log('Raw owner object:', JSON.stringify(owner, null, 2));
+        
+        if (!owner) {
+          console.log('No owner found with email:', email);
+          throw new Error('User does not exist');
+        }
+
+        if (!owner.isActive) {
+          console.log('Owner account is not active:', email); 
+          throw new Error('Account is not active');
+        }
+
+        const isMatch = await bcrypt.compare(password, owner.password);
+        console.log('Password match result:', isMatch);
+
+        if (!isMatch) {
+          throw new Error('Invalid credentials');
+        }
+
+        const token = jwt.sign(
+          {
+            userId: owner._id.toString(),
+            email: owner.email,
+            userType: owner.userType || 'VENDOR',
+          },
+          process.env.JWT_SECRET || 'customsecretkey'
+        );
+
+        const transformedOwner = await transformOwner(owner);
+        console.log('Transformed owner:', JSON.stringify(transformedOwner, null, 2));
+
+        // Ensure required fields are not null
+        const result = {
+          ...transformedOwner,
+          userId: owner._id.toString(),
+          token,
+          tokenExpiration: 1,
+          email: owner.email, // Explicitly include email
+          userType: owner.userType || 'VENDOR',
+          permissions: owner.permissions || [],
+          userTypeId: owner.userTypeId || null,
+          image: owner.image || null,
+          name: owner.name || '',
+          restaurants: transformedOwner.restaurants || []
+        };
+
+        console.log('Final response:', JSON.stringify(result, null, 2));
+        return result;
+      } catch (error) {
+        console.error('Error in ownerLogin:', error);
+        if (error.name === 'MongoError' || error.name === 'MongooseError') {
+          throw new Error('Database error occurred. Please try again.');
+        }
+        throw error;
+      }
+    },
+
     login: async (_, { appleId, email, password, type, name, notificationToken }) => {
       console.log('User login', { appleId, email, password, type, notificationToken });
 
