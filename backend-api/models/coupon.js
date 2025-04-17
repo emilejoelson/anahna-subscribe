@@ -10,18 +10,18 @@ const couponSchema = new Schema({
   discount: {
     type: Number,
     required: true,
-    min: 0,
+    min: 1,
     max: 100
   },
   restaurant: {
     type: Schema.Types.ObjectId,
     ref: 'Restaurant',
-    required: true
+    // required: true
   },
   expiryDate: {
     type: Date
   },
-  isActive: {
+  enabled: {
     type: Boolean,
     default: true
   },

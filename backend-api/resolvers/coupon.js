@@ -24,7 +24,7 @@ module.exports = {
       try {
         const existingCouponCount = await Coupon.countDocuments({
           title: args.couponInput.title,
-          isActive: true,
+          enabled: true,
         });
 
         if (existingCouponCount > 0) {
@@ -87,9 +87,8 @@ module.exports = {
           throw new Error('Coupon not found');
         }
 
-        coupon.isActive = false;
-        const result = await coupon.save();
-        return result.id;
+        await coupon.remove();
+        return "Coupon deleted successfully";
       } catch (err) {
         console.error('Error deleting coupon:', err);
         throw new Error('Failed to delete coupon');
