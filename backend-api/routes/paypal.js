@@ -1,4 +1,4 @@
-/* eslint-disable no-tabs */
+require('dotenv').config()
 const express = require('express')
 const paypal = require('paypal-rest-sdk')
 const Paypal = require('../models/paypal')

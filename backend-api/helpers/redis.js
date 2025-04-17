@@ -1,10 +1,10 @@
+require('dotenv').config()
 const Redis = require('ioredis')
-const config = require('../config')
 
 class RedisClient {
   constructor() {
     this.client = null
-    this.enabled = config.redis.enabled
+    this.enabled = process.env.REDIS_HOST && process.env.REDIS_PORT ? true : false
   }
 
   connect() {
@@ -15,8 +15,9 @@ class RedisClient {
 
     try {
       this.client = new Redis({
-        port: config.redis.port,
-        host: config.redis.host,
+        port: process.env.REDIS_PORT || 6379,
+        password: process.env.REDIS_PASSWORD,
+        host: process.env.REDIS_HOST || 'localhost',
         maxRetriesPerRequest: 1,
         retryStrategy: () => null // Disable retries
       })

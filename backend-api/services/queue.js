@@ -1,15 +1,15 @@
-const config = require('../config');
+require('dotenv').config()
 const Redis = require('ioredis');
 
 class QueueService {
   constructor() {
     this.redis = null;
-    if (config.redis.enabled && config.redis.port) {
+    if (process.env.REDIS_ENABLED && process.env.REDIS_PORT) {
       try {
         this.redis = new Redis({
-          port: config.redis.port,
-          host: config.redis.host,
-          password: config.redis.password,
+          port: process.env.REDIS_PORT || 6379,
+          host: process.env.REDIS_HOST || 'localhost',
+          password: process.env.REDIS_PASSWORD,
           retryStrategy: (times) => {
             if (times > 3) {
               console.log('Redis connection failed after 3 retries, disabling queue service');

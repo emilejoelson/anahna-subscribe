@@ -1,12 +1,13 @@
+require('dotenv').config();
 const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
 const mongoose = require('mongoose');
+const { graphqlHTTP } = require('express-graphql');
+const schema = require('./schema');
 const cors = require('cors');
 const { createServer } = require('http');
 const { WebSocketServer } = require('ws');
 const { useServer } = require('graphql-ws/lib/use/ws');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
-const config = require('./config');
 require('dotenv').config();
 
 // Set Mongoose options
@@ -18,18 +19,20 @@ const httpServer = createServer(app);
 app.use(cors());
 app.use(express.json());
 
+const PORT = parseInt(process.env.PORT) || 4000;
+const MONGODB_URI = process.env.CONNECTION_STRING || 'mongodb://localhost:27017/anahna';
+
 // Connect to MongoDB
 mongoose
-  .connect(config.mongodb.uri, {
+  .connect(MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
   .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.log(err));
+  .catch(err => console.log('MongoDB Connection Error:', err));
 
 // GraphQL setup
 const rootValue = require('./resolvers');
-const schema = require('./schema');
 
 // Validate schema before setting up middleware
 if (!schema || !schema.getQueryType) {
@@ -93,7 +96,6 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
-const PORT = process.env.PORT || 8001;  // Changed from 4000 to 8001 to match client config
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`WebSocket server is ready at ws://localhost:${PORT}/graphql`);
