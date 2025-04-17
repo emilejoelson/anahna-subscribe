@@ -9,9 +9,101 @@ const Rider = require('../models/rider');
 const { transformUser, transformOwner } = require('./merge');
 const { sendEmail, sendVerificationEmail, sendPasswordResetEmail } = require('../helpers/email');
 const templates = require('../helpers/templates');
+const restaurant = require('../models/restaurant');
 
 module.exports = {
   Mutation: {
+    createOwner: async (_, { input }) => {
+      try {
+        const { name, email, password, phone, image } = input;
+
+        // 1. Check if the email is already taken
+        const existingOwner = await Owner.findOne({ email });
+        if (existingOwner) {
+          throw new Error('Email is already taken');
+        }
+
+        // 2. Hash the password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // 3. Create the new owner
+        const newOwner = new Owner({
+          name,
+          email,
+          password: hashedPassword,
+          phone,
+          image,
+          userType: 'owner', // Set the userType
+          permissions: [],  // Initialize permissions
+          restaurants: [],
+          isActive: true,
+        });
+
+        // 4. Save the owner to the database
+        const savedOwner = await newOwner.save();
+
+        // 5.  Return the new owner data (you might want to exclude the password)
+        return {
+          userId: savedOwner.id,
+          email: savedOwner.email,
+          userType: savedOwner.userType,
+          name: savedOwner.name,
+          phone: savedOwner.phone,
+          image: savedOwner.image,
+          permissions: savedOwner.permissions,
+        };
+      } catch (error) {
+        console.error('Error creating owner:', error);
+        throw new Error(`Failed to create owner: ${error.message}`); // Improved error message
+      }
+    },
+    ownerLogin: async (_, { email, password }) => {
+      console.log('Owner login');
+      try {
+        const owner = await Owner.findOne({ email });
+        if (!owner) {
+          throw new Error('User does not exist');
+        }
+    
+        const isMatch = await bcrypt.compare(password, owner.password);
+        if (!isMatch) {
+          throw new Error('Invalid credentials');
+        }
+    
+        // Ensure userType matches a key in DEFAULT_ROUTES (uppercase in this case)
+        const userType = owner.userType ? String(owner.userType).toUpperCase() : 'ADMIN'; // Or 'STAFF'
+    
+        const token = jwt.sign(
+          {
+            userId: owner.id,
+            email: owner.email,
+            userType: userType,
+          },
+          process.env.JWT_SECRET || 'customsecretkey'
+        );
+    
+        // Get restaurants data if needed
+        const restaurants = await restaurant.find({ _id: { $in: owner.restaurants || [] } });
+    
+        console.log("Logged in owner userType:", userType);
+    
+        return {
+          userId: owner.id,
+          token,
+          email: owner.email,
+          userType: userType,
+          restaurants: restaurants || [],
+          permissions: owner.permissions || [],
+          userTypeId: owner.id,
+          image: owner.image || null,
+          name: owner.name,
+        };
+      } catch (error) {
+        console.error('Owner login error:', error);
+        throw new Error(`Login failed: ${error.message}`);
+      }
+    },
+
     vendorResetPassword: async (_, { oldPassword, newPassword }, { req }) => {
       console.log('Vendor resetting password');
       if (!req.isAuth) throw new Error('Unauthenticated');
@@ -31,30 +123,6 @@ module.exports = {
         throw error;
       }
     },
-
-    ownerLogin: async (_, { email, password }) => {
-      console.log('Owner login');
-      const owner = await Owner.findOne({ email });
-      if (!owner) throw new Error('User does not exist');
-
-      const isMatch = await bcrypt.compare(password, owner.password);
-      if (!isMatch) throw new Error('Invalid credentials');
-
-      const token = jwt.sign(
-        {
-          userId: owner.id,
-          email: owner.email,
-          userType: owner.userType,
-        },
-        process.env.JWT_SECRET || 'customsecretkey'
-      );
-
-      return {
-        ...transformOwner(owner),
-        token,
-      };
-    },
-
     login: async (_, { appleId, email, password, type, name, notificationToken }) => {
       console.log('User login', { appleId, email, password, type, notificationToken });
 

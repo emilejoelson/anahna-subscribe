@@ -20,24 +20,24 @@ module.exports = {
   },
   Mutation: {
     createCuisine: async (_, args) => {
-      console.log('Creating a new cuisine');
+      console.log('Creating a new cuisine with args:', args);
       try {
         const existingCuisineCount = await Cuisine.countDocuments({
           name: args.cuisineInput.name,
           isActive: true,
         });
-
+    
         if (existingCuisineCount > 0) {
           throw new Error('Cuisine already exists');
         }
-
+    
         const cuisine = new Cuisine({
           name: args.cuisineInput.name,
           description: args.cuisineInput.description,
           image: args.cuisineInput.image,
           shopType: args.cuisineInput.shopType,
         });
-
+    
         const result = await cuisine.save();
         return {
           ...result._doc,

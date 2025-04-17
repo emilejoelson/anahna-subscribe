@@ -99,7 +99,7 @@ const typeDefs = gql`
 
   type Restaurant {
     _id: ID!
-    orderId: Int!
+    orderId: String!
     orderPrefix: String
     name: String!
     image: String
@@ -385,13 +385,18 @@ const typeDefs = gql`
     pushToken: String
   }
 
-  type OwnerData {
-    _id: ID!
-    email: String!
-    userType: String!
-    restaurants: [Restaurant]!
-    pushToken: String
+  type OwnerAuthData {
+  userId: ID!
+  token: String!
+  email: String!
+  userType: String
+  restaurants: [Restaurant]
+  permissions: [String]  # Add this field
+  userTypeId: ID         # Add this field (though userType exists already)
+  image: String          # Add this field
+  name: String           # Add this field
   }
+    
 
   type Review {
     _id: ID!
