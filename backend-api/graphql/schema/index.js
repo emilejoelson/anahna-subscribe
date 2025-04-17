@@ -266,7 +266,7 @@ const typeDefs = gql`
     androidClientID: String
     iOSClientID: String
     expoClientID: String
-    googleMapLibraries: [String]
+    googleMapLibraries: String
     googleColor: String
     termsAndConditions: String
     privacyPolicy: String
@@ -286,6 +286,13 @@ const typeDefs = gql`
     skipMobileVerification: Boolean
     currency: String
     currencySymbol: String
+    isPaidVersion: String
+    
+    pushToken: String
+    enableRiderDemo: Boolean
+    enableRestaurantDemo: Boolean
+    enableAdminDemo: Boolean
+
     createdAt: String!
     updatedAt: String!
   }

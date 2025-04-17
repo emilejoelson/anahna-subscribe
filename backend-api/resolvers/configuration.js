@@ -2,6 +2,23 @@
 const Configuration = require('../models/configuration');
 
 module.exports = {
+  Query: {
+      configuration: async () => {
+        console.log('Fetching configuration');
+        try {
+          const configurations = await Configuration.findOne();
+          console.log('Configurations:', configurations);
+          return {
+            ...configurations._doc,
+            _id: configurations.id,
+          };
+          
+        } catch (err) {
+          console.error('Error fetching configurations:', err);
+          throw new Error('Failed to fetch configurations');
+        }
+      },
+    },
   Mutation: {
     saveEmailConfiguration: async (_, { configurationInput }) => {
       let config = await Configuration.findOne();

@@ -104,7 +104,7 @@ const configurationSchema = new Schema({
     type: String,
   },
   googleMapLibraries: {
-    type: [String],
+    type: String,
   },
   googleColor: {
     type: String,
@@ -166,6 +166,25 @@ const configurationSchema = new Schema({
   },
   currencySymbol: {
     type: String,
+  },
+  isPaidVersion: {
+    type: Boolean,
+    default: false,
+  },
+  pushToken: {
+    type: String,
+  },
+  enableRiderDemo: {
+    type: Boolean,
+    default: false,
+  },
+  enableRestaurantDemo: {
+    type: Boolean,
+    default: false,
+  },
+  enableAdminDemo: {
+    type: Boolean,
+    default: false,
   },
 }, {
   timestamps: true

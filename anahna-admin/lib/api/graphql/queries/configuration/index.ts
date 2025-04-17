@@ -58,6 +58,11 @@ export const GET_CONFIGURATION = gql`
       skipMobileVerification
       costType
       vapidKey
+
+      pushToken
+      enableRiderDemo
+      enableRestaurantDemo
+      enableAdminDemo
     }
   }
 `;
