@@ -1,4 +1,4 @@
-const { gql } = require('apollo-server-express')
+const { gql } = require("apollo-server-express");
 
 const typeDefs = gql`
   type Location {
@@ -232,30 +232,25 @@ const typeDefs = gql`
     userType: String
   }
   type Configuration {
-    _id: String!
-    pushToken: String
+    _id: ID!
     email: String
     emailName: String
     password: String
     enableEmail: Boolean
-    clientId: String
-    clientSecret: String
-    sandbox: Boolean
-    publishableKey: String
-    secretKey: String
-    currency: String
-    currencySymbol: String
-    deliveryRate: Float
-    twilioAccountSid: String
-    twilioAuthToken: String
-    twilioPhoneNumber: String
-    twilioEnabled: Boolean
     formEmail: String
     sendGridApiKey: String
     sendGridEnabled: Boolean
     sendGridEmail: String
     sendGridEmailName: String
     sendGridPassword: String
+    firebaseKey: String
+    authDomain: String
+    projectId: String
+    storageBucket: String
+    msgSenderId: String
+    appId: String
+    measurementId: String
+    vapidKey: String
     dashboardSentryUrl: String
     webSentryUrl: String
     apiSentryUrl: String
@@ -271,27 +266,30 @@ const typeDefs = gql`
     androidClientID: String
     iOSClientID: String
     expoClientID: String
-    googleMapLibraries: String
+    googleMapLibraries: [String]
     googleColor: String
     termsAndConditions: String
     privacyPolicy: String
     testOtp: String
-    firebaseKey: String
-    authDomain: String
-    projectId: String
-    storageBucket: String
-    msgSenderId: String
-    appId: String
-    measurementId: String
-    isPaidVersion: Boolean
-    skipMobileVerification: Boolean
-    skipEmailVerification: Boolean
-    enableRiderDemo: Boolean
-    enableRestaurantDemo: Boolean
-    enableAdminDemo: Boolean
+    deliveryRate: Float
     costType: String
-    vapidKey: String
+    clientId: String
+    clientSecret: String
+    sandbox: Boolean
+    publishableKey: String
+    secretKey: String
+    twilioAccountSid: String
+    twilioAuthToken: String
+    twilioPhoneNumber: String
+    twilioEnabled: Boolean
+    skipEmailVerification: Boolean
+    skipMobileVerification: Boolean
+    currency: String
+    currencySymbol: String
+    createdAt: String!
+    updatedAt: String!
   }
+
   type OrderStatus {
     pending: String!
     preparing: String
@@ -375,17 +373,17 @@ const typeDefs = gql`
     isActive: Boolean!
   }
 
-type OwnerAuthData {
-  userId: ID!
-  token: String!
-  email: String!
-  userType: String!
-  restaurants: [Restaurant!]!
-  permissions: [String!]
-  userTypeId: ID
-  image: String
-  name: String
-}
+  type OwnerAuthData {
+    userId: ID!
+    token: String!
+    email: String!
+    userType: String!
+    restaurants: [Restaurant!]!
+    permissions: [String!]
+    userTypeId: ID
+    image: String
+    name: String
+  }
 
   type OwnerData {
     _id: ID!
@@ -617,62 +615,73 @@ type OwnerAuthData {
   }
 
   input EmailConfigurationInput {
-    email: String!
-    password: String!
-    emailName: String!
-    enableEmail: Boolean!
+    email: String
+    emailName: String
+    password: String
+    enableEmail: Boolean
   }
 
   input TwilioConfigurationInput {
-    twilioAccountSid: String!
-    twilioAuthToken: String!
-    twilioPhoneNumber: String!
-    twilioEnabled: Boolean!
+    twilioAccountSid: String
+    twilioAuthToken: String
+    twilioPhoneNumber: String
+    twilioEnabled: Boolean
   }
   input FormEmailConfigurationInput {
-    formEmail: String!
+    formEmail: String
   }
+
   input SendGridConfigurationInput {
-    sendGridApiKey: String!
-    sendGridEnabled: Boolean!
-    sendGridEmail: String!
-    sendGridEmailName: String!
-    sendGridPassword: String!
+    sendGridApiKey: String
+    sendGridEnabled: Boolean
+    sendGridEmail: String
+    sendGridEmailName: String
+    sendGridPassword: String
+  }
+  input FirebaseConfigurationInput {
+    firebaseKey: String
+    authDomain: String
+    projectId: String
+    storageBucket: String
+    msgSenderId: String
+    appId: String
+    measurementId: String
+    vapidKey: String
   }
 
   input SentryConfigurationInput {
-    dashboardSentryUrl: String!
-    webSentryUrl: String!
-    apiSentryUrl: String!
-    customerAppSentryUrl: String!
-    restaurantAppSentryUrl: String!
-    riderAppSentryUrl: String!
-  }
+  dashboardSentryUrl: String
+  webSentryUrl: String
+  apiSentryUrl: String
+  customerAppSentryUrl: String
+  restaurantAppSentryUrl: String
+  riderAppSentryUrl: String
+}
   input GoogleApiKeyConfigurationInput {
-    googleApiKey: String!
-  }
-  input CloudinaryConfigurationInput {
-    cloudinaryUploadUrl: String!
-    cloudinaryApiKey: String!
-  }
-  input AmplitudeApiKeyConfigurationInput {
-    webAmplitudeApiKey: String!
-    appAmplitudeApiKey: String!
-  }
+  googleApiKey: String
+}
+ input CloudinaryConfigurationInput {
+  cloudinaryUploadUrl: String
+  cloudinaryApiKey: String
+}
+input AmplitudeApiKeyConfigurationInput {
+  webAmplitudeApiKey: String
+  appAmplitudeApiKey: String
+}
   input GoogleClientIDConfigurationInput {
-    webClientID: String!
-    androidClientID: String!
-    iOSClientID: String!
-    expoClientID: String!
+    webClientID: String
+    androidClientID: String
+    iOSClientID: String
+    expoClientID: String
   }
   input WebConfigurationInput {
-    googleMapLibraries: String!
-    googleColor: String!
+    googleMapLibraries: [String]
+    googleColor: String
   }
   input AppConfigurationsInput {
-    termsAndConditions: String!
-    privacyPolicy: String!
-    testOtp: String!
+     termsAndConditions: String
+    privacyPolicy: String
+    testOtp: String
   }
 
   input FirebaseConfigurationInput {
@@ -687,24 +696,24 @@ type OwnerAuthData {
   }
 
   input PaypalConfigurationInput {
-    clientId: String!
-    clientSecret: String!
-    sandbox: Boolean!
+    clientId: String
+    clientSecret: String
+    sandbox: Boolean
   }
 
   input StripeConfigurationInput {
-    publishableKey: String!
-    secretKey: String!
+    publishableKey: String
+    secretKey: String
   }
 
   input CurrencyConfigurationInput {
-    currency: String!
-    currencySymbol: String!
+   currency: String
+   currencySymbol: String
   }
 
   input VerificationConfigurationInput {
-    skipEmailVerification: Boolean!
-    skipMobileVerification: Boolean!
+    skipEmailVerification: Boolean
+    skipMobileVerification: Boolean
   }
 
   input DemoConfigurationInput {
@@ -714,7 +723,7 @@ type OwnerAuthData {
   }
 
   input DeliveryCostConfigurationInput {
-    deliveryRate: Float!
+    deliveryRate: Float
     costType: String
   }
 
@@ -951,21 +960,21 @@ type OwnerAuthData {
     message: String!
   }
 
-input CuisineInput {
-  name: String!
-  description: String
-  image: String
-  shopType: String
-}
+  input CuisineInput {
+    name: String!
+    description: String
+    image: String
+    shopType: String
+  }
 
- type Cuisine {
-  _id: ID!
-  name: String!
-  image: String
-  isActive: Boolean
-  createdAt: String!
-  updatedAt: String!
-}
+  type Cuisine {
+    _id: ID!
+    name: String!
+    image: String
+    isActive: Boolean
+    createdAt: String!
+    updatedAt: String!
+  }
 
   type Banner {
     _id: String!
@@ -1030,7 +1039,7 @@ input CuisineInput {
     user: ChatUserInput!
   }
 
-   input CreateOwnerInput {
+  input CreateOwnerInput {
     name: String!
     email: String!
     password: String!
@@ -1220,7 +1229,7 @@ input CuisineInput {
   }
 
   type Mutation {
-     createOwner(input: CreateOwnerInput!): OwnerAuthData!
+    createOwner(input: CreateOwnerInput!): OwnerAuthData!
     createWithdrawRequest(amount: Float!): WithdrawRequest!
     updateWithdrawReqStatus(id: ID!, status: String!): UpdateWithdrawResponse!
     createEarning(earningsInput: EarningsInput): Earnings!
@@ -1240,7 +1249,7 @@ input CuisineInput {
       isActive: Boolean
     ): AuthData!
     ownerLogin(email: String!, password: String!): OwnerAuthData!
-    createUser(userInput: UserInput): AuthData!
+    createUser(userInput: UserInput!): User
     createVendor(vendorInput: VendorInput): OwnerData!
     editVendor(vendorInput: VendorInput): OwnerData!
     deleteVendor(id: String!): Boolean
@@ -1272,59 +1281,22 @@ input CuisineInput {
     orderPickedUp(_id: String!): Order!
     cancelOrder(_id: String!, reason: String!): Order!
     likeFood(foodId: String!): Food!
-    saveEmailConfiguration(
-      configurationInput: EmailConfigurationInput!
-    ): Configuration!
-    saveFormEmailConfiguration(
-      configurationInput: FormEmailConfigurationInput!
-    ): Configuration!
-    saveSendGridConfiguration(
-      configurationInput: SendGridConfigurationInput!
-    ): Configuration!
-
-    saveFirebaseConfiguration(
-      configurationInput: FirebaseConfigurationInput!
-    ): Configuration!
-
-    saveSentryConfiguration(
-      configurationInput: SentryConfigurationInput!
-    ): Configuration!
-    saveGoogleApiKeyConfiguration(
-      configurationInput: GoogleApiKeyConfigurationInput!
-    ): Configuration!
-    saveCloudinaryConfiguration(
-      configurationInput: CloudinaryConfigurationInput!
-    ): Configuration!
-    saveAmplitudeApiKeyConfiguration(
-      configurationInput: AmplitudeApiKeyConfigurationInput!
-    ): Configuration!
-    saveGoogleClientIDConfiguration(
-      configurationInput: GoogleClientIDConfigurationInput!
-    ): Configuration!
-    saveWebConfiguration(
-      configurationInput: WebConfigurationInput!
-    ): Configuration!
-    saveAppConfigurations(
-      configurationInput: AppConfigurationsInput!
-    ): Configuration!
-
-    saveDeliveryRateConfiguration(
-      configurationInput: DeliveryCostConfigurationInput
-    ): Configuration
-
-    savePaypalConfiguration(
-      configurationInput: PaypalConfigurationInput!
-    ): Configuration!
-    saveStripeConfiguration(
-      configurationInput: StripeConfigurationInput!
-    ): Configuration!
-    saveTwilioConfiguration(
-      configurationInput: TwilioConfigurationInput!
-    ): Configuration!
-
-    saveCurrencyConfiguration(
-      configurationInput: CurrencyConfigurationInput!
-    ): Configuration!
+    saveEmailConfiguration(configurationInput: EmailConfigurationInput!): Configuration
+    saveFormEmailConfiguration(configurationInput: FormEmailConfigurationInput!): Configuration
+    saveSendGridConfiguration(configurationInput: SendGridConfigurationInput!): Configuration
+    saveFirebaseConfiguration(configurationInput: FirebaseConfigurationInput!): Configuration
+    saveSentryConfiguration(configurationInput: SentryConfigurationInput!): Configuration
+    saveGoogleApiKeyConfiguration(configurationInput: GoogleApiKeyConfigurationInput!): Configuration
+    saveCloudinaryConfiguration(configurationInput: CloudinaryConfigurationInput!): Configuration
+    saveAmplitudeApiKeyConfiguration(configurationInput: AmplitudeApiKeyConfigurationInput!): Configuration
+    saveGoogleClientIDConfiguration(configurationInput: GoogleClientIDConfigurationInput!): Configuration
+    saveWebConfiguration(configurationInput: WebConfigurationInput!): Configuration
+    saveAppConfigurations(configurationInput: AppConfigurationsInput!): Configuration
+    saveDeliveryRateConfiguration(configurationInput: DeliveryCostConfigurationInput!): Configuration
+    savePaypalConfiguration(configurationInput: PaypalConfigurationInput!): Configuration
+    saveStripeConfiguration(configurationInput: StripeConfigurationInput!): Configuration
+    saveTwilioConfiguration(configurationInput: TwilioConfigurationInput!): Configuration
+    saveCurrencyConfiguration(configurationInput: CurrencyConfigurationInput!): Configuration
     pushToken(token: String): User!
     updateOrderStatus(id: String!, status: String!, reason: String): Order!
     uploadToken(id: String!, pushToken: String!): OwnerData!
@@ -1440,5 +1412,5 @@ input CuisineInput {
     subscriptionDispatcher: Order!
     subscriptionNewMessage(order: ID!): ChatMessageOutput!
   }
-`
-module.exports = typeDefs
+`;
+module.exports = typeDefs;
