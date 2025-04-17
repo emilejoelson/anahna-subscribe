@@ -2,6 +2,10 @@ const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { createServer } = require('http');
+const { WebSocketServer } = require('ws');
+const { useServer } = require('graphql-ws/lib/use/ws');
+const { makeExecutableSchema } = require('@graphql-tools/schema');
 const config = require('./config');
 require('dotenv').config();
 
@@ -9,6 +13,7 @@ require('dotenv').config();
 mongoose.set('strictQuery', true);
 
 const app = express();
+const httpServer = createServer(app);
 
 app.use(cors());
 app.use(express.json());
@@ -31,10 +36,36 @@ if (!schema || !schema.getQueryType) {
   throw new Error('Invalid GraphQL schema: Schema must be a valid GraphQL schema object');
 }
 
+// Create executable schema
+const executableSchema = makeExecutableSchema({
+  typeDefs: schema,
+  resolvers: rootValue
+});
+
+// WebSocket server setup
+const wsServer = new WebSocketServer({
+  server: httpServer,
+  path: '/graphql',
+});
+
+// Use the schema with the WebSocket server
+useServer(
+  {
+    schema: executableSchema,
+    onConnect: async (ctx) => {
+      console.log('Client connected to WebSocket');
+    },
+    onDisconnect: async (ctx) => {
+      console.log('Client disconnected from WebSocket');
+    },
+  },
+  wsServer
+);
+
 app.use(
   '/graphql',
   graphqlHTTP({
-    schema: schema,
+    schema: executableSchema,
     rootValue: rootValue,
     graphiql: true,
     customFormatErrorFn: (error) => {
@@ -62,7 +93,8 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 8001;  // Changed from 4000 to 8001 to match client config
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server is ready at ws://localhost:${PORT}/graphql`);
 });

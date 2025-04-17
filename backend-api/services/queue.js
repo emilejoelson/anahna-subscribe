@@ -4,27 +4,46 @@ const Redis = require('ioredis');
 class QueueService {
   constructor() {
     this.redis = null;
-    if (config.redis.enabled) {
+    if (config.redis.enabled && config.redis.port) {
       try {
         this.redis = new Redis({
           port: config.redis.port,
           host: config.redis.host,
           password: config.redis.password,
-          retryStrategy: () => null // Disable retries
+          retryStrategy: (times) => {
+            if (times > 3) {
+              console.log('Redis connection failed after 3 retries, disabling queue service');
+              return null; // Stop retrying
+            }
+            return Math.min(times * 100, 3000); // Wait up to 3 seconds between retries
+          }
         });
         
         this.redis.on('error', (err) => {
           console.error('Queue service error:', err.message);
-          this.redis = null;
+          if (err.code === 'ECONNREFUSED' || err.code === 'ERR_SOCKET_BAD_PORT') {
+            console.log('Redis connection failed, disabling queue service');
+            this.redis = null;
+          }
+        });
+
+        this.redis.on('connect', () => {
+          console.log('Queue service connected to Redis successfully');
         });
       } catch (error) {
         console.error('Queue service initialization failed:', error.message);
+        this.redis = null;
       }
+    } else {
+      console.log('Queue service disabled: Redis not configured');
     }
   }
 
   async addToQueue(data) {
-    if (!this.redis) return;
+    if (!this.redis) {
+      console.log('Queue service is disabled, skipping queue operation');
+      return;
+    }
     try {
       await this.redis.lpush('orders', JSON.stringify(data));
     } catch (error) {
