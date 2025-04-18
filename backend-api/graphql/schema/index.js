@@ -915,6 +915,7 @@ input RestaurantInput {
     quantityMaximum: Int!
   }
 
+  
   input CouponInput {
     _id: String
     title: String!
