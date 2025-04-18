@@ -16,39 +16,21 @@ class RedisClient {
     try {
       this.client = new Redis({
         port: process.env.REDIS_PORT || 6379,
-        host: process.env.REDIS_HOST || 'localhost',
         password: process.env.REDIS_PASSWORD,
-        maxRetriesPerRequest: null,
-        retryStrategy: (times) => {
-          const delay = Math.min(times * 50, 2000)
-          return delay
-        },
-        reconnectOnError: (err) => {
-          const targetError = 'READONLY'
-          if (err.message.includes(targetError)) {
-            return true
-          }
-          return false
-        }
-      })
-
-      this.client.on('connect', () => {
-        console.log('Successfully connected to Redis')
+        host: process.env.REDIS_HOST || 'localhost',
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => null // Disable retries
       })
 
       this.client.on('error', (err) => {
-        console.error('Redis error:', err)
         if (err.code === 'ECONNREFUSED') {
-          console.log('Redis server not available, will retry connecting')
+          console.log('Redis server not available, disabling Redis')
+          this.enabled = false
+          this.client = null
         }
       })
-
-      this.client.on('ready', () => {
-        console.log('Redis client ready')
-      })
-
     } catch (error) {
-      console.error('Redis initialization failed:', error.message)
+      console.log('Redis initialization failed:', error.message)
       this.enabled = false
     }
   }

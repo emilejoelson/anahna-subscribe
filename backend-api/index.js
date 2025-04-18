@@ -1,14 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const { createHandler } = require('graphql-http/lib/use/express');
-const typeDefs = require('./graphql');
+const { graphqlHTTP } = require('express-graphql');
+const schema = require('./schema');
 const cors = require('cors');
 const { createServer } = require('http');
 const { WebSocketServer } = require('ws');
 const { useServer } = require('graphql-ws/lib/use/ws');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
-const rootValue = require('./resolvers');
+require('dotenv').config();
 
 // Set Mongoose options
 mongoose.set('strictQuery', true);
@@ -31,9 +31,17 @@ mongoose
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.log('MongoDB Connection Error:', err));
 
+// GraphQL setup
+const rootValue = require('./resolvers');
+
+// Validate schema before setting up middleware
+if (!schema || !schema.getQueryType) {
+  throw new Error('Invalid GraphQL schema: Schema must be a valid GraphQL schema object');
+}
+
 // Create executable schema
 const executableSchema = makeExecutableSchema({
-  typeDefs,
+  typeDefs: schema,
   resolvers: rootValue
 });
 
@@ -57,11 +65,30 @@ useServer(
   wsServer
 );
 
-// Set up GraphQL HTTP handler
-app.use('/graphql', createHandler({
-  schema: executableSchema,
-  rootValue: rootValue,
-}));
+app.use(
+  '/graphql',
+  graphqlHTTP({
+    schema: executableSchema,
+    rootValue: rootValue,
+    graphiql: true,
+    customFormatErrorFn: (error) => {
+      console.error('GraphQL Error:', error);
+      const isSchemaError = error.message.includes('GraphQL schema');
+      if (isSchemaError) {
+        return {
+          message: 'Internal server error',
+          type: 'SCHEMA_ERROR',
+          ...(process.env.NODE_ENV === 'development' && { details: error.message })
+        };
+      }
+      return {
+        message: error.message,
+        locations: error.locations,
+        path: error.path
+      };
+    }
+  })
+);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
