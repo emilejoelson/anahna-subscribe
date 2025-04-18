@@ -142,7 +142,17 @@ const typeDefs = gql`
     day: String!
     times: [Timings]
   }
+  type DeliveryUpdateResponse {
+  success: Boolean!
+  message: String!
+  data: RestaurantUpdateData
+}
 
+  type RestaurantUpdateData {
+  _id: ID
+  deliveryBounds: DeliveryBounds
+  location: Coordinates
+}
   type Timings {
     startTime: [String]
     endTime: [String]
@@ -826,24 +836,31 @@ input AmplitudeApiKeyConfigurationInput {
     restaurant: String!
   }
 
-  input RestaurantInput {
-    name: String!
-    username: String
-    password: String
-    image: String
-    logo: String
-    address: String
-    categories: [CategoryInput!]
-    reviews: [ReviewInput!]
-    deliveryTime: Int
-    minimumOrder: Int
-    salesTax: Float
-    shopType: String
-    cuisines: [String]
-    restaurantUrl: String
-    phone: String
-  }
-
+input RestaurantInput {
+  name: String!
+  image: String
+  username: String!
+  password: String!
+  phone: String
+  address: String
+  deliveryTime: String
+  minimumOrder: Float
+  commissionRate: Float
+  tax: Float
+  shopType: String
+  logo: String
+  location: CoordinatesInput
+  cuisines: [String!]!
+  openingTimes: [OpeningTimeInput!]
+}
+  input OpeningTimeInput {
+  day: String!
+  times: [TimeRangeInput!]!
+}
+  input TimeRangeInput {
+  startTime: String!
+  endTime: String!
+}
   input RestaurantProfileInput {
     _id: String
     name: String!
@@ -988,24 +1005,19 @@ input AmplitudeApiKeyConfigurationInput {
   }
 
   type Banner {
-    _id: String!
-    title: String
+    _id: ID!
+    title: String!
     description: String
-    file: String
     action: String
+    file: String
     screen: String
     parameters: String
+    isActive: Boolean
+    createdAt: String!
+    updatedAt: String!
   }
 
-  input BannerInput {
-    _id: String
-    title: String
-    description: String
-    file: String
-    action: String
-    screen: String
-    parameters: String
-  }
+
 
   type FormSubmissionResponse {
     message: String!
@@ -1050,6 +1062,15 @@ input AmplitudeApiKeyConfigurationInput {
     user: ChatUserInput!
   }
 
+ input BannerInput {
+    _id: ID
+    title: String!
+    description: String
+    action: String
+    file: String
+    screen: String
+    parameters: String
+  }
   input CreateOwnerInput {
     name: String!
     email: String!
@@ -1120,8 +1141,31 @@ input AmplitudeApiKeyConfigurationInput {
     read: Boolean!
     createdAt: String!
   }
-
+type DeliveryBounds {
+  type: String!
+  coordinates: [[[Float!]!]!]
+}
+type CircleBounds {
+  radius: Float!
+  center: [Float!]!
+}
+  type RestaurantDeliveryZoneInfo {
+    boundType: String
+    deliveryBounds: DeliveryBounds
+    circleBounds: CircleBounds
+    location: Coordinates
+    address: String
+    city: String
+    postCode: String
+  }
+  type Coordinates {
+    type: String!
+    coordinates: [Float!]!
+}
   type Query {
+    getClonedRestaurants: [Restaurant!]!
+    getRestaurantDeliveryZoneInfo(id: ID!): RestaurantDeliveryZoneInfo
+    banners: [Banner!]!
     withdrawRequests: [WithdrawRequest!]!
     earnings: [Earnings!]!
     categories: [Category!]!
@@ -1177,7 +1221,6 @@ input AmplitudeApiKeyConfigurationInput {
     ): DashboardSales!
     coupons: [Coupon!]!
     cuisines: [Cuisine!]!
-    banners: [Banner!]!
     bannerActions: [String!]!
     taxes: Taxation!
     tips: Tipping!
@@ -1208,7 +1251,7 @@ input AmplitudeApiKeyConfigurationInput {
     riderCompletedOrders: [Order!]
     restaurant(id: String, slug: String): Restaurant!
     restaurantPreview(id: String, slug: String): RestaurantPreview!
-    restaurants: [Restaurant!]
+    restaurants: [Restaurant!]!
     restaurantsPreview: [RestaurantPreview!]
     restaurantByOwner(id: String): OwnerData!
     offers: [Offer]
@@ -1247,8 +1290,31 @@ input AmplitudeApiKeyConfigurationInput {
     ): [RestaurantPreview!]
     lastOrderCreds: DemoCredentails
   }
-
+input BussinessDetailsInput {
+  bankName: String
+  accountName: String
+  accountCode: String
+  accountNumber: String
+  bussinessRegNo: String
+  companyRegNo: String
+  taxRate: Float
+}
   type Mutation {
+      updateRestaurantBussinessDetails(
+      id: String!
+      bussinessDetails: BussinessDetailsInput
+    ): DeliveryUpdateResponse
+     updateRestaurantDelivery(
+      id: ID!
+      minDeliveryFee: Float
+      deliveryDistance: Float
+      deliveryFee: Float
+    ): DeliveryUpdateResponse
+    duplicateRestaurant(id: String!, owner: String!): Restaurant!
+    hardDeleteRestaurant(id: String!): Boolean!
+    createBanner(bannerInput: BannerInput!): Banner!
+    editBanner(bannerInput: BannerInput!): Banner!
+    deleteBanner(id: String!): Boolean!
     createOwner(input: CreateOwnerInput!): OwnerAuthData!
     createWithdrawRequest(amount: Float!): WithdrawRequest!
     updateWithdrawReqStatus(id: ID!, status: String!): UpdateWithdrawResponse!
@@ -1357,9 +1423,6 @@ input AmplitudeApiKeyConfigurationInput {
     editCuisine(cuisineInput: CuisineInput!): Cuisine!
     deleteCuisine(id: String!): String!
     cuisine(cuisine: String!): Cuisine!
-    createBanner(bannerInput: BannerInput!): Banner!
-    editBanner(bannerInput: BannerInput!): Banner!
-    deleteBanner(id: String!): String!
     banner(banner: String!): Banner!
     createTipping(tippingInput: TippingInput!): Tipping!
     editTipping(tippingInput: TippingInput!): Tipping!
