@@ -899,8 +899,8 @@ export const currenciesSymbol = [
   },
   {
     currency: 'MAD',
-    label: 'د.م.',
-    code: 'د.م.',
+    label: 'DH',
+    code: 'DH',
   },
   {
     currency: 'MDL',
