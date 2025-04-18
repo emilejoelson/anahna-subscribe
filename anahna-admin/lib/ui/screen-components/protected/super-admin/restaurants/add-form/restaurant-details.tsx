@@ -224,7 +224,7 @@ export default function RestaurantDetailsForm({
           {/* <div className="flex flex-col mb-2">
             <span className="text-lg">Add Restaurant</span>
           </div>
- */}
+          */}
           <div>
             <Formik
               initialValues={initialValues}
