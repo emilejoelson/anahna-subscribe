@@ -53,7 +53,8 @@ export interface IGoogleApiForm {
 
 export interface ICloudinaryForm {
   cloudinaryUploadUrl: string | undefined;
-  cloudinaryApiKey: string | undefined;
+  // cloudinaryApiKey: string | undefined;
+  cloudinaryUploadPreset: string | undefined;
 }
 
 export interface IAmplitudeForm {

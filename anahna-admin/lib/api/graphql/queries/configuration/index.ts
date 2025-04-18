@@ -35,6 +35,7 @@ export const GET_CONFIGURATION = gql`
       googleApiKey
       cloudinaryUploadUrl
       cloudinaryApiKey
+      cloudinaryUploadPreset
       webAmplitudeApiKey
       appAmplitudeApiKey
       webClientID

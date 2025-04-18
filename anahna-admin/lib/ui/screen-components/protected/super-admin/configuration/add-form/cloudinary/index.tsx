@@ -28,12 +28,15 @@ import { useMutation } from '@apollo/client';
 const CloudinaryAddForm = () => {
   const { showToast } = useToast();
 
-  const { CLOUDINARY_UPLOAD_URL, CLOUDINARY_API_KEY } = useConfiguration();
+  const { CLOUDINARY_UPLOAD_URL, 
+    // CLOUDINARY_API_KEY,
+     CLOUDINARY_UPLOAD_PRESET } = useConfiguration();
 
   // Set initial values
   const initialValues = {
     cloudinaryUploadUrl: CLOUDINARY_UPLOAD_URL,
-    cloudinaryApiKey: CLOUDINARY_API_KEY,
+    // cloudinaryApiKey: CLOUDINARY_API_KEY,
+    cloudinaryUploadPreset: CLOUDINARY_UPLOAD_PRESET,
   };
 
   const [mutate, { loading: mutationLoading }] = useMutation(
@@ -48,7 +51,8 @@ const CloudinaryAddForm = () => {
       variables: {
         configurationInput: {
           cloudinaryUploadUrl: values.cloudinaryUploadUrl,
-          cloudinaryApiKey: values.cloudinaryApiKey,
+          // cloudinaryApiKey: values.cloudinaryApiKey,
+          cloudinaryUploadPreset: values.cloudinaryUploadPreset,
         },
       },
       onCompleted: () => {
@@ -109,7 +113,7 @@ const CloudinaryAddForm = () => {
                     }}
                   />
 
-                  <CustomPasswordTextField
+                  {/* <CustomPasswordTextField
                     placeholder="Cloudinary API Key"
                     feedback={false}
                     name="cloudinaryApiKey"
@@ -120,6 +124,21 @@ const CloudinaryAddForm = () => {
                     style={{
                       borderColor:
                         errors.cloudinaryApiKey && touched.cloudinaryApiKey
+                          ? 'red'
+                          : '',
+                    }}
+                  /> */}
+                  <CustomPasswordTextField
+                    placeholder="Cloudinary Upload Preset"
+                    feedback={false}
+                    name="cloudinaryUploadPreset"
+                    maxLength={255}
+                    value={values.cloudinaryUploadPreset}
+                    showLabel={true}
+                    onChange={handleChange}
+                    style={{
+                      borderColor:
+                        errors.cloudinaryUploadPreset && touched.cloudinaryUploadPreset
                           ? 'red'
                           : '',
                     }}

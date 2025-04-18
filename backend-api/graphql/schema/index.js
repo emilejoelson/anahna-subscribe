@@ -260,6 +260,7 @@ const typeDefs = gql`
     googleApiKey: String
     cloudinaryUploadUrl: String
     cloudinaryApiKey: String
+    cloudinaryUploadPreset: String
     webAmplitudeApiKey: String
     appAmplitudeApiKey: String
     webClientID: String
