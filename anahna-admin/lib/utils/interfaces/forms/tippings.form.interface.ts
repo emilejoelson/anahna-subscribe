@@ -12,9 +12,9 @@ export interface ITippingErrors {
 
 export interface ITippingResponse {
   tips: {
-    __typename: 'Tipping';
-    _id: string;
-    tipVariations: number[];
-    enabled: boolean;
+      __typename: 'Tipping';
+      _id: string;
+      tipVariations: number[];
+      enabled: boolean;
   };
 }

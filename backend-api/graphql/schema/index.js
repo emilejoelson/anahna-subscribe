@@ -515,10 +515,12 @@ const typeDefs = gql`
     enabled: Boolean!
   }
   type Tipping {
-    _id: String!
-    tipVariations: [Float]
-    enabled: Boolean!
-  }
+  _id: ID!
+  tipVariations: [Float!]!
+  enabled: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
 
   type OfferInfo {
     _id: String!
@@ -913,17 +915,18 @@ input RestaurantInput {
     quantityMaximum: Int!
   }
 
+  
   input CouponInput {
     _id: String
     title: String!
     discount: Float!
     enabled: Boolean
   }
-  input TippingInput {
-    _id: String
-    tipVariations: [Float]
-    enabled: Boolean
-  }
+input TippingInput {
+  _id: ID
+  tipVariations: [Float!]
+  enabled: Boolean
+}
   input TaxationInput {
     _id: String
     taxationCharges: Float
@@ -1223,7 +1226,7 @@ type CircleBounds {
     cuisines: [Cuisine!]!
     bannerActions: [String!]!
     taxes: Taxation!
-    tips: Tipping!
+    tips: Tipping
     nearByRestaurants(
       latitude: Float
       longitude: Float
@@ -1315,6 +1318,7 @@ input BussinessDetailsInput {
     createBanner(bannerInput: BannerInput!): Banner!
     editBanner(bannerInput: BannerInput!): Banner!
     deleteBanner(id: String!): Boolean!
+    deleteTipping(_id: ID!): Boolean!
     createOwner(input: CreateOwnerInput!): OwnerAuthData!
     createWithdrawRequest(amount: Float!): WithdrawRequest!
     updateWithdrawReqStatus(id: ID!, status: String!): UpdateWithdrawResponse!
