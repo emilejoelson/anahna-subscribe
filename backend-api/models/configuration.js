@@ -85,6 +85,9 @@ const configurationSchema = new Schema({
   cloudinaryApiKey: {
     type: String,
   },
+  cloudinaryUploadPreset: {
+    type: String,
+  },
   webAmplitudeApiKey: {
     type: String,
   },

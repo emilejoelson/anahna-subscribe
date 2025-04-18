@@ -99,7 +99,8 @@ function CustomUploadImageComponent({
             await uploadImageToCloudinary(
               fileReader.result as string,
               uploadURL ?? '',
-              configuration?.cloudinaryApiKey ?? ''
+              // configuration?.cloudinaryApiKey ?? '',
+              configuration?.cloudinaryUploadPreset ?? '',
             )
               .then((url) => {
                 console.log(':rocket: ~ .then ~ url:', url);
@@ -149,8 +150,9 @@ function CustomUploadImageComponent({
     [
       name,
       onSetImageUrl,
-      configuration?.cloudinaryApiKey,
+      // configuration?.cloudinaryApiKey,
       configuration?.cloudinaryUploadUrl,
+      configuration?.cloudinaryUploadPreset,
       showToast,
       title,
       // validateImage,

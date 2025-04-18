@@ -93,6 +93,7 @@ export const SAVE_CLOUDINARY_CONFIGURATION = gql`
       _id
       cloudinaryUploadUrl
       cloudinaryApiKey
+      cloudinaryUploadPreset
     }
   }
 `;

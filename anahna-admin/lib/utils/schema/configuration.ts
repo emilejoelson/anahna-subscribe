@@ -53,7 +53,8 @@ export const CloudinaryValidationSchema = Yup.object().shape({
   cloudinaryUploadUrl: Yup.string().required(
     'Cloudinary Upload URL is required'
   ),
-  cloudinaryApiKey: Yup.string().required('Cloudinary API Key is required'),
+  // cloudinaryApiKey: Yup.string().required('Cloudinary API Key is required'),
+  cloudinaryUploadPreset: Yup.string().required('Cloudinary Preset is required'),
 });
 
 export const AmplitudeValidationSchema = Yup.object().shape({

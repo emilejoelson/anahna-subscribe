@@ -55,7 +55,8 @@ export const useConfiguration = () => {
   const RESTAURANT_APP_SENTRY_URL = configuration?.restaurantAppSentryUrl;
   const RIDER_APP_SENTRY_URL = configuration?.riderAppSentryUrl;
   const CLOUDINARY_UPLOAD_URL = configuration?.cloudinaryUploadUrl;
-  const CLOUDINARY_API_KEY = configuration?.cloudinaryApiKey;
+  // const CLOUDINARY_API_KEY = configuration?.cloudinaryApiKey;
+  const CLOUDINARY_UPLOAD_PRESET = configuration?.cloudinaryUploadPreset;
   const FIREBASE_AUTH_DOMAIN = configuration?.authDomain;
   const FIREBASE_KEY = configuration?.firebaseKey;
   const FIREBASE_PROJECT_ID = configuration?.projectId;
@@ -115,7 +116,8 @@ export const useConfiguration = () => {
 
     // CLOUDINARY
     CLOUDINARY_UPLOAD_URL,
-    CLOUDINARY_API_KEY,
+    // CLOUDINARY_API_KEY,
+    CLOUDINARY_UPLOAD_PRESET,
 
     // GOOGLE CLIENT
     GOOGLE_CLIENT_ID,

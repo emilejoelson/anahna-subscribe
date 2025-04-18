@@ -37,7 +37,8 @@ export interface IConfiguration {
   projectId?: string;
   dashboardSentryUrl?: string;
   cloudinaryUploadUrl?: string;
-  cloudinaryApiKey?: string;
+  // cloudinaryApiKey?: string;
+  cloudinaryUploadPreset?: string;
   vapidKey?: string;
   isPaidVersion?: boolean;
   email?: string;
