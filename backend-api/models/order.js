@@ -5,7 +5,7 @@ const orderSchema = new Schema({
   orderId: {
     type: String,
     required: true,
-    unique: true
+    // unique: true
   },
   user: {
     type: Schema.Types.ObjectId,

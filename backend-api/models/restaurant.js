@@ -7,8 +7,8 @@ const openingTimeSchema = new Schema({
     required: true
   },
   times: [{
-    startTime: String,
-    endTime: String
+    startTime: [String],// ["11", "00"] <=> 11:00
+    endTime: [String]
   }]
 });
 
@@ -36,7 +36,10 @@ const deliveryBoundsSchema = new Schema({
     enum: ['Polygon'],
     default: 'Polygon'
   },
-  coordinates: [[[Number]]]
+  coordinates: {
+    type: [[[Number]]],
+    default: [ [0,0], [0,1], [1,1], [1,0], [0,0] ],// polygon coordinates
+  }
 });
 
 const circleBoundsSchema = new Schema({
@@ -103,40 +106,25 @@ const restaurantSchema = new Schema({
     // required: true
   },
   location: {
-    type: {
-      type: String,
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      default: [0, 0]
-    }
+    type: coordinatesSchema,
+    index: '2dsphere'
   },
-  deliveryBounds: {
-    type: {
-      type: String,
-      enum: ['Polygon'],
-      default: 'Polygon'
-    },
-    coordinates: {
-      type: [[[Number]]],
-      default: [ [0,0], [0,1], [1,1], [1,0], [0,0] ],// polygon coordinates
-    }
-  },
+  deliveryBounds: deliveryBoundsSchema,
   address: String,
   orderPrefix: String,
   orderId: [{
     type: Schema.Types.ObjectId,
-    ref: 'Order'
+    ref: 'Order',
+    required: false,
   }],
   slug: String,
   deliveryTime: {
     type: Number,
-    default: 30
+    // default: 30
   },
   minimumOrder: {
     type: Number,
-    default: 30
+    // default: 30
   },
   sections: {
     type: [String],
@@ -151,7 +139,10 @@ const restaurantSchema = new Schema({
     type: Boolean,
     default: true
   },
-  stripeDetailsSubmitted: String,
+  stripeDetailsSubmitted: {
+    type: Boolean,
+    default: false
+  },
   commissionRate: Number,
   notificationToken: String,
   enableNotification: String,
@@ -172,36 +163,10 @@ const restaurantSchema = new Schema({
   reviewAverage: Number,
   restaurantUrl: String,
   tax: Number,
-  openingTimes: [{
-    day: {
-      type: String,
-      required: true,
-      enum: ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
-    },
-    times: [{
-      startTime: [String], // 00:00
-      endTime: [String]  //
-    }]
-  }],
-  deliveryInfo: {
-    minDeliveryFee: {
-      type: Number,
-      default: 0
-    },
-    deliveryDistance: {
-      type: Number,
-      default: 0
-      // required: true
-    },
-    deliveryFee: {
-      type: Number,
-      default: 0
-      // required: true
-    }
-  },
+  openingTimes: [openingTimeSchema],
+  deliveryInfo: deliveryInfoSchema,
   boundType: {
     type: String,
-    default: 'circle', // or 'polygon'
   },
   city: {
     type: String,
@@ -209,12 +174,20 @@ const restaurantSchema = new Schema({
   postCode: {
     type: String,
   },
-  circleBounds: {
-    radius: {
-      type: Number,
-      default: 0
-    }
+  circleBounds: circleBoundsSchema,
+  bussinessDetails: bussinessDetailsSchema,
+  currentWalletAmount: {
+    type: Number,
+    default: 0
   },
+  totalWalletAmount: {
+    type: Number,
+    default: 0
+  },
+  withdrawnWalletAmount: {
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true
 });

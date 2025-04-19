@@ -9,7 +9,7 @@ export const OWNER_LOGIN = gql`
       userType
       restaurants {
         _id
-        orderId
+        orderId{ _id }
         name
         image
         address

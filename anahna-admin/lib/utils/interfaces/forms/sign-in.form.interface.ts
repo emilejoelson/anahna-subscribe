@@ -10,7 +10,7 @@ export interface ISignInFormErrors {
 
 export interface ISignInOwnerRestaurants {
   _id: string;
-  orderId: string;
+  orderId: string[];
   name: string;
   image: string;
   address: string;

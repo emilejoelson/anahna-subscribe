@@ -212,7 +212,16 @@ module.exports = {
     },
     deleteRestaurant: async (_, { id }) => {
       try {
-        const restaurant = await Restaurant.findByIdAndUpdate(id, { isActive: false }, { new: true });
+        const restaurant = await Restaurant.findByIdAndUpdate(id, 
+          // { isActive: false }, 
+          { new: true });
+        // update status
+        if (restaurant.isActive) {
+          restaurant.isActive = false
+        } else {
+          restaurant.isActive = true
+        }
+        await restaurant.save()
         if (!restaurant) {
           throw new Error('Restaurant not found');
         }
@@ -235,6 +244,7 @@ module.exports = {
     },
     editRestaurant: async (_, { restaurant: restaurantInput }) => {
       try {
+        log('editRestaurant', restaurantInput)
         const restaurant = await Restaurant.findByIdAndUpdate(restaurantInput._id, { ...restaurantInput }, { new: true });
         if (!restaurant) {
           throw new Error('Restaurant not found');
@@ -272,14 +282,16 @@ module.exports = {
     },
     updateDeliveryBoundsAndLocation: async (_, { id, boundType, bounds, circleBounds, location, address, postCode, city }) => {
       try {
-        const updateData = { location, address, postCode, city };
+        const updateData = { boundType, location, address, postCode, city };
         if (boundType === 'polygon' && bounds) {
           updateData.deliveryBounds = { coordinates: bounds };
           updateData.circleBounds = null;
+          updateData.boundType = 'polygon';
         } else if (boundType === 'circle' && circleBounds) {
           updateData.circleBounds = circleBounds;
           updateData.deliveryBounds = null;
           updateData.location = { type: 'Point', coordinates: circleBounds.center };
+          updateData.boundType = 'circle';
         } else {
           updateData.deliveryBounds = null;
           updateData.circleBounds = null;
@@ -330,50 +342,85 @@ module.exports = {
         throw err
       }
     },
-    updateDeliveryBoundsAndLocation: async(_, args) => {
-      console.log('updateDeliveryBoundsAndLocation')
-      const { id, boundType, bounds: newBounds, circleBounds, location: newLocation, 
-              address, postCode, city  } = args
+    // updateDeliveryBoundsAndLocation: async(_, args) => {
+    //   console.log('updateDeliveryBoundsAndLocation')
+    //   const { id, boundType, bounds: newBounds, circleBounds, location: newLocation, 
+    //           address, postCode, city  } = args
+    //   try {
+    //     const restaurant = await Restaurant.findById(id)
+    //     if (!restaurant) throw new Error('Restaurant does not exists')
+    //     const location = new Point({
+    //       type: 'Point',
+    //       coordinates: [newLocation.longitude, newLocation.latitude]
+    //     })
+    //     console.log('Location: ', location)
+    //     const zone = await Zone.findOne({
+    //       location: { $geoIntersects: { $geometry: location } },
+    //       isActive: true
+    //     })
+    //     console.log('Zone: ', zone)
+    //     if (!zone) {
+    //       return {
+    //         success: false,
+    //         message: "restaurant's location doesn't lie in any delivery zone"
+    //       }
+    //     }
+    //     const updated = await Restaurant.findByIdAndUpdate(
+    //       id,
+    //       {
+    //         deliveryBounds: { type: 'Polygon', coordinates: newBounds },
+    //         circleBounds: { radius: circleBounds.radius },
+    //         location,
+    //         boundType,
+    //         address,
+    //         postCode,
+    //         city,
+    //       },
+    //       { new: true }
+    //     );
+    //     if (!updatedRestaurant) {
+    //       return { success: false, message: 'Restaurant not found' };
+    //     }
+    //     return { success: true, message: 'Restaurant business details updated successfully', data: { _id: updatedRestaurant._id } };
+    //   } catch (error) {
+    //     console.error('Error updating restaurant business details:', error);
+    //     return { success: false, message: `Failed to update: ${error.message}` };
+    //   }
+    // }
+    updateTimings: async (_, { id, openingTimes }, { models }) => {
       try {
-        const restaurant = await Restaurant.findById(id)
-        if (!restaurant) throw new Error('Restaurant does not exists')
-        const location = new Point({
-          type: 'Point',
-          coordinates: [newLocation.longitude, newLocation.latitude]
-        })
-        console.log('Location: ', location)
-        const zone = await Zone.findOne({
-          location: { $geoIntersects: { $geometry: location } },
-          isActive: true
-        })
-        console.log('Zone: ', zone)
-        if (!zone) {
-          return {
-            success: false,
-            message: "restaurant's location doesn't lie in any delivery zone"
-          }
+        if (!openingTimes || openingTimes.length === 0) {
+          throw new Error('openingTimes required');
         }
-        const updated = await Restaurant.findByIdAndUpdate(
+    
+        const cleanedOpeningTimes = openingTimes.map(timing => ({
+          day: timing.day,
+          times: timing.times.map(time => ({
+            startTime: Array.isArray(time.startTime) ? time.startTime : [],
+            endTime: Array.isArray(time.endTime) ? time.endTime : []
+          }))
+        }));
+    
+        const updatedRestaurant = await Restaurant.findByIdAndUpdate(
           id,
-          {
-            deliveryBounds: { type: 'Polygon', coordinates: newBounds },
-            circleBounds: { radius: circleBounds.radius },
-            location,
-            boundType,
-            address,
-            postCode,
-            city,
-          },
+          { $set: { openingTimes: cleanedOpeningTimes } },
           { new: true }
         );
+    
         if (!updatedRestaurant) {
-          return { success: false, message: 'Restaurant not found' };
+          throw new Error('Restaurant not found');
         }
-        return { success: true, message: 'Restaurant business details updated successfully', data: { _id: updatedRestaurant._id } };
+    
+        return {
+          _id: updatedRestaurant._id.toString(),
+          openingTimes: updatedRestaurant.openingTimes
+        };
+    
       } catch (error) {
-        console.error('Error updating restaurant business details:', error);
-        return { success: false, message: `Failed to update: ${error.message}` };
+        console.error('Error in updateTimings:', error);
+        throw new Error(`Update Timing Error: ${error.message}`);
       }
     }
+    
   }
 };

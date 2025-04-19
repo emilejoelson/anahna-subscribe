@@ -144,6 +144,11 @@ const typeDefs = gql`
     city: String
     postCode: String
     circleBounds: RadiusCircle
+
+    bussinessDetails: BussinessDetails
+    currentWalletAmount: Float
+    totalWalletAmount: Float
+    withdrawnWalletAmount: Float
   }
 
   type RadiusCircle {
@@ -159,11 +164,27 @@ const typeDefs = gql`
     times: [Timings]
   }
 
+  type BussinessDetails {
+    bankName: String
+    accountName: String
+    accountCode: String
+    accountNumber: String
+    bussinessRegNo: String
+    companyRegNo: String
+    taxRate: Float
+  }
+  
+  type DeliveryUpdateResponse {
+    success: Boolean!
+    message: String!
+    data: RestaurantUpdateData
+  }
+
   type RestaurantUpdateData {
-  _id: ID
-  deliveryBounds: DeliveryBounds
-  location: Coordinates
-}
+    _id: ID
+    deliveryBounds: DeliveryBounds
+    location: Coordinates
+  }
   type Timings {
     startTime: [String]
     endTime: [String]
@@ -1170,14 +1191,14 @@ input TippingInput {
     read: Boolean!
     createdAt: String!
   }
-type DeliveryBounds {
-  type: String!
-  coordinates: [[[Float!]!]!]
-}
-type CircleBounds {
-  radius: Float!
-  center: [Float!]!
-}
+  type DeliveryBounds {
+    type: String!
+    coordinates: [[[Float!]!]!]
+  }
+  type CircleBounds {
+    radius: Float!
+    center: [Float!]!
+  }
   type RestaurantDeliveryZoneInfo {
     boundType: String
     deliveryBounds: DeliveryBounds
@@ -1193,7 +1214,7 @@ type CircleBounds {
 }
   type Query {
     getClonedRestaurants: [Restaurant!]!
-    getRestaurantDeliveryZoneInfo(id: ID!): RestaurantDeliveryZoneInfo
+    
     banners: [Banner!]!
     withdrawRequests: [WithdrawRequest!]!
     earnings: [Earnings!]!
@@ -1283,6 +1304,7 @@ type CircleBounds {
     restaurants: [Restaurant!]!
     restaurantsPreview: [RestaurantPreview!]
     restaurantByOwner(id: String): OwnerData!
+    
     getRestaurantDeliveryZoneInfo(id: ID!): Restaurant!
     offers: [Offer]
     sections: [Section]

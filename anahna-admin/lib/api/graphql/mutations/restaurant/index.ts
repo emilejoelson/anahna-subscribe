@@ -91,7 +91,7 @@ export const EDIT_RESTAURANT = gql`
   mutation EditRestaurant($restaurantInput: RestaurantProfileInput!) {
     editRestaurant(restaurant: $restaurantInput) {
       _id
-      orderId
+      orderId{ _id }
       orderPrefix
       name
       phone
@@ -140,7 +140,7 @@ export const DUPLICATE_RESTAURANT = gql`
         isActive
       }
       shopType
-      orderId
+      orderId{ _id }
       logo
       password
       location {

@@ -129,7 +129,7 @@ export const GET_RESTAURANT_PROFILE = gql`
   query Restaurant($id: String) {
     restaurant(id: $id) {
       _id
-      orderId
+      orderId{ _id }
       orderPrefix
       slug
       name
