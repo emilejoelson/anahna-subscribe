@@ -99,7 +99,7 @@ const typeDefs = gql`
 
   type Restaurant {
     _id: ID!
-    orderId: Int!
+    unique_restaurant_id: String
     orderPrefix: String
     name: String!
     image: String
@@ -107,6 +107,7 @@ const typeDefs = gql`
     address: String
     location: Point
     categories: [Category!]
+    orderId: [Order]
     options: [Option!]
     addons: [Addon!]
     reviewData: ReviewData
@@ -123,7 +124,7 @@ const typeDefs = gql`
     slug: String
     stripeDetailsSubmitted: Boolean
     commissionRate: Float
-    owner: Owner
+    owner: OwnerData
     deliveryBounds: Polygon
     tax: Float
     notificationToken: String
@@ -136,6 +137,21 @@ const typeDefs = gql`
     reviewAverage: Float
     restaurantUrl: String
     phone: String
+    salesTax: Float
+    deliveryInfo: DeliveryInfo
+
+    boundType: String
+    city: String
+    postCode: String
+    circleBounds: RadiusCircle
+  }
+
+  type RadiusCircle {
+    radius: Float
+  }
+
+  input CircleBoundsInput {
+    radius: Float
   }
 
   type OpeningTimes {
@@ -395,7 +411,17 @@ const typeDefs = gql`
 
   type OwnerData {
     _id: ID!
+    unique_id: String
     email: String!
+    password: String
+    name: String
+    image: String
+    firstName: String
+    lastName: String
+    phoneNumber: String
+    isActive: Boolean
+    plainPassword: String
+
     userType: String!
     restaurants: [Restaurant]!
     pushToken: String
@@ -581,7 +607,13 @@ const typeDefs = gql`
   }
 
   type Point {
-    coordinates: [String!]
+    coordinates: [Float!]
+  }
+  
+  type DeliveryInfo {
+    minDeliveryFee: Float!
+    deliveryDistance: Float!
+    deliveryFee: Float!
   }
 
   type Zone {
@@ -803,6 +835,11 @@ input AmplitudeApiKeyConfigurationInput {
     _id: String
     email: String
     password: String
+    image: String
+    name: String
+    firstName: String
+    lastName: String
+    phoneNumber: String
   }
 
   input ReviewInput {
@@ -828,20 +865,21 @@ input AmplitudeApiKeyConfigurationInput {
 
   input RestaurantInput {
     name: String!
-    username: String
-    password: String
+    address: String
+    phone: String
     image: String
     logo: String
-    address: String
-    categories: [CategoryInput!]
-    reviews: [ReviewInput!]
     deliveryTime: Int
     minimumOrder: Int
-    salesTax: Float
+    username: String
+    password: String
     shopType: String
+    salesTax: Float
     cuisines: [String]
+
+    categories: [CategoryInput!]
+    reviews: [ReviewInput!]
     restaurantUrl: String
-    phone: String
   }
 
   input RestaurantProfileInput {
@@ -1211,6 +1249,7 @@ input AmplitudeApiKeyConfigurationInput {
     restaurants: [Restaurant!]
     restaurantsPreview: [RestaurantPreview!]
     restaurantByOwner(id: String): OwnerData!
+    getRestaurantDeliveryZoneInfo(id: ID!): Restaurant!
     offers: [Offer]
     sections: [Section]
     vendors: [OwnerData]
@@ -1401,8 +1440,13 @@ input AmplitudeApiKeyConfigurationInput {
     updateCommission(id: String!, commissionRate: Float!): Restaurant!
     updateDeliveryBoundsAndLocation(
       id: ID!
+      boundType: String!
       bounds: [[[Float!]]]
+      circleBounds: CircleBoundsInput
       location: CoordinatesInput!
+      address: String
+      postCode: String
+      city: String
     ): RestaurantResponse!
     saveNotificationTokenWeb(token: String!): SaveNotificationTokenWebResponse!
     sendChatMessage(

@@ -22,7 +22,9 @@ export const CREATE_RESTAURANT = gql`
         isActive
       }
       shopType
-      orderId
+      orderId{
+        _id
+      }
       logo
       password
       location {

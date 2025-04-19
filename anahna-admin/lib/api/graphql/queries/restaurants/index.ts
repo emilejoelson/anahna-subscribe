@@ -69,7 +69,9 @@ export const GET_RESTAURANTS_BY_OWNER = gql`
       restaurants {
         unique_restaurant_id
         _id
-        orderId
+        orderId {
+          _id
+        }
         orderPrefix
         name
         slug

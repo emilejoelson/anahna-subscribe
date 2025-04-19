@@ -35,6 +35,7 @@ const {
   sendNotificationToUser,
   sendNotificationToRider
 } = require('../helpers/notifications')
+const bcrypt = require('bcryptjs')
 
 module.exports = {
   Query: {
@@ -176,6 +177,24 @@ module.exports = {
         const id = args.id || req.userId
         const owner = await Owner.findById(id)
         return transformOwner(owner)
+      } catch (e) {
+        throw e
+      }
+    },
+    getRestaurantDeliveryZoneInfo: async(_, args, { req }) => {
+      console.log('getRestaurantDeliveryZoneInfo')
+      try {
+        const id = args.id 
+        const restaurant = await Restaurant.findById(id)
+        return {
+          boundType: restaurant.boundType,
+          deliveryBounds: restaurant.deliveryBounds,
+          location: restaurant.location,
+          circleBounds: restaurant.circleBounds,
+          address: restaurant.address,
+          city: restaurant.city,
+          postCode: restaurant.postCode,
+        }
       } catch (e) {
         throw e
       }
@@ -602,7 +621,7 @@ module.exports = {
     createRestaurant: async(_, args, { req }) => {
       console.log('createRestanrant', args)
       try {
-        if (!req.userId) throw new Error('Unauthenticated')
+        // if (!req.userId) throw new Error('Unauthenticated')
         const restaurantExists = await Restaurant.exists({
           name: { $regex: new RegExp('^' + args.restaurant.name + '$', 'i') }
         })
@@ -610,11 +629,15 @@ module.exports = {
           throw Error('Restaurant by this name already exists')
         }
         const owner = await Owner.findById(args.owner)
+        console.log('owner', owner);
+        
         if (!owner) throw new Error('Owner does not exist')
         const orderPrefix = randomstring.generate({
           length: 5,
           capitalization: 'uppercase'
         })
+
+        const hashedPassword = await bcrypt.hash(args.restaurant.password, 12)
 
         const restaurant = new Restaurant({
           name: args.restaurant.name,
@@ -622,14 +645,17 @@ module.exports = {
           image: args.restaurant.image,
           logo: args.restaurant.logo,
           orderPrefix: orderPrefix,
+          isActive: true,
+          deliveryTime: args.restaurant.deliveryTime,
+          minimumOrder: args.restaurant.minimumOrder,
           slug: args.restaurant.name.toLowerCase().split(' ').join('-'),
           username: args.restaurant.username,
-          password: args.restaurant.password,
+          password: hashedPassword,
           owner: args.owner,
-          tax: args.salesTax,
+          tax: args.restaurant.salesTax,
           cuisines: args.restaurant.cuisines ?? [],
           shopType: args.restaurant.shopType || SHOP_TYPE.RESTAURANT, //  default value 'restaurant' for backward compatibility
-          restaurantUrl: args.restaurant.restaurantUrl,
+          // restaurantUrl: args.restaurant.restaurantUrl,
           phone: args.restaurant.phone
         })
         console.log('New Restaurant: ', restaurant)
@@ -637,7 +663,16 @@ module.exports = {
         const result = await restaurant.save()
         owner.restaurants.push(result.id)
         await owner.save()
-        return transformRestaurant(result)
+        return {
+          ...result._doc,
+          _id: result.id,
+          owner: {
+            _id: owner._id,
+            email: owner.email,
+            isActive: owner.isActive
+          },
+        }
+        // return transformRestaurant(result)
       } catch (err) {
         throw err
       }
@@ -900,7 +935,8 @@ module.exports = {
     },
     updateDeliveryBoundsAndLocation: async(_, args) => {
       console.log('updateDeliveryBoundsAndLocation')
-      const { id, bounds: newBounds, location: newLocation } = args
+      const { id, boundType, bounds: newBounds, circleBounds, location: newLocation, 
+              address, postCode, city  } = args
       try {
         const restaurant = await Restaurant.findById(id)
         if (!restaurant) throw new Error('Restaurant does not exists')
@@ -924,7 +960,12 @@ module.exports = {
           id,
           {
             deliveryBounds: { type: 'Polygon', coordinates: newBounds },
-            location
+            circleBounds: { radius: circleBounds.radius },
+            location,
+            boundType,
+            address,
+            postCode,
+            city,
           },
           { new: true }
         )
