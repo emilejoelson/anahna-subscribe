@@ -210,12 +210,14 @@ const categoryFoods = async foods => {
 };
 
 const transformCategory = async category => {
+  if (!category) return null;
+  const now = new Date().toISOString();
   return {
     ...category._doc,
     _id: category.id,
     foods: categoryFoods.bind(this, category.foods),
-    createdAt: dateToString(category._doc.createdAt),
-    updatedAt: dateToString(category._doc.updatedAt)
+    createdAt: category._doc.createdAt ? dateToString(category._doc.createdAt) : now,
+    updatedAt: category._doc.updatedAt ? dateToString(category._doc.updatedAt) : now
   };
 };
 
@@ -273,14 +275,29 @@ const transformMinimalRestaurants = async restaurants => {
 const transformRestaurant = async restaurant => {
   return {
     ...restaurant._doc,
-    categories: populateCategories.bind(this, restaurant.categories),
+    _id: restaurant.id,
+    categories: restaurant.categories.map(category => ({
+      _id: category._id,
+      title: category.title,
+      description: category.description,
+      image: category.image,
+      subCategories: category.subCategories.map(sub => ({
+        _id: sub._id,
+        title: sub.title,
+        description: sub.description,
+        isActive: sub.isActive
+      })),
+      foods: categoryFoods.bind(this, category.foods),
+      isActive: category.isActive,
+      createdAt: dateToString(category.createdAt),
+      updatedAt: dateToString(category.updatedAt)
+    })),
     options: populateOptions.bind(this, restaurant.options),
     addons: populateAddons.bind(this, restaurant.addons),
     reviewData: populateReviewsDetail.bind(this, restaurant.id),
-    zone: null, // remove this when zone revamp is done all the queries in apps, web are updated
+    zone: null,
     owner: restaurant.owner ? populateOwner.bind(this, restaurant.owner) : null,
-    shopType: restaurant.shopType || SHOP_TYPE.RESTAURANT,
-    _id: restaurant.id
+    shopType: restaurant.shopType || SHOP_TYPE.RESTAURANT
   };
 };
 

@@ -53,7 +53,8 @@ const rootResolver = {
     ...countries.Query,
     ...cuisine.Query,
     ...banner.Query,
-    ...demo.Query
+    ...demo.Query,
+    ...categoryResolver.Query
   },
   Mutation: {
     ...dashboardResolver.Mutation,

@@ -78,32 +78,49 @@ const restaurantSchema = new Schema({
   image: String,
   logo: String,
   phone:String,
-  // email: String,
   owner: {
     type: Schema.Types.ObjectId,
     ref: 'Owner',
     required: true
   },
-  categories: {
+  categories: [{
+    title: {
+      type: String,
+      required: true
+    },
+    description: String,
+    foods: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Food'
+    }],
+    subCategories: [{
+      title: {
+        type: String,
+        required: true
+      },
+      description: String,
+      isActive: {
+        type: Boolean,
+        default: true
+      }
+    }],
+    image: String,
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  }],
+  options: [{
     type: Schema.Types.ObjectId,
-    ref: 'Category',
-    // required: true
-  },
-  options: {
+    ref: 'Option'
+  }],
+  addons: [{
     type: Schema.Types.ObjectId,
-    ref: 'Option',
-    // required: true
-  },
-  addons: {
-    type: Schema.Types.ObjectId,
-    ref: 'Addon',
-    // required: true
-  },
-  // reviewData: ReviewData
+    ref: 'Addon'
+  }],
   zone: {
     type: Schema.Types.ObjectId,
-    ref: 'Zone',
-    // required: true
+    ref: 'Zone'
   },
   location: {
     type: coordinatesSchema,

@@ -1,5 +1,8 @@
 exports.dateToString = date => {
-  return new Date(date).toISOString();
+  if (!date) return null;
+  const newDate = new Date(date);
+  if (isNaN(newDate.getTime())) return null;
+  return newDate.toISOString();
 };
 
 exports.addHours = (date, hours) => {

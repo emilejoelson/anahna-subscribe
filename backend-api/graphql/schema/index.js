@@ -40,9 +40,20 @@ const typeDefs = gql`
   type Category {
     _id: ID!
     title: String!
+    description: String
+    image: String
     foods: [Food!]
-    createdAt: String!
-    updatedAt: String!
+    subCategories: [SubCategory!]
+    isActive: Boolean!
+    createdAt: String
+    updatedAt: String
+  }
+
+  type SubCategory {
+    _id: ID
+    title: String!
+    description: String
+    isActive: Boolean!
   }
 
   type ReviewData {
@@ -885,28 +896,37 @@ input AmplitudeApiKeyConfigurationInput {
     deliveryAddress: String
   }
 
+  input SubCategoryInput {
+    _id: String
+    title: String!
+    description: String
+    isActive: Boolean
+    parentCategoryId: String!
+  }
+
   input CategoryInput {
     _id: String
     title: String!
     restaurant: String!
+    image: String
+    subCategories: [SubCategoryInput!]
   }
 
   input RestaurantInput {
     name: String!
-    address: String
-    phone: String
-    image: String
-    logo: String
-    deliveryTime: Int
-    minimumOrder: Int
     username: String
     password: String
-    shopType: String
-    salesTax: Float
-    cuisines: [String]
-
+    image: String
+    logo: String
+    address: String
+    phone: String
     categories: [CategoryInput!]
     reviews: [ReviewInput!]
+    deliveryTime: Int
+    minimumOrder: Int
+    salesTax: Float
+    shopType: String
+    cuisines: [String]
     restaurantUrl: String
   }
 
@@ -1341,6 +1361,8 @@ input TippingInput {
       longitude: Float!
     ): [RestaurantPreview!]
     lastOrderCreds: DemoCredentails
+    subCategories(categoryId: ID!): [SubCategory!]
+    subCategoriesByParentId(parentId: ID!): [SubCategory!]
   }
 input BussinessDetailsInput {
   bankName: String
@@ -1542,6 +1564,11 @@ input BussinessDetailsInput {
     saveDemoConfiguration(
       configurationInput: DemoConfigurationInput!
     ): Configuration!
+    createSubCategories(
+      categoryId: ID!, 
+      restaurant: ID!, 
+      subCategories: [SubCategoryInput!]!
+    ): Restaurant!
   }
   type Subscription {
     subscribePlaceOrder(restaurant: String!): SubscriptionOrders!

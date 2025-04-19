@@ -16,6 +16,20 @@ const categorySchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Food'
   }],
+  subCategories: [{
+    title: {
+      type: String,
+      required: true
+    },
+    description: String,
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  }],
+  image: {
+    type: String
+  },
   isActive: {
     type: Boolean,
     default: true
