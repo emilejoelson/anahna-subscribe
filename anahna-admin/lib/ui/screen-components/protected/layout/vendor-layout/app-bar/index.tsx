@@ -178,30 +178,14 @@ const VendorAppTopbar = () => {
           <FontAwesomeIcon icon={faGlobe} />
 
           <Menu
-            model={[
-              {
-                label: 'FRENCH',
-                template(item) {
-                  return (
-                    <div
-                      className={`${currentLocale === 'fr' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
-                      onClick={() => onLocaleChange('fr')}
-                    >
-                      {item.label}
-                    </div>
-                  );
-                },
-                command: () => {
-                  onLocaleChange('fr');
-                },
-              },
+             model={[
               {
                 label: 'ENGLISH',
                 template(item) {
                   return (
                     <div
                       className={`${currentLocale === 'en' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
-                      onClick={() => onLocaleChange('en')}
+                      onClick={()=>onLocaleChange('en')}
                     >
                       {item.label}
                     </div>
@@ -217,7 +201,7 @@ const VendorAppTopbar = () => {
                   return (
                     <div
                       className={`${currentLocale === 'ar' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
-                      onClick={() => onLocaleChange('ar')}
+                      onClick={()=>onLocaleChange('ar')}
                     >
                       {item.label}
                     </div>
@@ -225,6 +209,70 @@ const VendorAppTopbar = () => {
                 },
                 command: () => {
                   onLocaleChange('ar');
+                },
+              },
+              {
+                label: 'FRENCH',
+                template(item) {
+                  return (
+                    <div
+                      className={`${currentLocale === 'fr' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
+                      onClick={()=>onLocaleChange('fr')}
+                    >
+                      {item.label}
+                    </div>
+                  );
+                },
+                command: () => {
+                  onLocaleChange('fr');
+                },
+              },
+              {
+                label: 'KHMER',
+                template(item) {
+                  return (
+                    <div
+                      className={`${currentLocale === 'km' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
+                      onClick={()=>onLocaleChange('km')}
+                    >
+                      {item.label}
+                    </div>
+                  );
+                },
+                command: () => {
+                  onLocaleChange('km');
+                },
+              },
+              {
+                label: 'CHINESE',
+                template(item) {
+                  return (
+                    <div
+                      className={`${currentLocale === 'zh' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
+                      onClick={()=>onLocaleChange('zh')}
+                    >
+                      {item.label}
+                    </div>
+                  );
+                },
+                command: () => {
+                  onLocaleChange('zh');
+                },
+              },
+              {
+                label: 'HEBREW',
+                template(item) {
+                  return (
+                    <div
+                      className={`${currentLocale === 'he' ? 'bg-[#b1c748]' : ''} p-2 cursor-pointer`}
+                      onClick={()=>onLocaleChange('he')}
+                    >
+                      {item.label}
+                    </div>
+                  );
+                },
+                command: () => {
+                  onLocaleChange('he');
                 },
               },
             ]}

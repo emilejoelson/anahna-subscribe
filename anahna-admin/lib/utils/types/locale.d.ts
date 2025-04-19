@@ -1,1 +1,1 @@
-export type TLocale = 'fr' | 'en' | 'ar';
+export type TLocale = 'en';
