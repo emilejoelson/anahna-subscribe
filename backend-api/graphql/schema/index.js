@@ -54,6 +54,7 @@ const typeDefs = gql`
     title: String!
     description: String
     isActive: Boolean!
+    parentCategoryId: ID!
   }
 
   type ReviewData {
@@ -1362,7 +1363,7 @@ input TippingInput {
     ): [RestaurantPreview!]
     lastOrderCreds: DemoCredentails
     subCategories(categoryId: ID!): [SubCategory!]
-    subCategoriesByParentId(parentId: ID!): [SubCategory!]
+    subCategoriesByParentId(parentId: ID, parentCategoryId: String): [SubCategory!]!
   }
 input BussinessDetailsInput {
   bankName: String
@@ -1566,7 +1567,7 @@ input BussinessDetailsInput {
     ): Configuration!
     createSubCategories(
       categoryId: ID!, 
-      restaurant: ID!, 
+      restaurant: ID, 
       subCategories: [SubCategoryInput!]!
     ): Restaurant!
   }

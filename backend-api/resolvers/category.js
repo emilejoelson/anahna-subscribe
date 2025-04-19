@@ -4,28 +4,35 @@ const { transformRestaurant } = require('./merge');
 
 module.exports = {
   Query: {
-    // Get all subcategories from all restaurants
-    subCategories: async (_, __, context) => {
+    // Get all subcategories for a specific category
+    subCategories: async (_, { categoryId }, context) => {
+      console.log('Fetching subcategories for category:', categoryId);
+      
+      if (!categoryId) {
+        console.log('Missing required parameter categoryId');
+        throw new Error('categoryId is required');
+      }
+      
       try {
-        const restaurants = await Restaurant.find({}, 'categories.subCategories');
-        const allSubCategories = [];
+        const restaurants = await Restaurant.find({});
         
-        restaurants.forEach(restaurant => {
-          restaurant.categories.forEach(category => {
-            if (category.subCategories && Array.isArray(category.subCategories)) {
-              category.subCategories.forEach(subCat => {
-                allSubCategories.push({
-                  _id: subCat._id,
-                  title: subCat.title,
-                  description: subCat.description || '',
-                  isActive: subCat.isActive
-                });
-              });
+        // Look through all restaurants to find the category with matching ID
+        for (const restaurant of restaurants) {
+          for (const category of restaurant.categories) {
+            if (category._id.toString() === categoryId) {
+              return category.subCategories.map(subCat => ({
+                _id: subCat._id,
+                title: subCat.title,
+                description: subCat.description || '',
+                isActive: subCat.isActive,
+                parentCategoryId: categoryId
+              }));
             }
-          });
-        });
+          }
+        }
         
-        return allSubCategories;
+        console.log(`No categories found with ID: ${categoryId}`);
+        return []; // Return empty array if no matching category found
       } catch (error) {
         console.error('Error fetching subcategories:', error);
         throw error;
@@ -33,25 +40,38 @@ module.exports = {
     },
     
     // Get subcategories by parent category ID and restaurant ID
-    subCategoriesByParentId: async (_, { categoryId, restaurant: restaurantId }, context) => {
-      console.log('Fetching subcategories for categoryId:', categoryId, 'in restaurant:', restaurantId);
+    subCategoriesByParentId: async (_, args, context) => {
+      // Support both parameter names for backward compatibility
+      const parentId = args.parentId || args.parentCategoryId;
+      
+      console.log('Fetching subcategories for parentId:', parentId);
+      
+      if (!parentId) {
+        // For debugging purposes, log what parameters were actually provided
+        console.log('Missing required parameter. Received args:', JSON.stringify(args));
+        throw new Error('Either parentId or parentCategoryId is required');
+      }
+      
       try {
-        const restaurant = await Restaurant.findById(restaurantId);
-        if (!restaurant) {
-          throw new Error('Restaurant not found');
+        const restaurants = await Restaurant.find({});
+        
+        // Look through all restaurants to find the category with matching ID
+        for (const restaurant of restaurants) {
+          for (const category of restaurant.categories) {
+            if (category._id.toString() === parentId) {
+              return category.subCategories.map(subCat => ({
+                _id: subCat._id,
+                title: subCat.title,
+                description: subCat.description || '',
+                isActive: subCat.isActive,
+                parentCategoryId: parentId
+              }));
+            }
+          }
         }
         
-        const category = restaurant.categories.id(categoryId);
-        if (!category) {
-          throw new Error('Category not found');
-        }
-        
-        return category.subCategories.map(subCat => ({
-          _id: subCat._id,
-          title: subCat.title,
-          description: subCat.description || '',
-          isActive: subCat.isActive
-        }));
+        console.log(`No categories found with ID: ${parentId}`);
+        return []; // Return empty array if no matching category found
       } catch (error) {
         console.error('Error fetching subcategories by parent ID:', error);
         throw error;
@@ -179,16 +199,38 @@ module.exports = {
     createSubCategories: async (_, { categoryId, restaurant: restaurantId, subCategories }, context) => {
       console.log('Adding subcategories to category:', categoryId);
       try {
-        // Find the restaurant
-        const restaurant = await Restaurant.findById(restaurantId);
-        if (!restaurant) {
-          throw new Error('Restaurant not found');
+        let restaurant;
+
+        // If restaurantId is not provided, try to find the restaurant by looking up the category
+        if (!restaurantId) {
+          console.log('Restaurant ID not provided, searching for category across all restaurants');
+          const restaurants = await Restaurant.find({});
+          
+          // Search for the category across all restaurants
+          for (const rest of restaurants) {
+            const category = rest.categories.id(categoryId);
+            if (category) {
+              restaurant = rest;
+              console.log(`Found category in restaurant: ${restaurant._id}`);
+              break;
+            }
+          }
+          
+          if (!restaurant) {
+            throw new Error(`Could not find any restaurant containing category with ID: ${categoryId}`);
+          }
+        } else {
+          // Find the restaurant by ID if provided
+          restaurant = await Restaurant.findById(restaurantId);
+          if (!restaurant) {
+            throw new Error(`Restaurant not found with ID: ${restaurantId}`);
+          }
         }
 
         // Find the specific category
         const category = restaurant.categories.id(categoryId);
         if (!category) {
-          throw new Error('Category not found');
+          throw new Error(`Category not found with ID: ${categoryId}`);
         }
 
         // Validate and format subcategories
@@ -199,7 +241,8 @@ module.exports = {
           return {
             title: sub.title.trim(),
             description: sub.description || '',
-            isActive: sub.isActive !== false
+            isActive: sub.isActive !== false,
+            parentCategoryId: categoryId
           };
         });
 

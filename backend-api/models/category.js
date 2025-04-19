@@ -25,6 +25,10 @@ const categorySchema = new Schema({
     isActive: {
       type: Boolean,
       default: true
+    },
+    parentCategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Category'
     }
   }],
   image: {

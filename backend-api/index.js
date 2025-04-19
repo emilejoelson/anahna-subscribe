@@ -64,10 +64,24 @@ useServer(
     schema: executableSchema,
     onConnect: async (ctx) => {
       console.log('Client connected to WebSocket');
+      return true; // Explicitly return true to accept the connection
     },
     onDisconnect: async (ctx) => {
       console.log('Client disconnected from WebSocket');
     },
+    onError: (ctx, message, errors) => {
+      console.error('GraphQL WebSocket error:', errors);
+      // Don't expose internal errors to clients
+      return { errors: errors.map(err => ({ message: err.message })) };
+    },
+    context: (ctx, msg, args) => {
+      // Pass authentication info from connection params
+      return { 
+        ...ctx,
+        isAuth: ctx.connectionParams?.isAuth || false,
+        userId: ctx.connectionParams?.userId || null
+      };
+    }
   },
   wsServer
 );
