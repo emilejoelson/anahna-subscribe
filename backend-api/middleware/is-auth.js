@@ -1,35 +1,35 @@
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
 
-module.exports = (req, res, next) => {
-  const authHeader = req.get('Authorization')
+const authMiddleware = (req, res, next) => {
+  const authHeader = req.get('Authorization');
+  
   if (!authHeader) {
-    return {
-      isAuth: false
-    }
+    req.isAuth = false;
+    return next();
   }
-  const token = authHeader.split(' ')[1]
+
+  const token = authHeader.split(' ')[1];
   if (!token || token === '') {
-    return {
-      isAuth: false
-    }
+    req.isAuth = false;
+    return next();
   }
-  let decodedToken
+
   try {
-    decodedToken = jwt.verify(token, 'somesupersecretkey')
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET || 'somesupersecretkey');
+    if (!decodedToken) {
+      req.isAuth = false;
+      return next();
+    }
+
+    req.isAuth = true;
+    req.userId = decodedToken.userId;
+    req.userType = decodedToken.userType || null;
+    req.restaurantId = decodedToken.restaurantId;
+    return next();
   } catch (err) {
-    return {
-      isAuth: false
-    }
+    req.isAuth = false;
+    return next();
   }
-  if (!decodedToken) {
-    return {
-      isAuth: false
-    }
-  }
-  return {
-    isAuth: true,
-    userId: decodedToken.userId,
-    userType: decodedToken.userType ? decodedToken.userType : null,
-    restaurantId: decodedToken.restaurantId
-  }
-}
+};
+
+module.exports = authMiddleware;

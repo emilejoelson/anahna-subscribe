@@ -108,6 +108,16 @@ const configurationSchema = new Schema({
   },
   googleMapLibraries: {
     type: [String],
+    validate: {
+      validator: function(libraries) {
+        // Ensure only valid libraries are included and no duplicates
+        const validLibraries = ['places', 'drawing', 'geometry', 'visualization'];
+        const uniqueLibraries = [...new Set(libraries)];
+        return uniqueLibraries.every(lib => validLibraries.includes(lib));
+      },
+      message: 'Invalid Google Maps library configuration'
+    },
+    default: ['places']
   },
   googleColor: {
     type: String,
@@ -191,6 +201,17 @@ const configurationSchema = new Schema({
   },
 }, {
   timestamps: true
+});
+
+// Middleware to prevent duplicate script loading
+configurationSchema.pre('save', function(next) {
+  if (this.isModified('googleApiKey') || this.isModified('googleMapLibraries')) {
+    // Ensure libraries are unique
+    if (this.googleMapLibraries) {
+      this.googleMapLibraries = [...new Set(this.googleMapLibraries)];
+    }
+  }
+  next();
 });
 
 module.exports = mongoose.model('Configuration', configurationSchema);
