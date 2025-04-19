@@ -94,6 +94,12 @@ module.exports = {
       if (!config) {
         config = new Configuration();
       }
+      
+      // Add validation to prevent duplicate script loading
+      if (config.googleApiKey === configurationInput.googleApiKey) {
+        return config;
+      }
+      
       Object.assign(config, {
         googleApiKey: configurationInput.googleApiKey,
       });
@@ -139,8 +145,15 @@ module.exports = {
       if (!config) {
         config = new Configuration();
       }
+
+      // Check if libraries are already configured
+      if (config.googleMapLibraries && 
+          config.googleMapLibraries.toString() === configurationInput.googleMapLibraries) {
+        return config;
+      }
+
       Object.assign(config, {
-        googleMapLibraries: configurationInput.googleMapLibraries,
+        googleMapLibraries: configurationInput.googleMapLibraries?.split(',') || ['places'],
         googleColor: configurationInput.googleColor,
       });
       return await config.save();

@@ -3,12 +3,16 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { graphqlHTTP } = require('express-graphql');
 const schema = require('./schema');
-const cors = require('cors');
 const { createServer } = require('http');
 const { WebSocketServer } = require('ws');
 const { useServer } = require('graphql-ws/lib/use/ws');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
-require('dotenv').config();
+const {
+  authMiddleware,
+  corsMiddleware,
+  errorHandler,
+  scriptCacheMiddleware
+} = require('./middleware');
 
 // Set Mongoose options
 mongoose.set('strictQuery', true);
@@ -16,8 +20,11 @@ mongoose.set('strictQuery', true);
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors());
+// Apply middleware
+app.use(corsMiddleware);
 app.use(express.json());
+app.use(scriptCacheMiddleware);
+app.use(authMiddleware);
 
 const PORT = parseInt(process.env.PORT) || 4000;
 const MONGODB_URI = process.env.CONNECTION_STRING || 'mongodb://localhost:27017/anahna';
@@ -65,6 +72,7 @@ useServer(
   wsServer
 );
 
+// GraphQL endpoint
 app.use(
   '/graphql',
   graphqlHTTP({
@@ -90,11 +98,8 @@ app.use(
   })
 );
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
+// Error handling middleware should be last
+app.use(errorHandler);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

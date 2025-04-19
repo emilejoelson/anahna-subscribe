@@ -1,6 +1,58 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+const openingTimeSchema = new Schema({
+  day: {
+    type: String,
+    required: true
+  },
+  times: [{
+    startTime: String,
+    endTime: String
+  }]
+});
+
+const coordinatesSchema = new Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    default: 'Point'
+  },
+  coordinates: {
+    type: [Number],
+    default: [0, 0]
+  }
+});
+
+const deliveryInfoSchema = new Schema({
+  minDeliveryFee: Number,
+  deliveryDistance: Number,
+  deliveryFee: Number
+});
+
+const deliveryBoundsSchema = new Schema({
+  type: {
+    type: String,
+    enum: ['Polygon'],
+    default: 'Polygon'
+  },
+  coordinates: [[[Number]]]
+});
+
+const circleBoundsSchema = new Schema({
+  radius: Number
+});
+
+const bussinessDetailsSchema = new Schema({
+  bankName: String,
+  accountName: String,
+  accountCode: String,
+  accountNumber: String,
+  bussinessRegNo: String,
+  companyRegNo: String,
+  taxRate: Number
+});
+
 const restaurantSchema = new Schema({
   unique_restaurant_id: {
     type: String,
@@ -166,8 +218,5 @@ const restaurantSchema = new Schema({
 }, {
   timestamps: true
 });
-
-restaurantSchema.index({ location: '2dsphere' });
-restaurantSchema.index({ deliveryBounds: '2dsphere' });
 
 module.exports = mongoose.model('Restaurant', restaurantSchema);
