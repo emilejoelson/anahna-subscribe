@@ -177,46 +177,145 @@ module.exports = {
       }
     },
     editAddon: async (_, { addonInput }) => {
-      console.log('Editing addon');
+      console.log('Editing addon:', JSON.stringify(addonInput));
       try {
         const restaurant = await Restaurant.findById(addonInput.restaurant);
+        if (!restaurant) {
+          throw new Error(`Restaurant with ID ${addonInput.restaurant} not found`);
+        }
+        
         const { addons } = addonInput;
-
-        const addonToUpdate = restaurant.addons.id(addons._id);
-        Object.assign(addonToUpdate, {
-          title: addons.title,
-          description: addons.description,
-          options: addons.options,
-          quantityMinimum: addons.quantityMinimum,
-          quantityMaximum: addons.quantityMaximum,
-        });
-
+        
+        // Find the addon in the restaurant's addons array
+        const addonIndex = restaurant.addons.findIndex(
+          addon => addon._id.toString() === addons._id
+        );
+        
+        if (addonIndex === -1) {
+          throw new Error(`Addon with ID ${addons._id} not found in restaurant`);
+        }
+        
+        console.log(`Found addon at index ${addonIndex}, updating...`);
+        
+        // Format options as ObjectIds if they're string IDs
+        const formattedOptions = Array.isArray(addons.options) 
+          ? addons.options.map(opt => 
+              typeof opt === 'string' ? opt : opt.toString()
+            )
+          : [];
+        
+        // Update the addon with new values, preserving the _id
+        restaurant.addons[addonIndex] = {
+          _id: restaurant.addons[addonIndex]._id,
+          title: addons.title || "Unnamed Addon",
+          description: addons.description || "",
+          options: formattedOptions,
+          quantityMinimum: addons.quantityMinimum !== undefined ? addons.quantityMinimum : 0,
+          quantityMaximum: addons.quantityMaximum !== undefined ? addons.quantityMaximum : 1,
+          isActive: true
+        };
+        
+        // Also update the standalone Addon document if it exists
+        const existingAddon = await Addon.findById(addons._id);
+        if (existingAddon) {
+          console.log(`Also updating standalone addon document`);
+          existingAddon.title = addons.title || "Unnamed Addon";
+          existingAddon.description = addons.description || "";
+          existingAddon.options = formattedOptions;
+          existingAddon.quantityMinimum = addons.quantityMinimum !== undefined ? addons.quantityMinimum : 0;
+          existingAddon.quantityMaximum = addons.quantityMaximum !== undefined ? addons.quantityMaximum : 1;
+          await existingAddon.save();
+        }
+        
         await restaurant.save();
-        return transformRestaurant(restaurant);
+        console.log(`Successfully updated addon ${addons._id}`);
+        
+        // Return the updated restaurant with properly formatted addons
+        return {
+          _id: restaurant._id.toString(),
+          addons: restaurant.addons.map(addon => ({
+            _id: addon._id.toString(),
+            title: addon.title || "Unnamed Addon",
+            description: addon.description || "",
+            options: Array.isArray(addon.options) 
+              ? addon.options.map(opt => typeof opt === 'object' ? opt.toString() : opt) 
+              : [],
+            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
+            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
+            isActive: addon.isActive !== undefined ? addon.isActive : true
+          }))
+        };
       } catch (error) {
-        console.error(error);
-        throw error;
+        console.error('Error editing addon:', error);
+        throw new Error(`Failed to edit addon: ${error.message}`);
       }
     },
     deleteAddon: async (_, { id, restaurant }) => {
-      console.log('Deleting addon');
+      console.log(`Deleting addon with ID ${id} from restaurant ${restaurant}`);
       try {
+        // Find the target restaurant
         const targetRestaurant = await Restaurant.findById(restaurant);
-
-        targetRestaurant.addons.id(id).remove();
+        if (!targetRestaurant) {
+          throw new Error(`Restaurant with ID ${restaurant} not found`);
+        }
+        
+        // Find the addon in the restaurant's addons array
+        const addonIndex = targetRestaurant.addons.findIndex(
+          addon => addon._id.toString() === id
+        );
+        
+        if (addonIndex === -1) {
+          throw new Error(`Addon with ID ${id} not found in restaurant`);
+        }
+        
+        // Remove the addon from the restaurant's addons array
+        targetRestaurant.addons.splice(addonIndex, 1);
+        
+        // Also remove any references to the addon from variations
         targetRestaurant.categories.forEach(category => {
+          if (!category.foods) return;
+          
           category.foods.forEach(food => {
+            if (!food.variations) return;
+            
             food.variations.forEach(variation => {
-              variation.addons = variation.addons.filter(addonId => addonId !== id);
+              if (!variation.addons) return;
+              
+              // Filter out the addon ID from variation.addons
+              variation.addons = variation.addons.filter(addonId => {
+                const addonIdStr = addonId.toString ? addonId.toString() : addonId;
+                return addonIdStr !== id;
+              });
             });
           });
         });
 
+        // Also delete the standalone Addon document if it exists
+        await Addon.findByIdAndDelete(id);
+        console.log(`Standalone addon document deleted (if it existed)`);
+        
+        // Save the updated restaurant
         await targetRestaurant.save();
-        return transformRestaurant(targetRestaurant);
+        console.log(`Successfully deleted addon ${id} from restaurant ${restaurant}`);
+        
+        // Return the updated restaurant with formatted addons
+        return {
+          _id: targetRestaurant._id.toString(),
+          addons: targetRestaurant.addons.map(addon => ({
+            _id: addon._id.toString(),
+            title: addon.title || "Unnamed Addon",
+            description: addon.description || "",
+            options: Array.isArray(addon.options) 
+              ? addon.options.map(opt => typeof opt === 'object' ? opt.toString() : opt) 
+              : [],
+            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
+            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
+            isActive: addon.isActive !== undefined ? addon.isActive : true
+          }))
+        };
       } catch (error) {
-        console.error(error);
-        throw error;
+        console.error('Error deleting addon:', error);
+        throw new Error(`Failed to delete addon: ${error.message}`);
       }
     },
   },
