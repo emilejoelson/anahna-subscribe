@@ -935,6 +935,8 @@ const typeDefs = gql`
 
   input ZoneInput {
     _id: String
+  input ZoneInput {
+    _id: ObjectId
     title: String!
     description: String!
     coordinates: [[[Float!]]]
@@ -952,8 +954,6 @@ const typeDefs = gql`
 
   input FormSubmissionInput {
     name: String!
-    email: String!
-    message: String!
   }
 
   input CuisineInput {

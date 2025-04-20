@@ -56,6 +56,31 @@ const bussinessDetailsSchema = new Schema({
   taxRate: Number
 });
 
+// Create a sub-schema for embedded addons
+const addonEmbeddedSchema = new Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: String,
+  options: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Option'
+  }],
+  quantityMinimum: {
+    type: Number,
+    default: 0
+  },
+  quantityMaximum: {
+    type: Number,
+    default: 1
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  }
+});
+
 const restaurantSchema = new Schema({
   unique_restaurant_id: {
     type: String,
@@ -117,8 +142,8 @@ const restaurantSchema = new Schema({
     isActive: { type: Boolean, default: true }
   }],
   addons: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Addon'
+    type: Schema.Types.Mixed,
+    ref: 'Addon' // This allows for both embedded documents and references
   }],
   zone: {
     type: Schema.Types.ObjectId,

@@ -247,9 +247,30 @@ const transformOption = async option => {
 };
 
 const transformAddon = async addon => {
+  // Handle the case when addon is already a plain object (not a Mongoose document)
+  if (!addon._doc && addon._id) {
+    return {
+      ...addon,
+      _id: addon._id.toString ? addon._id.toString() : addon._id,
+      // Ensure quantityMinimum and quantityMaximum are present
+      quantityMinimum: addon.quantityMinimum ?? 0,
+      quantityMaximum: addon.quantityMaximum ?? 1,
+      options: Array.isArray(addon.options) ? addon.options.map(opt => 
+        typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
+      ) : []
+    };
+  }
+  
+  // Handle the standard Mongoose document case
   return {
     ...addon._doc,
-    _id: addon.id
+    _id: addon.id,
+    // Ensure quantityMinimum and quantityMaximum are present
+    quantityMinimum: addon._doc.quantityMinimum ?? 0,
+    quantityMaximum: addon._doc.quantityMaximum ?? 1,
+    options: Array.isArray(addon._doc.options) ? addon._doc.options.map(opt => 
+      typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
+    ) : []
   };
 };
 
@@ -273,28 +294,44 @@ const transformMinimalRestaurants = async restaurants => {
 };
 
 const transformRestaurant = async restaurant => {
+  // Add a safety check to prevent returning null for _id
+  if (!restaurant) {
+    console.error('Attempted to transform null or undefined restaurant');
+    // Return a minimal valid restaurant object to prevent GraphQL errors
+    return {
+      _id: 'unknown',
+      name: 'Unknown Restaurant',
+      categories: [],
+      options: [],
+      addons: []
+    };
+  }
+  
+  // Handle case when restaurant might be a plain object without _doc property
+  const restaurantData = restaurant._doc || restaurant;
+  
   return {
-    ...restaurant._doc,
-    _id: restaurant.id,
-    categories: restaurant.categories.map(category => ({
-      _id: category._id,
-      title: category.title,
-      description: category.description,
-      image: category.image,
-      subCategories: category.subCategories.map(sub => ({
-        _id: sub._id,
-        title: sub.title,
-        description: sub.description,
-        isActive: sub.isActive
+    ...restaurantData,
+    _id: restaurant.id || restaurant._id?.toString() || 'unknown',
+    categories: (restaurant.categories || []).map(category => ({
+      _id: category._id?.toString() || 'unknown',
+      title: category.title || '',
+      description: category.description || '',
+      image: category.image || '',
+      subCategories: (category.subCategories || []).map(sub => ({
+        _id: sub._id?.toString() || 'unknown',
+        title: sub.title || '',
+        description: sub.description || '',
+        isActive: sub.isActive !== undefined ? sub.isActive : true
       })),
-      foods: categoryFoods.bind(this, category.foods),
-      isActive: category.isActive,
-      createdAt: dateToString(category.createdAt),
-      updatedAt: dateToString(category.updatedAt)
+      foods: categoryFoods.bind(this, category.foods || []),
+      isActive: category.isActive !== undefined ? category.isActive : true,
+      createdAt: dateToString(category.createdAt || new Date()),
+      updatedAt: dateToString(category.updatedAt || new Date())
     })),
-    options: populateOptions.bind(this, restaurant.options),
-    addons: populateAddons.bind(this, restaurant.addons),
-    reviewData: populateReviewsDetail.bind(this, restaurant.id),
+    options: populateOptions.bind(this, restaurant.options || []),
+    addons: populateAddons.bind(this, restaurant.addons || []),
+    reviewData: populateReviewsDetail.bind(this, restaurant.id || restaurant._id?.toString() || 'unknown'),
     zone: null,
     owner: restaurant.owner ? populateOwner.bind(this, restaurant.owner) : null,
     shopType: restaurant.shopType || SHOP_TYPE.RESTAURANT
@@ -302,10 +339,23 @@ const transformRestaurant = async restaurant => {
 };
 
 const transformMinimalRestaurantData = async restaurant => {
+  // Add a safety check to prevent returning null for _id
+  if (!restaurant) {
+    console.error('Attempted to transform null or undefined restaurant for minimal data');
+    return {
+      _id: 'unknown',
+      name: 'Unknown Restaurant',
+      shopType: SHOP_TYPE.RESTAURANT
+    };
+  }
+  
+  // Handle case when restaurant might be a plain object without _doc property
+  const restaurantData = restaurant._doc || restaurant;
+  
   return {
-    ...restaurant._doc,
+    ...restaurantData,
     shopType: restaurant.shopType || SHOP_TYPE.RESTAURANT,
-    _id: restaurant.id
+    _id: restaurant.id || restaurant._id?.toString() || 'unknown'
   };
 };
 

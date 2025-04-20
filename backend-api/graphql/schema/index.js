@@ -1293,7 +1293,8 @@ input TippingInput {
     getPaymentStatuses: [String!]
     assignedOrders(id: String): [Order!]
     options(restaurant: ID): [Option!]
-    addons: [Addon!]
+    addons(restaurantId: String): [Addon!]
+    addonsByRestaurant(restaurantId: String!): [Addon!]
     foodByIds(foodIds: [CartFoodInput!]!): [CartFood!]
     getDashboardOrders(
       starting_date: String

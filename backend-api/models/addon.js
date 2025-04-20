@@ -16,6 +16,16 @@ const addonSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Option'
   }],
+  quantityMinimum: {
+    type: Number,
+    default: 0,
+    required: true
+  },
+  quantityMaximum: {
+    type: Number,
+    default: 1,
+    required: true
+  },
   isActive: {
     type: Boolean,
     default: true

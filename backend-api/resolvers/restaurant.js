@@ -48,12 +48,30 @@ module.exports = {
         throw err;
       }
     },
-    restaurant: async (_, { id }) => {
+    restaurant: async(_, args, { req }) => {
+      console.log('restaurant query called with args:', args)
       try {
-        const restaurant = await Restaurant.findById(id);
-        return transformRestaurant(restaurant);
-      } catch (err) {
-        throw err;
+        const filters = {}
+        if (args.slug) {
+          filters.slug = args.slug
+        } else if (args.id) {
+          filters._id = args.id
+        } else if (req.restaurantId) {
+          filters._id = req.restaurantId
+        } else {
+          throw new Error('Invalid request, restaurant id not provided')
+        }
+        console.log('Finding restaurant with filters:', filters)
+        const restaurant = await Restaurant.findOne(filters).lean()
+        if (!restaurant) {
+          console.log('Restaurant not found with filters:', filters)
+          throw Error('Restaurant not found')
+        }
+        console.log(`Found restaurant: ${restaurant.name}, has ${restaurant.addons?.length || 0} addons`)
+        return transformRestaurant(restaurant)
+      } catch (e) {
+        console.error('Error in restaurant query:', e)
+        throw e
       }
     },
     restaurantByOwner: async(_, args, { req }) => {
@@ -102,34 +120,15 @@ module.exports = {
         throw e
       }
     },
-    restaurant: async(_, args, { req }) => {
-      console.log('restaurant', args)
-      try {
-        const filters = {}
-        if (args.slug) {
-          filters.slug = args.slug
-        } else if (args.id) {
-          filters._id = args.id
-        } else if (req.restaurantId) {
-          filters._id = req.restaurantId
-        } else {
-          throw new Error('Invalid request, restaurant id not provided')
-        }
-        const restaurant = await Restaurant.findOne(filters)
-        if (!restaurant) throw Error('Restaurant not found')
-        return transformRestaurant(restaurant)
-      } catch (e) {
-        throw e
-      }
-    },
     restaurantPreview: async(_, args, { req }) => {
       console.log('restaurantPreview', args)
       try {
-        const restaurant = await Restaurant.findById(id);
+        const restaurant = await Restaurant.findById(args.id);
         if (!restaurant) {
           throw new Error('Restaurant not found');
         }
         return {
+          _id: restaurant._id.toString(),
           boundType: restaurant.deliveryBounds ? 'polygon' : restaurant.circleBounds ? 'circle' : null,
           deliveryBounds: restaurant.deliveryBounds,
           circleBounds: restaurant.circleBounds,
@@ -139,6 +138,7 @@ module.exports = {
           postCode: restaurant.postCode
         };
       } catch (error) {
+        console.error('Error in restaurantPreview:', error);
         throw new Error(`Could not fetch delivery zone info: ${error.message}`);
       }
     },
@@ -403,6 +403,62 @@ module.exports = {
           price: option.price
         }]
       }));
+    },
+    addons: async (parent) => {
+      console.log(`Processing addons for restaurant: ${parent.name || parent._id}`)
+      
+      // If parent (restaurant) doesn't have addons or they're empty, return empty array
+      if (!parent.addons || parent.addons.length === 0) {
+        console.log(`No addons found for restaurant ${parent._id}`)
+        return []
+      }
+      
+      console.log(`Found ${parent.addons.length} addons in restaurant document`)
+      
+      try {
+        // Format addons for return, ensuring all required fields are present
+        const formattedAddons = parent.addons.map(addon => {
+          // Skip null or undefined values
+          if (!addon) return null
+          
+          // Handle both cases: when addon is an object or when it's an ObjectId
+          if (typeof addon === 'string' || addon instanceof mongoose.Types.ObjectId || (addon._id && !addon.title)) {
+            const addonId = typeof addon === 'string' ? addon : addon._id.toString()
+            console.log(`Found reference addon with ID: ${addonId}`)
+            // This is just an ID reference, return a placeholder
+            return {
+              _id: addonId,
+              title: "Loading...",
+              description: "",
+              options: [],
+              quantityMinimum: 0,
+              quantityMaximum: 1,
+              isActive: true
+            }
+          }
+          
+          // Handle plain objects (embedded addons)
+          console.log(`Processing embedded addon: ${addon.title || 'Unknown'}`)
+          return {
+            _id: addon._id ? addon._id.toString() : new mongoose.Types.ObjectId().toString(),
+            title: addon.title || "",
+            description: addon.description || "",
+            options: Array.isArray(addon.options) ? addon.options.map(opt => 
+              typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
+            ) : [],
+            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
+            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
+            isActive: addon.isActive !== undefined ? addon.isActive : true
+          }
+        })
+        
+        // Filter out any null values
+        return formattedAddons.filter(addon => addon !== null)
+      } catch (error) {
+        console.error(`Error formatting addons for restaurant ${parent._id}:`, error)
+        // Return empty array instead of throwing to prevent UI crashes
+        return []
+      }
     }
   }
 };
