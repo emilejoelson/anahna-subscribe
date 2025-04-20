@@ -502,7 +502,19 @@ const typeDefs = gql`
     title: String!
     description: String
     price: Float!
+    restaurant: String
+    addon: String
+    isActive: Boolean
+    options: [OptionDetail]
   }
+
+  type OptionDetail {
+    _id: String!
+    title: String!
+    description: String
+    price: Float!
+  }
+
   type ItemOption {
     _id: String!
     title: String!
@@ -1088,7 +1100,10 @@ input TippingInput {
     updatedAt: String!
   }
 
-
+  type OptionsResponse {
+    _id: String!
+    options: [OptionDetail!]
+  }
 
   type FormSubmissionResponse {
     message: String!
@@ -1277,7 +1292,7 @@ input TippingInput {
     getOrderStatuses: [String!]
     getPaymentStatuses: [String!]
     assignedOrders(id: String): [Order!]
-    options: [Option!]
+    options(restaurant: ID): [Option!]
     addons: [Addon!]
     foodByIds(foodIds: [CartFoodInput!]!): [CartFood!]
     getDashboardOrders(
@@ -1485,6 +1500,7 @@ input BussinessDetailsInput {
     updateOrderStatusRider(id: String!, status: String!): Order!
     updatePaymentStatus(id: String, status: String): Order!
     createOption(optionInput: CreateOptionInput): Restaurant!
+    createOptions(optionInput: CreateOptionInput): OptionsResponse!
     editOption(optionInput: editOptionInput): Restaurant!
     updateOption(optionInput: editOptionInput): Restaurant!
     deleteOption(id: String!, restaurant: String!): Restaurant!

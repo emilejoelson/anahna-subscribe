@@ -28,6 +28,48 @@ const cuisine = require('./cuisine')
 const banner = require('./banner')
 const demo = require('./demo')
 
+// Make sure to import the Option model
+const Option = require('../models/option');
+const Restaurant = require('../models/restaurant');
+
+const restaurantResolvers = {
+  Restaurant: {
+    options: async (parent) => {
+      try {
+        console.log(`Restaurant options resolver for ID: ${parent._id}`);
+        
+        // Make sure we have the full restaurant document with options
+        const restaurant = await Restaurant.findById(parent._id);
+        if (!restaurant || !restaurant.options || restaurant.options.length === 0) {
+          console.log(`No options found in restaurant ${parent._id}`);
+          return [];
+        }
+        
+        console.log(`Found ${restaurant.options.length} options in restaurant ${parent._id}`);
+        
+        // Format options for GraphQL
+        return restaurant.options.map(option => ({
+          _id: option._id.toString(),
+          title: option.title,
+          description: option.description || "",
+          price: option.price,
+          restaurant: restaurant._id.toString(),
+          isActive: option.isActive !== undefined ? option.isActive : true,
+          options: [{
+            _id: option._id.toString(),
+            title: option.title,
+            description: option.description || "",
+            price: option.price
+          }]
+        }));
+      } catch (error) {
+        console.error(`Error in Restaurant.options resolver: ${error.message}`);
+        return [];
+      }
+    }
+  }
+};
+
 const rootResolver = {
   Query: {
     ...dashboardResolver.Query,
@@ -91,7 +133,8 @@ const rootResolver = {
     ...riderResolver.Subscription,
     ...dispatchResolver.Subscription,
     ...chatResolver.Subscription
-  }
+  },
+  ...restaurantResolvers
 }
 
 module.exports = rootResolver

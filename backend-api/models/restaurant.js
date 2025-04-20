@@ -111,8 +111,10 @@ const restaurantSchema = new Schema({
     }
   }],
   options: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Option'
+    title: { type: String, required: true },
+    description: String,
+    price: { type: Number, required: true },
+    isActive: { type: Boolean, default: true }
   }],
   addons: [{
     type: Schema.Types.ObjectId,

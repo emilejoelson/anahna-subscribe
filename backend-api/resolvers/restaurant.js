@@ -9,6 +9,7 @@ const Point = require('../models/point')
 const Sections = require('../models/section')
 const Zone = require('../models/zone')
 const User = require('../models/user')
+const Option = require('../models/option')
 const {
   sendNotificationToCustomerWeb
 } = require('../helpers/firebase-web-notifications')
@@ -342,51 +343,6 @@ module.exports = {
         throw err
       }
     },
-    // updateDeliveryBoundsAndLocation: async(_, args) => {
-    //   console.log('updateDeliveryBoundsAndLocation')
-    //   const { id, boundType, bounds: newBounds, circleBounds, location: newLocation, 
-    //           address, postCode, city  } = args
-    //   try {
-    //     const restaurant = await Restaurant.findById(id)
-    //     if (!restaurant) throw new Error('Restaurant does not exists')
-    //     const location = new Point({
-    //       type: 'Point',
-    //       coordinates: [newLocation.longitude, newLocation.latitude]
-    //     })
-    //     console.log('Location: ', location)
-    //     const zone = await Zone.findOne({
-    //       location: { $geoIntersects: { $geometry: location } },
-    //       isActive: true
-    //     })
-    //     console.log('Zone: ', zone)
-    //     if (!zone) {
-    //       return {
-    //         success: false,
-    //         message: "restaurant's location doesn't lie in any delivery zone"
-    //       }
-    //     }
-    //     const updated = await Restaurant.findByIdAndUpdate(
-    //       id,
-    //       {
-    //         deliveryBounds: { type: 'Polygon', coordinates: newBounds },
-    //         circleBounds: { radius: circleBounds.radius },
-    //         location,
-    //         boundType,
-    //         address,
-    //         postCode,
-    //         city,
-    //       },
-    //       { new: true }
-    //     );
-    //     if (!updatedRestaurant) {
-    //       return { success: false, message: 'Restaurant not found' };
-    //     }
-    //     return { success: true, message: 'Restaurant business details updated successfully', data: { _id: updatedRestaurant._id } };
-    //   } catch (error) {
-    //     console.error('Error updating restaurant business details:', error);
-    //     return { success: false, message: `Failed to update: ${error.message}` };
-    //   }
-    // }
     updateTimings: async (_, { id, openingTimes }, { models }) => {
       try {
         if (!openingTimes || openingTimes.length === 0) {
@@ -421,6 +377,32 @@ module.exports = {
         throw new Error(`Update Timing Error: ${error.message}`);
       }
     }
-    
+  },
+  Restaurant: {
+    options: async (parent) => {
+      // If parent (restaurant) doesn't have options or they're empty, return empty array
+      if (!parent.options || parent.options.length === 0) {
+        console.log(`No options found for restaurant ${parent._id}`);
+        return [];
+      }
+      
+      console.log(`Found ${parent.options.length} options for restaurant ${parent._id}`);
+      
+      // Format options for return
+      return parent.options.map(option => ({
+        _id: option._id || new mongoose.Types.ObjectId(),
+        title: option.title,
+        description: option.description || "",
+        price: option.price,
+        restaurant: parent._id,
+        isActive: option.isActive !== undefined ? option.isActive : true,
+        options: [{
+          _id: option._id || new mongoose.Types.ObjectId(),
+          title: option.title,
+          description: option.description || "",
+          price: option.price
+        }]
+      }));
+    }
   }
 };
