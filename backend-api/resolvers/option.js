@@ -176,24 +176,38 @@ module.exports = {
         console.log("Delete option args:", JSON.stringify(args));
         
         let optionId = args.id;
+        let restaurantId = args.restaurant;
+        
+        console.log(`Attempting to delete option ${optionId} from restaurant ${restaurantId}`);
         
         // Find the restaurant containing this option
-        const restaurant = await Restaurant.findOne({ "options._id": optionId });
+        const restaurant = await Restaurant.findById(restaurantId);
         if (!restaurant) {
-          console.log(`Restaurant containing option ${optionId} not found`);
-          return false;
+          throw new Error(`Restaurant with ID ${restaurantId} not found`);
         }
         
+        console.log(`Found restaurant: ${restaurant._id}, removing option: ${optionId}`);
+        
+        // Convert the option ID string to ObjectId for proper comparison
+        const optionObjectId = new mongoose.Types.ObjectId(optionId);
+        
         // Remove the option from the options array
-        restaurant.options = restaurant.options.filter(
-          option => option._id.toString() !== optionId
+        const initialLength = restaurant.options ? restaurant.options.length : 0;
+        restaurant.options = restaurant.options.filter(option => 
+          !option._id.equals(optionObjectId)
         );
+        
+        if (initialLength === restaurant.options.length) {
+          console.error(`Option ${optionId} not found in restaurant options array`);
+          throw new Error(`Option with ID ${optionId} not found in restaurant`);
+        }
         
         // Save the updated restaurant
         await restaurant.save();
-        console.log(`Option with ID ${optionId} deleted successfully`);
+        console.log(`Option ${optionId} deleted successfully from restaurant ${restaurant._id}`);
         
-        return true;
+        // Return the updated restaurant with its options
+        return restaurant;
       } catch (error) {
         console.error('Error deleting option:', error);
         throw new Error('Failed to delete option: ' + error.message);
