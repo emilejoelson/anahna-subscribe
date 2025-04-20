@@ -405,59 +405,76 @@ module.exports = {
       }));
     },
     addons: async (parent) => {
-      console.log(`Processing addons for restaurant: ${parent.name || parent._id}`)
+      console.log(`===== ADDON DEBUG START =====`);
+      console.log(`Processing addons for restaurant: ${parent.name || parent._id}`);
       
       // If parent (restaurant) doesn't have addons or they're empty, return empty array
       if (!parent.addons || parent.addons.length === 0) {
-        console.log(`No addons found for restaurant ${parent._id}`)
-        return []
+        console.log(`No addons found for restaurant ${parent._id}`);
+        return [];
       }
       
-      console.log(`Found ${parent.addons.length} addons in restaurant document`)
+      console.log(`Found ${parent.addons.length} addons in restaurant document`);
       
       try {
-        // Format addons for return, ensuring all required fields are present
-        const formattedAddons = parent.addons.map(addon => {
-          // Skip null or undefined values
-          if (!addon) return null
-          
-          // Handle both cases: when addon is an object or when it's an ObjectId
-          if (typeof addon === 'string' || addon instanceof mongoose.Types.ObjectId || (addon._id && !addon.title)) {
-            const addonId = typeof addon === 'string' ? addon : addon._id.toString()
-            console.log(`Found reference addon with ID: ${addonId}`)
-            // This is just an ID reference, return a placeholder
+        // Filter out null or invalid addons first
+        const validAddons = parent.addons.filter(addon => addon !== null && addon !== undefined);
+        
+        // Format each addon with error handling
+        const formattedAddons = validAddons.map((addon, index) => {
+          try {
+            // Handle reference addons (strings or ObjectIds)
+            if (typeof addon === 'string' || addon instanceof mongoose.Types.ObjectId) {
+              const addonId = typeof addon === 'string' ? addon : addon._id.toString();
+              console.log(`Processing reference addon ${index} with ID: ${addonId}`);
+              return {
+                _id: addonId,
+                title: "Loading...", // Placeholder title
+                description: "",
+                options: [],
+                quantityMinimum: 0,
+                quantityMaximum: 1,
+                isActive: true
+              };
+            }
+            
+            // Handle addon objects
+            console.log(`Processing addon ${index}`);
             return {
-              _id: addonId,
-              title: "Loading...",
-              description: "",
+              _id: addon._id ? addon._id.toString() : new mongoose.Types.ObjectId().toString(),
+              // IMPORTANT: Ensure title is never null
+              title: addon.title || "Unnamed Addon",
+              description: addon.description || "",
+              options: Array.isArray(addon.options) ? addon.options.map(opt => 
+                typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
+              ) : [],
+              quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
+              quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
+              isActive: addon.isActive !== undefined ? addon.isActive : true
+            };
+          } catch (error) {
+            console.error(`Error processing addon ${index}:`, error);
+            // Return a valid fallback addon
+            return {
+              _id: new mongoose.Types.ObjectId().toString(),
+              title: "Error Addon",
+              description: "Error processing addon data",
               options: [],
               quantityMinimum: 0,
               quantityMaximum: 1,
-              isActive: true
-            }
+              isActive: false
+            };
           }
-          
-          // Handle plain objects (embedded addons)
-          console.log(`Processing embedded addon: ${addon.title || 'Unknown'}`)
-          return {
-            _id: addon._id ? addon._id.toString() : new mongoose.Types.ObjectId().toString(),
-            title: addon.title || "",
-            description: addon.description || "",
-            options: Array.isArray(addon.options) ? addon.options.map(opt => 
-              typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
-            ) : [],
-            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
-            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
-            isActive: addon.isActive !== undefined ? addon.isActive : true
-          }
-        })
+        });
         
-        // Filter out any null values
-        return formattedAddons.filter(addon => addon !== null)
+        console.log(`Returning ${formattedAddons.length} formatted addons`);
+        console.log(`===== ADDON DEBUG END =====`);
+        return formattedAddons;
       } catch (error) {
-        console.error(`Error formatting addons for restaurant ${parent._id}:`, error)
-        // Return empty array instead of throwing to prevent UI crashes
-        return []
+        console.error(`Error formatting addons for restaurant ${parent._id}:`, error);
+        console.log(`===== ADDON DEBUG END WITH ERROR =====`);
+        // Return empty array instead of throwing
+        return [];
       }
     }
   }

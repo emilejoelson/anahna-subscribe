@@ -247,11 +247,28 @@ const transformOption = async option => {
 };
 
 const transformAddon = async addon => {
+  // Skip null/undefined addons entirely
+  if (!addon) {
+    console.log('Warning: Attempted to transform null addon');
+    return {
+      _id: new mongoose.Types.ObjectId().toString(),
+      title: "Unknown Addon", // Non-null placeholder
+      description: "",
+      options: [],
+      quantityMinimum: 0,
+      quantityMaximum: 1,
+      isActive: true
+    };
+  }
+  
   // Handle the case when addon is already a plain object (not a Mongoose document)
   if (!addon._doc && addon._id) {
     return {
       ...addon,
       _id: addon._id.toString ? addon._id.toString() : addon._id,
+      // Ensure title is NEVER null
+      title: addon.title || "Unnamed Addon",
+      description: addon.description || "",
       // Ensure quantityMinimum and quantityMaximum are present
       quantityMinimum: addon.quantityMinimum ?? 0,
       quantityMaximum: addon.quantityMaximum ?? 1,
@@ -265,6 +282,9 @@ const transformAddon = async addon => {
   return {
     ...addon._doc,
     _id: addon.id,
+    // Ensure title is NEVER null
+    title: addon._doc.title || "Unnamed Addon",
+    description: addon._doc.description || "",
     // Ensure quantityMinimum and quantityMaximum are present
     quantityMinimum: addon._doc.quantityMinimum ?? 0,
     quantityMaximum: addon._doc.quantityMaximum ?? 1,
@@ -283,7 +303,37 @@ const populateOptions = async options => {
 };
 
 const populateAddons = async addons => {
-  return await addons.map(transformAddon);
+  // Safety check - if addons is null or not an array, return empty array
+  if (!addons || !Array.isArray(addons)) {
+    console.log('Warning: populateAddons received null or non-array input');
+    return [];
+  }
+  
+  // Filter out any null/undefined items before transformation
+  const validAddons = addons.filter(addon => addon !== null && addon !== undefined);
+  
+  // Transform each addon and catch any errors that might occur
+  const transformedAddons = await Promise.all(
+    validAddons.map(async (addon, index) => {
+      try {
+        return await transformAddon(addon);
+      } catch (error) {
+        console.error(`Error transforming addon at index ${index}:`, error);
+        // Return a valid placeholder addon instead of letting the error propagate
+        return {
+          _id: new mongoose.Types.ObjectId().toString(),
+          title: "Error Addon", // Non-null placeholder
+          description: "An error occurred processing this addon",
+          options: [],
+          quantityMinimum: 0,
+          quantityMaximum: 1,
+          isActive: false
+        };
+      }
+    })
+  );
+  
+  return transformedAddons;
 };
 
 const transformRestaurants = async restaurants => {
