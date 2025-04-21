@@ -1,3 +1,4 @@
+// models/rider.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -8,13 +9,8 @@ const riderSchema = new Schema({
   },
   username: {
     type: String,
-    unique: true,
-    required: true
-  },
-  email: {
-    type: String,
-    unique: true,
-    sparse: true
+    required: true,
+    unique: true
   },
   password: {
     type: String,
@@ -22,40 +18,45 @@ const riderSchema = new Schema({
   },
   phone: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
-  isAvailable: {
+  available: {
     type: Boolean,
     default: false
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  currentWalletAmount: {
-    type: Number,
-    default: 0
+  vehicleType: {
+    type: String,
+    required: true
   },
   zone: {
     type: Schema.Types.ObjectId,
-    ref: 'Zone'
+    ref: 'Zone',
+    required: true
   },
-  location: {
-    type: {
-      type: String,
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      default: [0, 0]
-    }
+  assigned: {
+    type: Boolean,
+    default: false
   },
-  notificationToken: String
+  bussinessDetails: {
+    bankName: String,
+    accountName: String,
+    accountCode: String,
+    accountNumber: String,
+    bussinessRegNo: String,
+    companyRegNo: String,
+    taxRate: Number
+  },
+  licenseDetails: {
+    number: String,
+    expiryDate: Date,
+    image: String
+  },
+  vehicleDetails: {
+    number: String,
+    image: String
+  }
 }, {
   timestamps: true
 });
-
-riderSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Rider', riderSchema);

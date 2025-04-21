@@ -250,25 +250,21 @@ const typeDefs = gql`
     updatedAt: String!
   }
 
-  type Rider {
-    _id: ID!
-    name: String!
-    email: String
-    username: String!
-    password: String!
-    phone: String!
-    image: String
-    available: Boolean!
-    zone: Zone!
-    isActive: Boolean!
-    createdAt: String!
-    updatedAt: String!
-    location: Point
-    accountNumber: String
-    currentWalletAmount: Float
-    totalWalletAmount: Float
-    withdrawnWalletAmount: Float
-  }
+type Rider {
+  _id: ID!
+  name: String!
+  username: String!
+  phone: String!
+  available: Boolean!
+  vehicleType: String!
+  zone: Zone!
+  assigned: Boolean!
+  bussinessDetails: RiderBussinessDetails
+  licenseDetails: RiderLicenseDetails
+  vehicleDetails: RiderVehicleDetails
+  createdAt: String!
+  updatedAt: String!
+}
 
   type User {
     _id: ID
@@ -689,6 +685,16 @@ const typeDefs = gql`
     isActive: Boolean!
   }
 
+  type RiderBussinessDetails {
+  bankName: String
+  accountName: String
+  accountCode: String
+  accountNumber: String
+  bussinessRegNo: String
+  companyRegNo: String
+  taxRate: Float
+}
+
   type Earnings {
     _id: String!
     rider: Rider!
@@ -717,6 +723,22 @@ const typeDefs = gql`
     paymentMethod: String!
     deliveryTime: String!
   }
+
+  input RiderBussinessDetailsInput {
+    bankName: String
+    accountName: String
+    accountCode: String
+    accountNumber: String
+    bussinessRegNo: String
+    companyRegNo: String
+    taxRate: Float
+  }
+
+  input RiderLicenseDetailsInput {
+  number: String
+  expiryDate: String
+  image: String
+}
 
   input EmailConfigurationInput {
     email: String
@@ -834,6 +856,10 @@ const typeDefs = gql`
     phoneIsVerified: Boolean
     emailIsVerified: Boolean
   }
+input RiderVehicleDetailsInput {
+  number: String
+  image: String
+}
 
   input AddonsInput {
     _id: String
@@ -870,18 +896,20 @@ const typeDefs = gql`
     isActive: Boolean
   }
 
-  input RiderInput {
-    _id: String
-    name: String!
-    email: String
-    username: String!
-    password: String!
-    phone: String!
-    image: String
-    available: Boolean!
-    zone: String!
-    accountNumber: String
-  }
+input RiderInput {
+  _id: ID
+  name: String!
+  username: String!
+  password: String
+  phone: String!
+  available: Boolean
+  vehicleType: String!
+  zone: ID!
+  assigned: Boolean
+  bussinessDetails: RiderBussinessDetailsInput
+  licenseDetails: RiderLicenseDetailsInput
+  vehicleDetails: RiderVehicleDetailsInput
+}
 
   input UserInput {
     phone: String
@@ -1220,6 +1248,16 @@ const typeDefs = gql`
     rider: Rider!
     withdrawRequest: WithdrawRequest!
   }
+type RiderLicenseDetails {
+  number: String
+  expiryDate: String
+  image: String
+}
+
+type RiderVehicleDetails {
+  number: String
+  image: String
+}
 
   type City {
     id: Int
@@ -1329,12 +1367,12 @@ const typeDefs = gql`
     order(id: String!): Order!
     orderPaypal(id: String!): Order!
     orderStripe(id: String!): Order!
-    riders: [Rider!]
-    rider(id: String): Rider!
+    riders: [Rider!]!
+    rider(id: ID!): Rider
     riderEarnings(id: String, offset: Int): [Earnings!]
     riderWithdrawRequests(id: String, offset: Int): [WithdrawRequest!]
     pageCount(restaurant: String!): Int
-    availableRiders: [Rider]
+    availableRiders: [Rider!]!
     getOrderStatuses: [String!]
     getPaymentStatuses: [String!]
     assignedOrders(id: String): [Order!]
@@ -1405,7 +1443,7 @@ const typeDefs = gql`
       search: String
     ): ActiveOrdersResponse!
     orderDetails(id: String!): Order!
-    ridersByZone(id: String!): [Rider!]
+    ridersByZone(id: ID!): [Rider!]!
     chat(order: ID!): [ChatMessageOutput!]
     getAllWithdrawRequests(offset: Int): WithdrawRequestReponse!
     getCountries: [Country]
@@ -1555,11 +1593,10 @@ const typeDefs = gql`
       restaurant: String!
       categoryId: String!
     ): Restaurant!
-    createRider(riderInput: RiderInput): Rider!
-    editRider(riderInput: RiderInput): Rider!
-    deleteRider(id: String!): Rider!
-    toggleAvailablity(id: String): Rider!
-    updateStatus(id: String, orderStatus: String!): Order!
+    createRider(riderInput: RiderInput!): Rider!
+    editRider(riderInput: RiderInput!): Rider
+    deleteRider(id: ID!): DeleteResponse!
+    toggleAvailablity(id: ID!): Rider
     assignRider(id: String!, riderId: String!): Order!
     riderLogin(
       username: String
@@ -1649,14 +1686,17 @@ const typeDefs = gql`
     saveDemoConfiguration(
       configurationInput: DemoConfigurationInput!
     ): Configuration!
-    createSubCategories(
-      categoryId: ID!, 
-      restaurant: ID, 
-      subCategories: [SubCategoryInput!]!
-    ): Restaurant!
-    updateFoodOutOfStock(id: String!, restaurant: String!, categoryId: String!): Boolean!
+    createSubCategories(subCategories: [SubCategoryInput!]!): [ID!]!
+    deleteSubCategory(_id: ID!): Boolean!
+    updateFoodOutOfStock(
+      id: String!
+      restaurant: String!
+      categoryId: String!
+    ): Boolean!
   }
-
+  type DeleteResponse {
+  _id: ID!
+}
   type Subscription {
     subscribePlaceOrder(restaurant: String!): SubscriptionOrders!
     orderStatusChanged(userId: String!): SubscriptionOrders!
