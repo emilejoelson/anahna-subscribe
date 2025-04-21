@@ -11,18 +11,18 @@ const itemSchema = new Schema({
   image: String,
   quantity: Number,
   variation: {
-    title: String,
-    price: Number
+    type: Schema.Types.ObjectId,
+    ref: 'Variation'
   },
   addons: [{
-    title: String,
-    description: String,
-    options: [{
-      title: String,
-      price: Number
-    }]
+    type: Schema.Types.ObjectId,
+    ref: 'Addon'
   }],
-  specialInstructions: String
+  specialInstructions: String,
+  isActive: {
+    type: Boolean,
+    default: true
+  },
 }, {
   timestamps: true
 });

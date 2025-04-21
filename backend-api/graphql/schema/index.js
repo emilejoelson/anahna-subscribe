@@ -19,13 +19,13 @@ const typeDefs = gql`
     deliveryAddress: String!
     details: String
     label: String!
+
     id: String
   }
 
   type Item {
     _id: ID!
     title: String!
-    food: String!
     description: String!
     image: String
     quantity: Int!
@@ -35,6 +35,8 @@ const typeDefs = gql`
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
+
+    food: String!
   }
 
   type Category {
@@ -416,6 +418,7 @@ const typeDefs = gql`
     image: String!
     address: String!
     location: Point
+
     slug: String
     keywords: [String]
     tags: [String]
@@ -1257,7 +1260,15 @@ input TippingInput {
 }
   type Query {
     getClonedRestaurants: [Restaurant!]!
-    
+    allOrdersWithoutPagination(
+      dateKeyword: String
+      starting_date: String
+      ending_date: String
+    ): [Order!]!
+    ordersByRestIdWithoutPagination(
+      restaurant: String!, 
+      search: String
+    ): [Order!]!
     banners: [Banner!]!
     withdrawRequests: [WithdrawRequest!]!
     earnings: [Earnings!]!
@@ -1398,11 +1409,11 @@ input BussinessDetailsInput {
   taxRate: Float
 }
   type Mutation {
-      updateRestaurantBussinessDetails(
+    updateRestaurantBussinessDetails(
       id: String!
       bussinessDetails: BussinessDetailsInput
     ): DeliveryUpdateResponse
-     updateRestaurantDelivery(
+    updateRestaurantDelivery(
       id: ID!
       minDeliveryFee: Float
       deliveryDistance: Float
@@ -1447,6 +1458,18 @@ input BussinessDetailsInput {
     editCategory(category: CategoryInput): Restaurant!
     createFood(foodInput: FoodInput): Restaurant!
     editFood(foodInput: FoodInput): Restaurant!
+    createOrder(
+      restaurant: String!
+      orderInput: [OrderInput!]!
+      paymentMethod: String!
+      couponCode: String
+      address: AddressInput!
+      tipping: Float!
+      orderDate: String!
+      isPickedUp: Boolean!
+      userId: String!
+      
+    ): Order!
     placeOrder(
       restaurant: String!
       orderInput: [OrderInput!]!
