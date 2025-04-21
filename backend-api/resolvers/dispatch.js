@@ -32,14 +32,44 @@ module.exports = {
         if (!req.isAuth) {
           throw new AuthenticationError('Unauthenticated');
         }
+
+        // Build base filters
         const filters = {
           orderStatus: { $in: ['PENDING', 'ACCEPTED', 'PICKED', 'ASSIGNED'] }
         };
+
+        // Add restaurant filter if provided
         if (args.restaurantId) {
           filters.restaurant = args.restaurantId;
         }
-        const orders = await Order.find(filters).sort({ createdAt: -1 });
-        return orders.map(transformOrder);
+
+        // Add search filter if provided
+        if (args.search) {
+          filters.orderId = new RegExp(args.search.replace(/[\\\[\]()+?.*]/g, c => '\\' + c), 'i');
+        }
+
+        // Add actions filter if provided
+        if (args.actions && args.actions.length > 0) {
+          filters.orderStatus = { $in: args.actions };
+        }
+
+        // Get total count for pagination
+        const totalCount = await Order.countDocuments(filters);
+
+        // Calculate pagination
+        const skip = args.page ? (args.page - 1) * (args.rowsPerPage || 10) : 0;
+        const limit = args.rowsPerPage || 10;
+
+        // Get orders with pagination
+        const orders = await Order.find(filters)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit);
+
+        return {
+          totalCount,
+          orders: orders.map(transformOrder)
+        };
       } catch (err) {
         console.error('Error fetching active orders:', err);
         throw new Error('Failed to fetch active orders');

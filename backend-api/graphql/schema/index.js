@@ -25,6 +25,7 @@ const typeDefs = gql`
   type Item {
     _id: ID!
     title: String!
+    food: String!
     description: String!
     image: String
     quantity: Int!
@@ -34,7 +35,6 @@ const typeDefs = gql`
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
-    food: String!
   }
 
   type Category {
@@ -179,9 +179,9 @@ const typeDefs = gql`
     bankName: String
     accountName: String
     accountCode: String
-    accountNumber: Float
-    bussinessRegNo: Float
-    companyRegNo: Float
+    accountNumber: String
+    bussinessRegNo: String
+    companyRegNo: String
     taxRate: Float
   }
 
@@ -1140,8 +1140,8 @@ const typeDefs = gql`
   }
 
   input CoordinatesInput {
-    longitude: Float
-    latitude: Float
+    longitude: Float!
+    latitude: Float!
   }
 
   type SaveNotificationTokenWebResponse {
@@ -1287,7 +1287,6 @@ const typeDefs = gql`
   }
 
   type Query {
-    subCategory(_id: ID!): SubCategory
     getClonedRestaurants: [Restaurant!]!
     allOrdersWithoutPagination(
       dateKeyword: String
@@ -1398,7 +1397,13 @@ const typeDefs = gql`
     zone(id: String!): Zone!
     unassignedOrdersByZone: [Order!]
     riderOrders: [Order!]
-    getActiveOrders(restaurantId: ID): [Order!]
+    getActiveOrders(
+      restaurantId: ID
+      page: Int
+      rowsPerPage: Int
+      actions: [String]
+      search: String
+    ): ActiveOrdersResponse!
     orderDetails(id: String!): Order!
     ridersByZone(id: String!): [Rider!]
     chat(order: ID!): [ChatMessageOutput!]
@@ -1427,6 +1432,11 @@ const typeDefs = gql`
     subCategoriesByParentId(parentId: ID, parentCategoryId: String): [SubCategory!]!
   }
 
+  type ActiveOrdersResponse {
+    totalCount: Int!
+    orders: [Order!]!
+  }
+
   input BussinessDetailsInput {
     bankName: String
     accountName: String
@@ -1438,11 +1448,11 @@ const typeDefs = gql`
   }
 
   type Mutation {
-    updateRestaurantBussinessDetails(
+      updateRestaurantBussinessDetails(
       id: String!
       bussinessDetails: BussinessDetailsInput
     ): DeliveryUpdateResponse
-    updateRestaurantDelivery(
+     updateRestaurantDelivery(
       id: ID!
       minDeliveryFee: Float
       deliveryDistance: Float
@@ -1612,13 +1622,13 @@ const typeDefs = gql`
       notificationTitle: String
       notificationBody: String!
     ): String!
-    updateCommission(id: String!, commissionRate: Float!): commissionDetails
+    updateCommission(id: String!, commissionRate: Float!): Restaurant!
     updateDeliveryBoundsAndLocation(
       id: ID!
       boundType: String!
-      bounds: [[[Float]]]
+      bounds: [[[Float!]]]
       circleBounds: CircleBoundsInput
-      location: CoordinatesInput
+      location: CoordinatesInput!
       address: String
       postCode: String
       city: String
@@ -1639,13 +1649,12 @@ const typeDefs = gql`
     saveDemoConfiguration(
       configurationInput: DemoConfigurationInput!
     ): Configuration!
-    createSubCategories(subCategories: [SubCategoryInput!]!): [ID!]!
-    deleteSubCategory(_id: ID!): Boolean!
-    updateFoodOutOfStock(
-      id: String!
-      restaurant: String!
-      categoryId: String!
-    ): Boolean!
+    createSubCategories(
+      categoryId: ID!, 
+      restaurant: ID, 
+      subCategories: [SubCategoryInput!]!
+    ): Restaurant!
+    updateFoodOutOfStock(id: String!, restaurant: String!, categoryId: String!): Boolean!
   }
 
   type Subscription {
