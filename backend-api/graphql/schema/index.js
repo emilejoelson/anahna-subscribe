@@ -1257,7 +1257,11 @@ input TippingInput {
   type Coordinates {
     type: String!
     coordinates: [Float!]!
-}
+  }
+  type commissionDetails{
+    _id: String
+    commissionRate: Float
+  }
   type Query {
     getClonedRestaurants: [Restaurant!]!
     allOrdersWithoutPagination(
@@ -1468,7 +1472,7 @@ input BussinessDetailsInput {
       orderDate: String!
       isPickedUp: Boolean!
       userId: String!
-      
+
     ): Order!
     placeOrder(
       restaurant: String!
@@ -1584,7 +1588,7 @@ input BussinessDetailsInput {
       notificationTitle: String
       notificationBody: String!
     ): String!
-    updateCommission(id: String!, commissionRate: Float!): Restaurant!
+    updateCommission(id: String!, commissionRate: Float!): commissionDetails
     updateDeliveryBoundsAndLocation(
       id: ID!
       boundType: String!
