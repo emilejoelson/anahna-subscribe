@@ -149,7 +149,6 @@ export const GET_RESTAURANT_PROFILE = gql`
         deliveryFee
       }
       username
-      password
       deliveryTime
       minimumOrder
       tax
