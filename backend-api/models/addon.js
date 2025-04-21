@@ -13,8 +13,8 @@ const addonSchema = new Schema({
     required: true
   },
   options: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Option'
+    type: [String],
+    default: []
   }],
   quantityMinimum: {
     type: Number,

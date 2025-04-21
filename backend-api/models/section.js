@@ -6,7 +6,6 @@ const sectionSchema = new Schema({
     type: String,
     required: true
   },
-  description: String,
   restaurants: [{
     type: Schema.Types.ObjectId,
     ref: 'Restaurant'
@@ -15,6 +14,8 @@ const sectionSchema = new Schema({
     type: Boolean,
     default: true
   },
+
+  description: String,
   order: {
     type: Number,
     default: 0

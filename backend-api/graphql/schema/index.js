@@ -209,7 +209,7 @@ const typeDefs = gql`
     title: String!
     price: Float!
     discounted: Float
-    addons: [String!]
+    addons: [Addon!]
     isOutOfStock: Boolean
   }
 
@@ -231,7 +231,7 @@ const typeDefs = gql`
   type Food {
     _id: ID!
     title: String!
-    description: String!
+    description: String
     variations: [Variation!]!
     image: String
     isActive: Boolean!
@@ -1337,7 +1337,7 @@ input TippingInput {
       latitude: Float
       longitude: Float
       shopType: String
-    ): NearByData!
+    ): NearByData
     nearByRestaurantsPreview(
       latitude: Float
       longitude: Float
