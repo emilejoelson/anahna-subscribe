@@ -7,7 +7,7 @@ module.exports = {
   Mutation: {
     createFood: async (_, args, context) => {
       console.log('Creating food item with arguments:', args);
-      const { restaurant: restId, category: categoryId, variations: foodVariations, title, description, image, _id: foodId } = args.foodInput;
+      const { restaurant: restId, category: categoryId, variations: foodVariations, title, description, image, _id: foodId, isOutOfStock, isActive } = args.foodInput;
 
       // Always require a restaurant ID
       if (!restId) {
@@ -24,14 +24,16 @@ module.exports = {
         
         // If the _id is empty string or null, it's a new item (create)
         if (!foodId || foodId === '') {
-          // Create a placeholder title if not provided
+          // Create a placeholder title if not provided - ALWAYS SET A TITLE
           const foodTitle = title || 'New Food Item';
           
           const food = new Food({
-            title: foodTitle,
+            title: foodTitle, // Ensure title is never null or empty
             variations,
             description: description || '',
-            image: image || ''
+            image: image || '',
+            isOutOfStock: isOutOfStock !== undefined ? isOutOfStock : false,
+            isActive: isActive !== undefined ? isActive : true
           });
 
           // If category not provided, try to find the first available category
@@ -50,18 +52,26 @@ module.exports = {
             
             // Add food to the first category
             firstCategory.foods.push(food);
-            await restaurant.save();
+            const savedRestaurant = await restaurant.save();
             
-            return await transformRestaurant(restaurant);
+            return await transformRestaurant(savedRestaurant);
           } else {
             // Use the specified category
-            await Restaurant.updateOne(
-              { _id: restId, 'categories._id': categoryId },
-              { $push: { 'categories.$.foods': food } }
-            );
-
-            const latestRest = await Restaurant.findOne({ _id: restId });
-            return await transformRestaurant(latestRest);
+            const restaurant = await Restaurant.findOne({ _id: restId });
+            if (!restaurant) {
+              throw new Error('Restaurant not found');
+            }
+            
+            const category = restaurant.categories.id(categoryId);
+            if (!category) {
+              throw new Error(`Category with ID ${categoryId} not found`);
+            }
+            
+            // Add directly to the category
+            category.foods.push(food);
+            const savedRestaurant = await restaurant.save();
+            
+            return await transformRestaurant(savedRestaurant);
           }
         } else {
           // If _id is provided, it's an edit

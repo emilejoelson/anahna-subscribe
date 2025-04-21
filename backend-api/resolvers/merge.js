@@ -92,10 +92,52 @@ const zone = async id => {
 };
 
 const transformFood = food => {
+  // Handle null/undefined food
+  if (!food) {
+    console.warn('Attempted to transform null food item');
+    return {
+      _id: new mongoose.Types.ObjectId().toString(),
+      title: "Unknown Food Item",
+      description: "",
+      variations: [],
+      image: "",
+      isActive: true,
+      createdAt: dateToString(new Date()),
+      updatedAt: dateToString(new Date())
+    };
+  }
+  
+  // Handle the case when food._id is a Buffer
+  let foodId;
+  if (food._id) {
+    if (Buffer.isBuffer(food._id)) {
+      foodId = food._id.toString('hex');
+    } else if (food._id.toString) {
+      foodId = food._id.toString();
+    } else {
+      foodId = String(food._id);
+    }
+  } else if (food.id) {
+    foodId = food.id;
+  } else {
+    foodId = new mongoose.Types.ObjectId().toString();
+    console.warn('Generated placeholder ID for food item without ID');
+  }
+  
+  const foodDoc = food._doc || food;
+  
   return {
-    ...food._doc,
-    _id: food.id,
-    variations: variations.bind(this, food.variations)
+    ...foodDoc,
+    _id: foodId,
+    // Ensure these fields are never null
+    title: foodDoc.title || 'New Food Item',
+    description: foodDoc.description !== undefined ? foodDoc.description : '',
+    image: foodDoc.image || '',
+    isActive: foodDoc.isActive !== undefined ? foodDoc.isActive : true,
+    isOutOfStock: foodDoc.isOutOfStock !== undefined ? foodDoc.isOutOfStock : false,
+    variations: variations.bind(this, food.variations || []),
+    createdAt: foodDoc.createdAt ? dateToString(foodDoc.createdAt) : dateToString(new Date()),
+    updatedAt: foodDoc.updatedAt ? dateToString(foodDoc.updatedAt) : dateToString(new Date())
   };
 };
 

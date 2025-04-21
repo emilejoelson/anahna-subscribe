@@ -236,6 +236,7 @@ const typeDefs = gql`
     createdAt: String!
     updatedAt: String!
     subCategory: String
+    isOutOfStock: Boolean
   }
 
   type CartFood {
@@ -857,6 +858,8 @@ input AmplitudeApiKeyConfigurationInput {
     image: String
     variations: [VariationInput!]!
     subCategory: String
+    isOutOfStock: Boolean
+    isActive: Boolean
   }
 
   input RiderInput {
