@@ -6,28 +6,28 @@ module.exports = {
   Query: {
     riders: async () => {
       try {
-        return await Rider.find().populate('zone').select('-password');
+        return await Rider.find().populate('zone');
       } catch (err) {
         throw err;
       }
     },
     rider: async (_, { id }) => {
       try {
-        return await Rider.findById(id).populate('zone').select('-password');
+        return await Rider.findById(id).populate('zone');
       } catch (err) {
         throw err;
       }
     },
     availableRiders: async () => {
       try {
-        return await Rider.find({ available: true }).populate('zone').select('-password');
+        return await Rider.find({ available: true }).populate('zone');
       } catch (err) {
         throw err;
       }
     },
     ridersByZone: async (_, { id }) => {
       try {
-        return await Rider.find({ zone: id }).populate('zone').select('-password');
+        return await Rider.find({ zone: id }).populate('zone');
       } catch (err) {
         throw err;
       }
@@ -38,14 +38,14 @@ module.exports = {
       try {
         const rider = new Rider(riderInput);
         const savedRider = await rider.save();
-        return await Rider.findById(savedRider._id).populate('zone').select('-password');
+        return await Rider.findById(savedRider._id).populate('zone');
       } catch (err) {
         throw err;
       }
     },
     editRider: async (_, { riderInput }) => {
       try {
-        const updatedRider = await Rider.findByIdAndUpdate(riderInput._id, riderInput, { new: true }).populate('zone').select('-password');
+        const updatedRider = await Rider.findByIdAndUpdate(riderInput._id, riderInput, { new: true }).populate('zone');
         if (!updatedRider) {
           throw new Error('Rider not found');
         }
@@ -67,7 +67,7 @@ module.exports = {
     },
     toggleAvailablity: async (_, { id }) => {
       try {
-        const rider = await Rider.findById(id).populate('zone').select('-password');
+        const rider = await Rider.findById(id).populate('zone');
         if (!rider) {
           throw new Error('Rider not found');
         }
