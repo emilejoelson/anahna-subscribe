@@ -1594,6 +1594,11 @@ input BussinessDetailsInput {
       restaurant: ID, 
       subCategories: [SubCategoryInput!]!
     ): Restaurant!
+    updateFoodOutOfStock(
+      id: String!
+      restaurant: String!
+      categoryId: String!
+    ): Boolean!
   }
   type Subscription {
     subscribePlaceOrder(restaurant: String!): SubscriptionOrders!
