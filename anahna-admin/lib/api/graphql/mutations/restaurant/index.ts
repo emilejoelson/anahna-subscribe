@@ -55,7 +55,7 @@ export const UPDATE_DELIVERY_BOUNDS_AND_LOCATION = gql`
   mutation updateDeliveryBoundsAndLocation(
     $id: ID!
     $boundType: String!
-    $bounds: [[[Float!]]]
+    $bounds: [[[Float]]]
     $circleBounds: CircleBoundsInput
     $location: CoordinatesInput!
     $address: String

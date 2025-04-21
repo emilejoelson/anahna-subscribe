@@ -50,9 +50,9 @@ const bussinessDetailsSchema = new Schema({
   bankName: String,
   accountName: String,
   accountCode: String,
-  accountNumber: String,
-  bussinessRegNo: String,
-  companyRegNo: String,
+  accountNumber: Number,
+  bussinessRegNo: Number,
+  companyRegNo: Number,
   taxRate: Number
 });
 

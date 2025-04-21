@@ -5,6 +5,7 @@ const orderSchema = new Schema({
   orderId: {
     type: String,
     required: true,
+    default: () => new mongoose.Types.ObjectId().toHexString(), // ou uuidv4()
     // unique: true
   },
   user: {
@@ -21,6 +22,10 @@ const orderSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Item'
   }],
+  addons: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Addon'
+  }],
   orderAmount: {
     type: Number,
     required: true
@@ -29,19 +34,16 @@ const orderSchema = new Schema({
     type: Number,
     default: 0
   },
+  status: {
+    type: Boolean,
+    default: true
+  },
   deliveryCharges: Number,
   tipping: Number,
   taxationAmount: Number,
   deliveryAddress: {
-    location: {
-      type: {
-        type: String,
-        default: 'Point'
-      },
-      coordinates: [Number]
-    },
-    deliveryAddress: String,
-    details: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Address',
   },
   orderStatus: {
     type: String,
@@ -72,15 +74,27 @@ const orderSchema = new Schema({
   },
   preparationTime: Date,
   completionTime: Date,
+  orderDate: Date,
+  expectedTime: Date,
   acceptedAt: Date,
   pickedAt: Date,
   deliveredAt: Date,
   cancelledAt: Date,
+  assignedAt: Date,
   reason: String,
   isPickedUp: {
     type: Boolean,
     default: false
-  }
+  },
+  isRinged: {
+    type: Boolean,
+    default: false
+  },
+  isRinged: {
+    type: Boolean,
+    default: false
+  },
+  instructions: String,
 }, {
   timestamps: true
 });

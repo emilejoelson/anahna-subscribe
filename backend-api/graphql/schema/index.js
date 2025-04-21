@@ -20,6 +20,7 @@ const typeDefs = gql`
     details: String
     label: String!
 
+
     id: String
   }
 
@@ -35,6 +36,8 @@ const typeDefs = gql`
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
+
+    food: String!
 
     food: String!
   }
@@ -182,6 +185,9 @@ const typeDefs = gql`
     bankName: String
     accountName: String
     accountCode: String
+    accountNumber: Float
+    bussinessRegNo: Float
+    companyRegNo: Float
     accountNumber: Float
     bussinessRegNo: Float
     companyRegNo: Float
@@ -418,6 +424,7 @@ const typeDefs = gql`
     image: String!
     address: String!
     location: Point
+
 
     slug: String
     keywords: [String]
@@ -1129,6 +1136,8 @@ input TippingInput {
   input CoordinatesInput {
     longitude: Float
     latitude: Float
+    longitude: Float
+    latitude: Float
   }
 
   type SaveNotificationTokenWebResponse {
@@ -1262,9 +1271,23 @@ input TippingInput {
     _id: String
     commissionRate: Float
   }
+  }
+  type commissionDetails{
+    _id: String
+    commissionRate: Float
+  }
   type Query {
     subCategory(_id: ID!): SubCategory
     getClonedRestaurants: [Restaurant!]!
+    allOrdersWithoutPagination(
+      dateKeyword: String
+      starting_date: String
+      ending_date: String
+    ): [Order!]!
+    ordersByRestIdWithoutPagination(
+      restaurant: String!, 
+      search: String
+    ): [Order!]!
     allOrdersWithoutPagination(
       dateKeyword: String
       starting_date: String
@@ -1411,13 +1434,18 @@ input BussinessDetailsInput {
   accountNumber: Float
   bussinessRegNo: Float
   companyRegNo: Float
+  accountNumber: Float
+  bussinessRegNo: Float
+  companyRegNo: Float
   taxRate: Float
 }
   type Mutation {
     updateRestaurantBussinessDetails(
+    updateRestaurantBussinessDetails(
       id: String!
       bussinessDetails: BussinessDetailsInput
     ): DeliveryUpdateResponse
+    updateRestaurantDelivery(
     updateRestaurantDelivery(
       id: ID!
       minDeliveryFee: Float
@@ -1463,6 +1491,18 @@ input BussinessDetailsInput {
     editCategory(category: CategoryInput): Restaurant!
     createFood(foodInput: FoodInput): Restaurant!
     editFood(foodInput: FoodInput): Restaurant!
+    createOrder(
+      restaurant: String!
+      orderInput: [OrderInput!]!
+      paymentMethod: String!
+      couponCode: String
+      address: AddressInput!
+      tipping: Float!
+      orderDate: String!
+      isPickedUp: Boolean!
+      userId: String!
+
+    ): Order!
     createOrder(
       restaurant: String!
       orderInput: [OrderInput!]!
@@ -1590,11 +1630,14 @@ input BussinessDetailsInput {
       notificationBody: String!
     ): String!
     updateCommission(id: String!, commissionRate: Float!): commissionDetails
+    updateCommission(id: String!, commissionRate: Float!): commissionDetails
     updateDeliveryBoundsAndLocation(
       id: ID!
       boundType: String!
       bounds: [[[Float]]]
+      bounds: [[[Float]]]
       circleBounds: CircleBoundsInput
+      location: CoordinatesInput
       location: CoordinatesInput
       address: String
       postCode: String

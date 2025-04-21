@@ -125,6 +125,11 @@ module.exports = {
         throw new Error('At least one variation is required');
       }
 
+      // Ensure title is provided - this is a required field in the model
+      if (!title) {
+        throw new Error('Food title is required');
+      }
+
       try {
         const restaurant = await Restaurant.findOne({ _id: restId });
         if (!restaurant) throw new Error('Restaurant not found');
@@ -161,10 +166,10 @@ module.exports = {
             containingCategory.foods.splice(foodIndex, 1);
           }
 
-          // Create updated food document
+          // Create updated food document - ensure title is always present
           const updatedFoodDoc = {
             _id: mongoose.Types.ObjectId(foodId),
-            title: title || 'New Food Item',
+            title: title, // Required field - no fallback now since we validate above
             description: description || '',
             image: image || '',
             isOutOfStock: isOutOfStock !== undefined ? isOutOfStock : false,
@@ -192,9 +197,9 @@ module.exports = {
             throw new Error('Food item not found in any category');
           }
           
-          // Update the existing food item
+          // Update the existing food item - ensure title is always present
           const existingFood = containingCategory.foods[foodIndex];
-          existingFood.title = title || existingFood.title;
+          existingFood.title = title; // Required field - no fallback now since we validate above
           existingFood.description = description !== undefined ? description : existingFood.description;
           existingFood.image = image !== undefined ? image : existingFood.image;
           existingFood.variations = variations;
@@ -213,17 +218,145 @@ module.exports = {
     },
 
     deleteFood: async (_, { id, restaurant: restId, categoryId }, context) => {
-      console.log('Deleting food item with ID:', id);
+      console.log('Deleting food item with ID:', id, 'from category:', categoryId, 'in restaurant:', restId);
       try {
-        const restaurant = await Restaurant.findOne({ _id: restId });
-        if (!restaurant) throw new Error('Restaurant not found');
+        // Validate inputs
+        if (!id || !restId || !categoryId) {
+          throw new Error('Food ID, restaurant ID, and category ID are all required');
+        }
 
-        restaurant.categories.id(categoryId).foods.id(id).remove();
-        const result = await restaurant.save();
-        return await transformRestaurant(result);
+        // Find the restaurant
+        const restaurant = await Restaurant.findById(restId);
+        if (!restaurant) {
+          throw new Error(`Restaurant with ID ${restId} not found`);
+        }
+
+        // Find the category by ID
+        const categoryIndex = restaurant.categories.findIndex(
+          cat => cat._id.toString() === categoryId
+        );
+        
+        if (categoryIndex === -1) {
+          throw new Error(`Category with ID ${categoryId} not found in restaurant ${restId}`);
+        }
+        
+        // First, fix any existing foods without title - add a title to prevent validation errors
+        restaurant.categories.forEach(category => {
+          if (category.foods && Array.isArray(category.foods)) {
+            category.foods.forEach(food => {
+              if (!food.title) {
+                console.log(`Setting default title for food ${food._id}`);
+                food.title = 'Untitled Food';
+              }
+            });
+          }
+        });
+        
+        // Find the food item by ID in the category
+        const category = restaurant.categories[categoryIndex];
+        const foodIndex = category.foods.findIndex(
+          food => food._id.toString() === id
+        );
+        
+        if (foodIndex === -1) {
+          throw new Error(`Food item with ID ${id} not found in category ${categoryId}`);
+        }
+        
+        // Remove the food item
+        category.foods.splice(foodIndex, 1);
+        
+        // Save with validation bypass option if needed
+        // Use updateOne to bypass validation and directly update the document
+        const updateResult = await Restaurant.updateOne(
+          { _id: restId },
+          { $set: { categories: restaurant.categories } }
+        );
+        
+        if (updateResult.modifiedCount === 0) {
+          throw new Error('Failed to update restaurant after removing food item');
+        }
+        
+        console.log(`Successfully deleted food ${id} from category ${categoryId}`);
+        
+        // Fetch the latest restaurant data
+        const updatedRestaurant = await Restaurant.findById(restId);
+        return transformRestaurant(updatedRestaurant);
       } catch (err) {
         console.error('Error deleting food item:', err);
-        throw new Error('Failed to delete food item');
+        // Return the specific error message instead of generic one
+        throw new Error(`Failed to delete food item: ${err.message}`);
+      }
+    },
+
+    updateFoodOutOfStock: async (_, { id, restaurant: restId, categoryId }, context) => {
+      console.log('Toggling food out-of-stock status with ID:', id, 'in category:', categoryId, 'in restaurant:', restId);
+      try {
+        // Validate inputs
+        if (!id || !restId || !categoryId) {
+          throw new Error('Food ID, restaurant ID, and category ID are all required');
+        }
+
+        // Find the restaurant
+        const restaurant = await Restaurant.findById(restId);
+        if (!restaurant) {
+          throw new Error(`Restaurant with ID ${restId} not found`);
+        }
+
+        // Find the category by ID
+        const categoryIndex = restaurant.categories.findIndex(
+          cat => cat._id.toString() === categoryId
+        );
+        
+        if (categoryIndex === -1) {
+          throw new Error(`Category with ID ${categoryId} not found in restaurant ${restId}`);
+        }
+        
+        // Find the food item by ID in the category
+        const category = restaurant.categories[categoryIndex];
+        const foodIndex = category.foods.findIndex(
+          food => food._id.toString() === id
+        );
+        
+        if (foodIndex === -1) {
+          throw new Error(`Food item with ID ${id} not found in category ${categoryId}`);
+        }
+        
+        // Toggle the isOutOfStock status
+        const foodItem = category.foods[foodIndex];
+        foodItem.isOutOfStock = !foodItem.isOutOfStock;
+        
+        // Use updateOne to bypass validation and directly update the document
+        const updateResult = await Restaurant.updateOne(
+          { 
+            _id: restId,
+            'categories._id': categoryId,
+            'categories.foods._id': mongoose.Types.ObjectId(id)
+          },
+          { 
+            $set: { 
+              'categories.$[category].foods.$[food].isOutOfStock': foodItem.isOutOfStock,
+              'categories.$[category].foods.$[food].updatedAt': new Date()
+            } 
+          },
+          {
+            arrayFilters: [
+              { 'category._id': mongoose.Types.ObjectId(categoryId) },
+              { 'food._id': mongoose.Types.ObjectId(id) }
+            ]
+          }
+        );
+        
+        if (updateResult.modifiedCount === 0) {
+          throw new Error('Failed to update food out-of-stock status');
+        }
+        
+        console.log(`Successfully updated food ${id} out-of-stock status to ${foodItem.isOutOfStock}`);
+        
+        // Return the new out-of-stock status
+        return foodItem.isOutOfStock;
+      } catch (err) {
+        console.error('Error updating food out-of-stock status:', err);
+        throw new Error(`Failed to update food out-of-stock status: ${err.message}`);
       }
     }
   }

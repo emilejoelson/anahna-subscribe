@@ -91,9 +91,9 @@ module.exports = {
         const restaurant = await Restaurant.findById(id)
         return {
           boundType: restaurant.boundType,
-          deliveryBounds: restaurant.deliveryBounds,
-          location: restaurant.location,
-          circleBounds: restaurant.circleBounds,
+          deliveryBounds: restaurant.deliveryBounds.coordinates,
+          location: restaurant.location.coordinates,
+          circleBounds: restaurant.circleBounds.radius,
           address: restaurant.address,
           city: restaurant.city,
           postCode: restaurant.postCode,
@@ -269,7 +269,7 @@ module.exports = {
     },
     editRestaurant: async (_, { restaurant: restaurantInput }) => {
       try {
-        log('editRestaurant', restaurantInput)
+        console.log('editRestaurant', restaurantInput)
         const restaurant = await Restaurant.findByIdAndUpdate(restaurantInput._id, { ...restaurantInput }, { new: true });
         if (!restaurant) {
           throw new Error('Restaurant not found');
@@ -279,6 +279,30 @@ module.exports = {
         throw new Error(`Could not edit restaurant: ${err.message}`);
       }
     },
+    updateRestaurantBussinessDetails: async (_, { id, bussinessDetails }) => {
+      try {
+        const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+          id,
+          { bussinessDetails },
+          { new: true }
+        );
+    
+        if (!updatedRestaurant) {
+          throw new Error('Restaurant not found');
+        }
+        console.log('bussinessDetails', updatedRestaurant.bussinessDetails);
+        
+        return {
+          success: true,
+          message: 'Business details updated successfully',
+          data: {
+            _id: updatedRestaurant._id
+          }
+        };
+      } catch (error) {
+        throw new Error(`Could not update business details: ${error.message}`);
+      }
+    },    
     duplicateRestaurant: async (_, { id, owner }) => {
       try {
         const existingRestaurant = await Restaurant.findById(id);
@@ -287,16 +311,19 @@ module.exports = {
         }
         const restaurantCount = await Restaurant.countDocuments();
         const newRestaurantData = { ...existingRestaurant._doc };
+
         delete newRestaurantData._id;
         delete newRestaurantData.unique_restaurant_id;
         delete newRestaurantData.orderId;
         delete newRestaurantData.slug;
+
         newRestaurantData.name = `${newRestaurantData.name} (Clone)`;
         newRestaurantData.username = `${newRestaurantData.username}_clone_${Date.now()}`;
-        newRestaurantData.orderId = restaurantCount + 1;
+        // newRestaurantData.orderId = restaurantCount + 1;
         newRestaurantData.unique_restaurant_id = Math.random().toString(36).substring(2, 15);
         newRestaurantData.slug = newRestaurantData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') + '-' + Math.random().toString(36).substring(2, 7);
         newRestaurantData.owner = owner;
+
         const newRestaurant = new Restaurant(newRestaurantData);
         const savedRestaurant = await newRestaurant.save();
         await Owner.findByIdAndUpdate(owner, { $push: { restaurants: savedRestaurant._id } });
@@ -307,20 +334,43 @@ module.exports = {
     },
     updateDeliveryBoundsAndLocation: async (_, { id, boundType, bounds, circleBounds, location, address, postCode, city }) => {
       try {
-        const updateData = { boundType, location, address, postCode, city };
-        if (boundType === 'polygon' && bounds) {
-          updateData.deliveryBounds = { coordinates: bounds };
-          updateData.circleBounds = null;
-          updateData.boundType = 'polygon';
-        } else if (boundType === 'circle' && circleBounds) {
-          updateData.circleBounds = circleBounds;
-          updateData.deliveryBounds = null;
-          updateData.location = { type: 'Point', coordinates: circleBounds.center };
-          updateData.boundType = 'circle';
-        } else {
-          updateData.deliveryBounds = null;
-          updateData.circleBounds = null;
+        let updateData = { boundType };
+
+        if (address) updateData.address = address;
+        if (postCode) updateData.postCode = postCode;
+        if (city) updateData.city = city;
+
+        function isValidPolygonCoordinates(bounds) {
+          return Array.isArray(bounds) && bounds.length > 0 && bounds.every(polygon => 
+            polygon.every(point => Array.isArray(point) && point.length === 2 && point.every(coord => typeof coord === 'number'))
+          );
         }
+
+        console.log('updateData', updateData);
+        
+        // boundType in front refere to deliveryZoneType
+        if (boundType === 'polygon' && isValidPolygonCoordinates(bounds)) {
+          updateData.boundType = 'polygon';
+          updateData.deliveryBounds = {
+            type: 'Polygon',
+            coordinates: bounds,
+          };
+        } else if (boundType === 'radius' && circleBounds?.radius && isValidPolygonCoordinates(bounds)) {
+          updateData.boundType = 'radius';
+          updateData.circleBounds = {
+            radius: circleBounds.radius,
+          };
+          updateData.deliveryBounds = {
+            coordinates: bounds,
+          };
+        } else if (boundType === 'point' && location && location.latitude && location.longitude) {
+          updateData.boundType = 'point';
+          updateData.location = {
+            type: 'Point',
+            coordinates: [location.longitude, location.latitude],
+          };
+        }
+
         const updatedRestaurant = await Restaurant.findByIdAndUpdate(id, updateData, { new: true });
         if (!updatedRestaurant) {
           return { success: false, message: 'Restaurant not found' };
@@ -399,6 +449,32 @@ module.exports = {
       } catch (error) {
         console.error('Error in updateTimings:', error);
         throw new Error(`Update Timing Error: ${error.message}`);
+      }
+    },
+    updateCommission: async (_, { id, commissionRate } ) => {
+      try {
+        console.log('========updateCommission========', id, commissionRate)
+        
+        if (!id || !commissionRate) {
+          throw new Error('Restaurant ID and commission rate are required');
+        }
+        
+        const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+          id,
+          { commissionRate },
+          { new: true } // return restaurant after update
+        );
+
+        if (!updatedRestaurant) {
+          throw new Error('Restaurant not found');
+        }
+
+        return { 
+          _id: updatedRestaurant._id.toString(),
+          commissionRate: updatedRestaurant.commissionRate
+        };
+      } catch (error) {
+        throw new Error(`Could not update commission: ${error.message}`);
       }
     }
   },

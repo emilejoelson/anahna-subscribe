@@ -303,7 +303,59 @@ module.exports = {
     },
     getPaymentStatuses: async(_, args, context) => {
       return payment_status
-    }
+    },
+    allOrdersWithoutPagination: async(_, { dateKeyword, starting_date, ending_date }, context) => {
+      try {
+        console.log('allOrdersWithoutPagination', dateKeyword, starting_date, ending_date)
+        let filter = {}
+        if (dateKeyword === 'All') {
+          filter = {}
+        } else if (starting_date && ending_date) {
+          filter = {
+            createdAt: {
+              $gte: new Date(starting_date),
+              $lt: new Date(ending_date)
+              }
+          }
+        }
+
+        const orders = await Order.find(filter)
+          .sort({ createdAt: -1 })
+        return orders.map(order => {
+          return transformOrder(order)
+        })
+      } catch (err) {
+        throw err
+      }
+    },
+    ordersByRestIdWithoutPagination: async(_, { restaurant, search }, context) => {
+      console.log('restaurant orders args', restaurant, search)
+      try {
+        let orders = []
+        if (search) {
+          const search = new RegExp(
+            // eslint-disable-next-line no-useless-escape
+            search.replace(/[\\\[\]()+?.*]/g, c => '\\' + c),
+            'i'
+          )
+          orders = await Order.find({
+            restaurant: restaurant,
+            orderId: search
+          }).sort({ createdAt: -1 })
+          return orders.map(order => {
+            return transformOrder(order)
+          })
+        } else {
+          orders = await Order.find({ restaurant: restaurant })
+            .sort({ createdAt: -1 })
+          return orders.map(order => {
+            return transformOrder(order)
+          })
+        }
+      } catch (err) {
+        throw err
+      }
+    },
   },
   Mutation: {
     placeOrder: async(_, args, { req, res }) => {
@@ -622,6 +674,22 @@ module.exports = {
       publishOrder(transformedOrder)
 
       return transformedOrder
+    },
+    // createOrder mutation
+    createOrder: async (_, { input }, { req }) => {
+      console.log('createOrder', input)
+
+      try {
+        const order = new Order({
+          ...input,
+          user: req.userId
+        })
+        const result = await order.save()
+        return transformOrder(result)
+      } catch (err) {
+        throw err
+      }
+
     }
   }
 }

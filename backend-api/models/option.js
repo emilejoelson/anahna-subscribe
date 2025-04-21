@@ -6,6 +6,9 @@ const optionSchema = new Schema({
     type: String,
     required: true
   },
+  description: {
+    type: String,
+  },
   price: {
     type: Number,
     required: true,
