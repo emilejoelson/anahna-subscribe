@@ -2,12 +2,24 @@ const Food = require('../models/food');
 const Restaurant = require('../models/restaurant');
 const Variation = require('../models/variation');
 const { transformRestaurant } = require('./merge');
+const mongoose = require('mongoose');
 
 module.exports = {
   Mutation: {
     createFood: async (_, args, context) => {
       console.log('Creating food item with arguments:', args);
-      const { restaurant: restId, category: categoryId, variations: foodVariations, title, description, image, _id: foodId, isOutOfStock, isActive } = args.foodInput;
+      const { 
+        restaurant: restId, 
+        category: categoryId, 
+        variations: foodVariations, 
+        title, 
+        description, 
+        image, 
+        _id: foodId, 
+        isOutOfStock, 
+        isActive,
+        subCategory 
+      } = args.foodInput;
 
       // Always require a restaurant ID
       if (!restId) {
@@ -20,23 +32,36 @@ module.exports = {
           throw new Error('At least one variation is required');
         }
 
-        const variations = foodVariations.map(variation => new Variation(variation));
+        // Format variations for storing directly in the restaurant document
+        const variations = foodVariations.map(variation => ({
+          _id: variation._id || new mongoose.Types.ObjectId(),
+          title: variation.title || 'Default Variation',
+          price: variation.price,
+          discounted: variation.discounted || null,
+          addons: variation.addons || [],
+          isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+        }));
         
         // If the _id is empty string or null, it's a new item (create)
         if (!foodId || foodId === '') {
-          // Create a placeholder title if not provided - ALWAYS SET A TITLE
+          // Create a placeholder title if not provided
           const foodTitle = title || 'New Food Item';
           
-          const food = new Food({
-            title: foodTitle, // Ensure title is never null or empty
-            variations,
+          // Create a food document for embedding
+          const foodDoc = {
+            _id: new mongoose.Types.ObjectId(),
+            title: foodTitle,
             description: description || '',
             image: image || '',
             isOutOfStock: isOutOfStock !== undefined ? isOutOfStock : false,
-            isActive: isActive !== undefined ? isActive : true
-          });
+            isActive: isActive !== undefined ? isActive : true,
+            subCategory: subCategory || '',
+            variations: variations,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
 
-          // If category not provided, try to find the first available category
+          // If category not provided, find first available category
           if (!categoryId) {
             const restaurant = await Restaurant.findOne({ _id: restId });
             if (!restaurant) {
@@ -47,31 +72,25 @@ module.exports = {
               throw new Error('Restaurant has no categories. Please create a category first.');
             }
             
-            // Use the first category
-            const firstCategory = restaurant.categories[0];
-            
             // Add food to the first category
-            firstCategory.foods.push(food);
+            restaurant.categories[0].foods.push(foodDoc);
             const savedRestaurant = await restaurant.save();
             
-            return await transformRestaurant(savedRestaurant);
+            return transformRestaurant(savedRestaurant);
           } else {
             // Use the specified category
-            const restaurant = await Restaurant.findOne({ _id: restId });
-            if (!restaurant) {
-              throw new Error('Restaurant not found');
+            // Update using updateOne to avoid race conditions
+            const result = await Restaurant.updateOne(
+              { _id: restId, 'categories._id': categoryId },
+              { $push: { 'categories.$.foods': foodDoc } }
+            );
+
+            if (result.matchedCount === 0) {
+              throw new Error(`Restaurant or category not found`);
             }
             
-            const category = restaurant.categories.id(categoryId);
-            if (!category) {
-              throw new Error(`Category with ID ${categoryId} not found`);
-            }
-            
-            // Add directly to the category
-            category.foods.push(food);
-            const savedRestaurant = await restaurant.save();
-            
-            return await transformRestaurant(savedRestaurant);
+            const updatedRestaurant = await Restaurant.findById(restId);
+            return transformRestaurant(updatedRestaurant);
           }
         } else {
           // If _id is provided, it's an edit
@@ -85,7 +104,18 @@ module.exports = {
 
     editFood: async (_, args, context) => {
       console.log('Editing food item with arguments:', args);
-      const { _id: foodId, restaurant: restId, category: categoryId, variations: foodVariations, title, description, image } = args.foodInput;
+      const { 
+        _id: foodId, 
+        restaurant: restId, 
+        category: categoryId, 
+        variations: foodVariations, 
+        title, 
+        description, 
+        image,
+        isOutOfStock,
+        isActive,
+        subCategory 
+      } = args.foodInput;
 
       if (!restId) {
         throw new Error('Restaurant ID is required');
@@ -95,73 +125,86 @@ module.exports = {
         throw new Error('At least one variation is required');
       }
 
-      const variations = foodVariations.map(variation => new Variation(variation));
-
       try {
         const restaurant = await Restaurant.findOne({ _id: restId });
         if (!restaurant) throw new Error('Restaurant not found');
 
-        // Find category containing the food item (if any)
+        // Process variations for the embedded document
+        const variations = foodVariations.map(variation => ({
+          _id: variation._id || new mongoose.Types.ObjectId(),
+          title: variation.title || 'Default Variation',
+          price: variation.price,
+          discounted: variation.discounted || null,
+          addons: variation.addons || [],
+          isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+        }));
+
+        // Find category containing the food item
         let containingCategory = null;
+        let foodIndex = -1;
+        
         for (const cat of restaurant.categories) {
-          if (cat.foods.id(foodId)) {
-            containingCategory = cat;
-            break;
+          for (let i = 0; i < cat.foods.length; i++) {
+            if (cat.foods[i]._id.toString() === foodId) {
+              containingCategory = cat;
+              foodIndex = i;
+              break;
+            }
           }
+          if (containingCategory) break;
         }
 
         // If we're moving to a new category or the food doesn't exist in any category
         if (categoryId && (!containingCategory || !containingCategory._id.equals(categoryId))) {
           // Remove from previous category if necessary
-          if (containingCategory) {
-            containingCategory.foods.id(foodId).remove();
-            await restaurant.save();
+          if (containingCategory && foodIndex !== -1) {
+            containingCategory.foods.splice(foodIndex, 1);
           }
 
-          // Add to new category
-          const food = new Food({
-            title: title || 'New Food Item', 
-            variations,
+          // Create updated food document
+          const updatedFoodDoc = {
+            _id: mongoose.Types.ObjectId(foodId),
+            title: title || 'New Food Item',
             description: description || '',
-            image: image || ''
-          });
+            image: image || '',
+            isOutOfStock: isOutOfStock !== undefined ? isOutOfStock : false,
+            isActive: isActive !== undefined ? isActive : true,
+            subCategory: subCategory || '',
+            variations: variations,
+            updatedAt: new Date()
+          };
 
-          // Ensure the target category exists
-          const targetCategory = restaurant.categories.id(categoryId);
-          if (!targetCategory) {
+          // Find target category and add food to it
+          const targetCategoryIndex = restaurant.categories.findIndex(
+            cat => cat._id.toString() === categoryId
+          );
+
+          if (targetCategoryIndex === -1) {
             throw new Error(`Category with ID ${categoryId} not found`);
           }
 
-          await Restaurant.updateOne(
-            { _id: restId, 'categories._id': categoryId },
-            { $push: { 'categories.$.foods': food } }
-          );
-
-          const latestRest = await Restaurant.findOne({ _id: restId });
-          return await transformRestaurant(latestRest);
+          restaurant.categories[targetCategoryIndex].foods.push(updatedFoodDoc);
+          const result = await restaurant.save();
+          return transformRestaurant(result);
         } else {
-          // Edit food item in the existing category (if category not specified, use the containing one)
-          const effectiveCategoryId = categoryId || (containingCategory ? containingCategory._id : null);
-          
-          if (!effectiveCategoryId) {
-            throw new Error('Category ID is required when editing a food item that does not exist in any category');
+          // Edit food item in the existing category
+          if (!containingCategory || foodIndex === -1) {
+            throw new Error('Food item not found in any category');
           }
           
-          const categoryFood = restaurant.categories.id(effectiveCategoryId).foods.id(foodId);
+          // Update the existing food item
+          const existingFood = containingCategory.foods[foodIndex];
+          existingFood.title = title || existingFood.title;
+          existingFood.description = description !== undefined ? description : existingFood.description;
+          existingFood.image = image !== undefined ? image : existingFood.image;
+          existingFood.variations = variations;
+          existingFood.isOutOfStock = isOutOfStock !== undefined ? isOutOfStock : existingFood.isOutOfStock;
+          existingFood.isActive = isActive !== undefined ? isActive : existingFood.isActive;
+          existingFood.subCategory = subCategory !== undefined ? subCategory : existingFood.subCategory;
+          existingFood.updatedAt = new Date();
           
-          if (categoryFood) {
-            categoryFood.set({
-              title: title || categoryFood.title,
-              description: description !== undefined ? description : categoryFood.description,
-              image: image !== undefined ? image : categoryFood.image,
-              variations
-            });
-            
-            const result = await restaurant.save();
-            return transformRestaurant(result);
-          } else {
-            throw new Error('Food item not found in category');
-          }
+          const result = await restaurant.save();
+          return transformRestaurant(result);
         }
       } catch (err) {
         console.error('Error editing food item:', err);

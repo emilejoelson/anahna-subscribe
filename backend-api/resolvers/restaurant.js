@@ -476,6 +476,79 @@ module.exports = {
         // Return empty array instead of throwing
         return [];
       }
+    },
+    categories: async (parent) => {
+      try {
+        if (!parent.categories || parent.categories.length === 0) {
+          console.log(`No categories found for restaurant ${parent._id}`);
+          return [];
+        }
+        
+        console.log(`Found ${parent.categories.length} categories for restaurant ${parent._id}`);
+        
+        const formattedCategories = await Promise.all(parent.categories.map(async (category) => {
+          // Get all foods in this category
+          let foodItems = [];
+          
+          if (category.foods && category.foods.length > 0) {
+            // Fetch full food documents
+            const Food = require('../models/food');
+            const Variation = require('../models/variation');
+            
+            // Get foods by IDs
+            const foodIds = category.foods.map(foodId => 
+              typeof foodId === 'string' ? foodId : foodId.toString()
+            );
+            
+            // Populate the foods with proper structure
+            const foods = await Food.find({ _id: { $in: foodIds } }).lean();
+            
+            // Format each food with proper structure
+            foodItems = foods.map(food => ({
+              _id: food._id.toString(),
+              title: food.title || 'Unnamed Food',
+              description: food.description || '',
+              image: food.image || '',
+              isActive: food.isActive !== undefined ? food.isActive : true,
+              isOutOfStock: food.isOutOfStock !== undefined ? food.isOutOfStock : false,
+              subCategory: food.subCategory || '',
+              variations: (food.variations || []).map(variation => ({
+                _id: variation._id ? variation._id.toString() : new mongoose.Types.ObjectId().toString(),
+                title: variation.title || 'Default Variation',
+                price: variation.price || 0,
+                discounted: variation.discounted || null,
+                addons: variation.addons || [],
+                isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+              })),
+              createdAt: food.createdAt ? new Date(food.createdAt).toISOString() : new Date().toISOString(),
+              updatedAt: food.updatedAt ? new Date(food.updatedAt).toISOString() : new Date().toISOString()
+            }));
+          }
+          
+          return {
+            _id: category._id.toString(),
+            title: category.title || '',
+            description: category.description || '',
+            image: category.image || '',
+            isActive: category.isActive !== undefined ? category.isActive : true,
+            foods: foodItems,
+            subCategories: (category.subCategories || []).map(subCategory => ({
+              _id: subCategory._id ? subCategory._id.toString() : new mongoose.Types.ObjectId().toString(),
+              title: subCategory.title || '',
+              description: subCategory.description || '',
+              isActive: subCategory.isActive !== undefined ? subCategory.isActive : true,
+              parentCategoryId: category._id.toString()
+            })),
+            createdAt: category.createdAt ? new Date(category.createdAt).toISOString() : new Date().toISOString(),
+            updatedAt: category.updatedAt ? new Date(category.updatedAt).toISOString() : new Date().toISOString()
+          };
+        }));
+        
+        return formattedCategories;
+      } catch (error) {
+        console.error(`Error formatting categories for restaurant ${parent._id}:`, error);
+        return [];
+      }
     }
   }
 };
