@@ -180,9 +180,9 @@ const typeDefs = gql`
     bankName: String
     accountName: String
     accountCode: String
-    accountNumber: String
-    bussinessRegNo: String
-    companyRegNo: String
+    accountNumber: Float
+    bussinessRegNo: Float
+    companyRegNo: Float
     taxRate: Float
   }
   
@@ -1124,8 +1124,8 @@ input TippingInput {
   }
 
   input CoordinatesInput {
-    longitude: Float!
-    latitude: Float!
+    longitude: Float
+    latitude: Float
   }
 
   type SaveNotificationTokenWebResponse {
@@ -1392,9 +1392,9 @@ input BussinessDetailsInput {
   bankName: String
   accountName: String
   accountCode: String
-  accountNumber: String
-  bussinessRegNo: String
-  companyRegNo: String
+  accountNumber: Float
+  bussinessRegNo: Float
+  companyRegNo: Float
   taxRate: Float
 }
   type Mutation {
@@ -1565,9 +1565,9 @@ input BussinessDetailsInput {
     updateDeliveryBoundsAndLocation(
       id: ID!
       boundType: String!
-      bounds: [[[Float!]]]
+      bounds: [[[Float]]]
       circleBounds: CircleBoundsInput
-      location: CoordinatesInput!
+      location: CoordinatesInput
       address: String
       postCode: String
       city: String
