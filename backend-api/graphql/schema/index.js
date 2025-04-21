@@ -208,6 +208,7 @@ const typeDefs = gql`
     price: Float!
     discounted: Float
     addons: [String!]
+    isOutOfStock: Boolean
   }
 
   type CartVariation {
@@ -234,6 +235,7 @@ const typeDefs = gql`
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
+    subCategory: String
   }
 
   type CartFood {
@@ -843,16 +845,18 @@ input AmplitudeApiKeyConfigurationInput {
     price: Float!
     discounted: Float
     addons: [String!]
+    isOutOfStock: Boolean
   }
 
   input FoodInput {
     _id: String
     restaurant: String!
-    category: String!
-    title: String!
+    category: String
+    title: String
     description: String
     image: String
     variations: [VariationInput!]!
+    subCategory: String
   }
 
   input RiderInput {
