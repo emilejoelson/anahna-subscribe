@@ -19,8 +19,6 @@ const typeDefs = gql`
     deliveryAddress: String!
     details: String
     label: String!
-
-
     id: String
   }
 
@@ -36,9 +34,6 @@ const typeDefs = gql`
     isActive: Boolean!
     createdAt: String!
     updatedAt: String!
-
-    food: String!
-
     food: String!
   }
 
@@ -78,6 +73,7 @@ const typeDefs = gql`
     totalAmountCashOnDelivery: Float!
     countCashOnDeliveryOrders: Int!
   }
+
   type RestaurantPreview {
     _id: ID!
     orderId: Int!
@@ -156,12 +152,10 @@ const typeDefs = gql`
     phone: String
     salesTax: Float
     deliveryInfo: DeliveryInfo
-
     boundType: String
     city: String
     postCode: String
     circleBounds: RadiusCircle
-
     bussinessDetails: BussinessDetails
     currentWalletAmount: Float
     totalWalletAmount: Float
@@ -188,12 +182,9 @@ const typeDefs = gql`
     accountNumber: Float
     bussinessRegNo: Float
     companyRegNo: Float
-    accountNumber: Float
-    bussinessRegNo: Float
-    companyRegNo: Float
     taxRate: Float
   }
-  
+
   type DeliveryUpdateResponse {
     success: Boolean!
     message: String!
@@ -205,6 +196,7 @@ const typeDefs = gql`
     deliveryBounds: DeliveryBounds
     location: Coordinates
   }
+
   type Timings {
     startTime: [String]
     endTime: [String]
@@ -296,6 +288,7 @@ const typeDefs = gql`
     favourite: [String!]
     userType: String
   }
+
   type Configuration {
     _id: ID!
     email: String
@@ -353,12 +346,10 @@ const typeDefs = gql`
     currency: String
     currencySymbol: String
     isPaidVersion: String
-    
     pushToken: String
     enableRiderDemo: Boolean
     enableRestaurantDemo: Boolean
     enableAdminDemo: Boolean
-
     createdAt: String!
     updatedAt: String!
   }
@@ -370,6 +361,7 @@ const typeDefs = gql`
     delivered: String
     cancelled: String
   }
+
   type Order {
     _id: ID!
     orderId: String!
@@ -424,8 +416,6 @@ const typeDefs = gql`
     image: String!
     address: String!
     location: Point
-
-
     slug: String
     keywords: [String]
     tags: [String]
@@ -472,7 +462,6 @@ const typeDefs = gql`
     phoneNumber: String
     isActive: Boolean
     plainPassword: String
-
     userType: String!
     restaurants: [Restaurant]!
     pushToken: String
@@ -570,6 +559,7 @@ const typeDefs = gql`
   type DashboardSales {
     orders: [SalesValues!]
   }
+
   type DashboardOrders {
     orders: [OrdersValues!]
   }
@@ -578,28 +568,32 @@ const typeDefs = gql`
     day: String!
     amount: Float!
   }
+
   type OrdersValues {
     day: String!
     count: Int!
   }
+
   type Coupon {
     _id: String!
     title: String!
     discount: Float!
     enabled: Boolean!
   }
+
   type Taxation {
     _id: String!
     taxationCharges: Float
     enabled: Boolean!
   }
+
   type Tipping {
-  _id: ID!
-  tipVariations: [Float!]!
-  enabled: Boolean!
-  createdAt: String!
-  updatedAt: String!
-}
+    _id: ID!
+    tipVariations: [Float!]!
+    enabled: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
 
   type OfferInfo {
     _id: String!
@@ -607,11 +601,13 @@ const typeDefs = gql`
     tag: String!
     restaurants: [String]
   }
+
   type SectionInfo {
     _id: String!
     name: String!
     restaurants: [String]
   }
+
   type Offer {
     _id: String!
     name: String!
@@ -627,10 +623,12 @@ const typeDefs = gql`
     location: Point
     categories: [Category]
   }
+
   type SectionRestaurant {
     _id: String!
     name: String!
   }
+
   type Section {
     _id: String!
     name: String!
@@ -656,6 +654,7 @@ const typeDefs = gql`
     offers: [OfferInfo!]
     sections: [SectionInfo!]
   }
+
   type NearByDataPreview {
     restaurants: [RestaurantPreview!]
     offers: [OfferInfo!]
@@ -674,7 +673,7 @@ const typeDefs = gql`
   type Point {
     coordinates: [Float!]
   }
-  
+
   type DeliveryInfo {
     minDeliveryFee: Float!
     deliveryDistance: Float!
@@ -732,6 +731,7 @@ const typeDefs = gql`
     twilioPhoneNumber: String
     twilioEnabled: Boolean
   }
+
   input FormEmailConfigurationInput {
     formEmail: String
   }
@@ -743,6 +743,7 @@ const typeDefs = gql`
     sendGridEmailName: String
     sendGridPassword: String
   }
+
   input FirebaseConfigurationInput {
     firebaseKey: String
     authDomain: String
@@ -755,49 +756,44 @@ const typeDefs = gql`
   }
 
   input SentryConfigurationInput {
-  dashboardSentryUrl: String
-  webSentryUrl: String
-  apiSentryUrl: String
-  customerAppSentryUrl: String
-  restaurantAppSentryUrl: String
-  riderAppSentryUrl: String
-}
+    dashboardSentryUrl: String
+    webSentryUrl: String
+    apiSentryUrl: String
+    customerAppSentryUrl: String
+    restaurantAppSentryUrl: String
+    riderAppSentryUrl: String
+  }
+
   input GoogleApiKeyConfigurationInput {
-  googleApiKey: String
-}
- input CloudinaryConfigurationInput {
-  cloudinaryUploadUrl: String
-  cloudinaryApiKey: String
-}
-input AmplitudeApiKeyConfigurationInput {
-  webAmplitudeApiKey: String
-  appAmplitudeApiKey: String
-}
+    googleApiKey: String
+  }
+
+  input CloudinaryConfigurationInput {
+    cloudinaryUploadUrl: String
+    cloudinaryApiKey: String
+  }
+
+  input AmplitudeApiKeyConfigurationInput {
+    webAmplitudeApiKey: String
+    appAmplitudeApiKey: String
+  }
+
   input GoogleClientIDConfigurationInput {
     webClientID: String
     androidClientID: String
     iOSClientID: String
     expoClientID: String
   }
+
   input WebConfigurationInput {
     googleMapLibraries: [String]
     googleColor: String
   }
+
   input AppConfigurationsInput {
-     termsAndConditions: String
+    termsAndConditions: String
     privacyPolicy: String
     testOtp: String
-  }
-
-  input FirebaseConfigurationInput {
-    firebaseKey: String!
-    authDomain: String!
-    projectId: String!
-    storageBucket: String!
-    msgSenderId: String!
-    appId: String!
-    measurementId: String!
-    vapidKey: String
   }
 
   input PaypalConfigurationInput {
@@ -812,8 +808,8 @@ input AmplitudeApiKeyConfigurationInput {
   }
 
   input CurrencyConfigurationInput {
-   currency: String
-   currencySymbol: String
+    currency: String
+    currencySymbol: String
   }
 
   input VerificationConfigurationInput {
@@ -838,10 +834,12 @@ input AmplitudeApiKeyConfigurationInput {
     phoneIsVerified: Boolean
     emailIsVerified: Boolean
   }
+
   input AddonsInput {
     _id: String
     options: [String!]
   }
+
   input OrderInput {
     food: String!
     quantity: Int!
@@ -890,7 +888,6 @@ input AmplitudeApiKeyConfigurationInput {
     email: String
     password: String
     name: String
-
     notificationToken: String
     appleId: String
   }
@@ -999,10 +996,12 @@ input AmplitudeApiKeyConfigurationInput {
     restaurant: String!
     addons: [createAddonInput!]!
   }
+
   input editAddonInput {
     restaurant: String!
     addons: createAddonInput!
   }
+
   input createAddonInput {
     title: String!
     _id: String
@@ -1012,23 +1011,25 @@ input AmplitudeApiKeyConfigurationInput {
     quantityMaximum: Int!
   }
 
-  
   input CouponInput {
     _id: String
     title: String!
     discount: Float!
     enabled: Boolean
   }
-input TippingInput {
-  _id: ID
-  tipVariations: [Float!]
-  enabled: Boolean
-}
+
+  input TippingInput {
+    _id: ID
+    tipVariations: [Float!]
+    enabled: Boolean
+  }
+
   input TaxationInput {
     _id: String
     taxationCharges: Float
     enabled: Boolean
   }
+
   input AddressInput {
     _id: String
     longitude: String
@@ -1037,24 +1038,29 @@ input TippingInput {
     details: String
     label: String!
   }
+
   input CartFoodInput {
     _id: String
     variation: CartVariationInput!
   }
+
   input CartVariationInput {
     _id: String
     addons: [CartAddonInput!]
   }
+
   input CartAddonInput {
     _id: String
     options: [String!]
   }
+
   input OfferInput {
     _id: String
     name: String!
     tag: String!
     restaurants: [String]
   }
+
   input SectionInput {
     _id: String
     name: String!
@@ -1136,8 +1142,6 @@ input TippingInput {
   input CoordinatesInput {
     longitude: Float
     latitude: Float
-    longitude: Float
-    latitude: Float
   }
 
   type SaveNotificationTokenWebResponse {
@@ -1167,7 +1171,7 @@ input TippingInput {
     user: ChatUserInput!
   }
 
- input BannerInput {
+  input BannerInput {
     _id: ID
     title: String!
     description: String
@@ -1176,6 +1180,7 @@ input TippingInput {
     screen: String
     parameters: String
   }
+
   input CreateOwnerInput {
     name: String!
     email: String!
@@ -1193,20 +1198,24 @@ input TippingInput {
     id: ID!
     name: String!
   }
+
   type WithdrawRequestReponse {
     success: Boolean!
     data: [WithdrawRequest!]
     message: String
     pagination: Pagination
   }
+
   type Pagination {
     total: Int
   }
+
   type UpdateWithdrawResponse {
     success: Boolean!
     data: RiderAndWithdrawRequest
     message: String
   }
+
   type RiderAndWithdrawRequest {
     rider: Rider!
     withdrawRequest: WithdrawRequest!
@@ -1246,14 +1255,17 @@ input TippingInput {
     read: Boolean!
     createdAt: String!
   }
+
   type DeliveryBounds {
     type: String!
     coordinates: [[[Float!]!]!]
   }
+
   type CircleBounds {
     radius: Float!
     center: [Float!]!
   }
+
   type RestaurantDeliveryZoneInfo {
     boundType: String
     deliveryBounds: DeliveryBounds
@@ -1263,19 +1275,17 @@ input TippingInput {
     city: String
     postCode: String
   }
+
   type Coordinates {
     type: String!
     coordinates: [Float!]!
   }
-  type commissionDetails{
+
+  type commissionDetails {
     _id: String
     commissionRate: Float
   }
-  }
-  type commissionDetails{
-    _id: String
-    commissionRate: Float
-  }
+
   type Query {
     subCategory(_id: ID!): SubCategory
     getClonedRestaurants: [Restaurant!]!
@@ -1285,16 +1295,7 @@ input TippingInput {
       ending_date: String
     ): [Order!]!
     ordersByRestIdWithoutPagination(
-      restaurant: String!, 
-      search: String
-    ): [Order!]!
-    allOrdersWithoutPagination(
-      dateKeyword: String
-      starting_date: String
-      ending_date: String
-    ): [Order!]!
-    ordersByRestIdWithoutPagination(
-      restaurant: String!, 
+      restaurant: String!
       search: String
     ): [Order!]!
     banners: [Banner!]!
@@ -1380,14 +1381,12 @@ input TippingInput {
       endingDate: String!
       restaurant: String!
     ): OrdersWithCashOnDeliveryInfo!
-
     riderCompletedOrders: [Order!]
     restaurant(id: String, slug: String): Restaurant!
     restaurantPreview(id: String, slug: String): RestaurantPreview!
     restaurants: [Restaurant!]!
     restaurantsPreview: [RestaurantPreview!]
     restaurantByOwner(id: String): OwnerData!
-    
     getRestaurantDeliveryZoneInfo(id: ID!): Restaurant!
     offers: [Offer]
     sections: [Section]
@@ -1427,25 +1426,22 @@ input TippingInput {
     subCategories(categoryId: ID!): [SubCategory!]
     subCategoriesByParentId(parentId: ID, parentCategoryId: String): [SubCategory!]!
   }
-input BussinessDetailsInput {
-  bankName: String
-  accountName: String
-  accountCode: String
-  accountNumber: Float
-  bussinessRegNo: Float
-  companyRegNo: Float
-  accountNumber: Float
-  bussinessRegNo: Float
-  companyRegNo: Float
-  taxRate: Float
-}
+
+  input BussinessDetailsInput {
+    bankName: String
+    accountName: String
+    accountCode: String
+    accountNumber: Float
+    bussinessRegNo: Float
+    companyRegNo: Float
+    taxRate: Float
+  }
+
   type Mutation {
-    updateRestaurantBussinessDetails(
     updateRestaurantBussinessDetails(
       id: String!
       bussinessDetails: BussinessDetailsInput
     ): DeliveryUpdateResponse
-    updateRestaurantDelivery(
     updateRestaurantDelivery(
       id: ID!
       minDeliveryFee: Float
@@ -1501,19 +1497,6 @@ input BussinessDetailsInput {
       orderDate: String!
       isPickedUp: Boolean!
       userId: String!
-
-    ): Order!
-    createOrder(
-      restaurant: String!
-      orderInput: [OrderInput!]!
-      paymentMethod: String!
-      couponCode: String
-      address: AddressInput!
-      tipping: Float!
-      orderDate: String!
-      isPickedUp: Boolean!
-      userId: String!
-
     ): Order!
     placeOrder(
       restaurant: String!
@@ -1630,14 +1613,11 @@ input BussinessDetailsInput {
       notificationBody: String!
     ): String!
     updateCommission(id: String!, commissionRate: Float!): commissionDetails
-    updateCommission(id: String!, commissionRate: Float!): commissionDetails
     updateDeliveryBoundsAndLocation(
       id: ID!
       boundType: String!
       bounds: [[[Float]]]
-      bounds: [[[Float]]]
       circleBounds: CircleBoundsInput
-      location: CoordinatesInput
       location: CoordinatesInput
       address: String
       postCode: String
@@ -1656,7 +1636,6 @@ input BussinessDetailsInput {
     saveVerificationsToggle(
       configurationInput: VerificationConfigurationInput!
     ): Configuration!
-
     saveDemoConfiguration(
       configurationInput: DemoConfigurationInput!
     ): Configuration!
@@ -1668,6 +1647,7 @@ input BussinessDetailsInput {
       categoryId: String!
     ): Boolean!
   }
+
   type Subscription {
     subscribePlaceOrder(restaurant: String!): SubscriptionOrders!
     orderStatusChanged(userId: String!): SubscriptionOrders!
@@ -1679,4 +1659,5 @@ input BussinessDetailsInput {
     subscriptionNewMessage(order: ID!): ChatMessageOutput!
   }
 `;
+
 module.exports = typeDefs;
