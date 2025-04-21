@@ -92,10 +92,52 @@ const zone = async id => {
 };
 
 const transformFood = food => {
+  // Handle null/undefined food
+  if (!food) {
+    console.warn('Attempted to transform null food item');
+    return {
+      _id: new mongoose.Types.ObjectId().toString(),
+      title: "Unknown Food Item",
+      description: "",
+      variations: [],
+      image: "",
+      isActive: true,
+      createdAt: dateToString(new Date()),
+      updatedAt: dateToString(new Date())
+    };
+  }
+  
+  // Handle the case when food._id is a Buffer
+  let foodId;
+  if (food._id) {
+    if (Buffer.isBuffer(food._id)) {
+      foodId = food._id.toString('hex');
+    } else if (food._id.toString) {
+      foodId = food._id.toString();
+    } else {
+      foodId = String(food._id);
+    }
+  } else if (food.id) {
+    foodId = food.id;
+  } else {
+    foodId = new mongoose.Types.ObjectId().toString();
+    console.warn('Generated placeholder ID for food item without ID');
+  }
+  
+  const foodDoc = food._doc || food;
+  
   return {
-    ...food._doc,
-    _id: food.id,
-    variations: variations.bind(this, food.variations)
+    ...foodDoc,
+    _id: foodId,
+    // Ensure these fields are never null
+    title: foodDoc.title || 'New Food Item',
+    description: foodDoc.description !== undefined ? foodDoc.description : '',
+    image: foodDoc.image || '',
+    isActive: foodDoc.isActive !== undefined ? foodDoc.isActive : true,
+    isOutOfStock: foodDoc.isOutOfStock !== undefined ? foodDoc.isOutOfStock : false,
+    variations: variations.bind(this, food.variations || []),
+    createdAt: foodDoc.createdAt ? dateToString(foodDoc.createdAt) : dateToString(new Date()),
+    updatedAt: foodDoc.updatedAt ? dateToString(foodDoc.updatedAt) : dateToString(new Date())
   };
 };
 
@@ -206,7 +248,40 @@ const populateRestaurantDetail = async restaurantId => {
 };
 
 const categoryFoods = async foods => {
-  return foods.map(transformFood);
+  // Log the number of foods being processed
+  console.log(`Processing ${foods.length} foods in categoryFoods function`);
+  
+  // Return actual food objects directly - don't use a binding function
+  return foods.map(food => {
+    // Ensure food has valid ID and all required properties
+    const foodObj = food._doc || food;
+    const foodId = food._id ? food._id.toString() : new mongoose.Types.ObjectId().toString();
+    
+    return {
+      ...foodObj,
+      _id: foodId,
+      title: foodObj.title || 'Unnamed Food',
+      description: foodObj.description || '',
+      image: foodObj.image || '',
+      isActive: foodObj.isActive !== undefined ? foodObj.isActive : true,
+      isOutOfStock: foodObj.isOutOfStock !== undefined ? foodObj.isOutOfStock : false,
+      subCategory: foodObj.subCategory || '',
+      // Directly transform variations here instead of binding
+      variations: (food.variations || []).map(variation => {
+        const variationId = variation._id || new mongoose.Types.ObjectId();
+        return {
+          _id: variationId.toString(),
+          title: variation.title || 'Default Variation', 
+          price: variation.price || 0,
+          discounted: variation.discounted || null,
+          addons: variation.addons || [],
+          isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+        };
+      }),
+      createdAt: foodObj.createdAt ? dateToString(foodObj.createdAt) : dateToString(new Date()),
+      updatedAt: foodObj.updatedAt ? dateToString(foodObj.updatedAt) : dateToString(new Date())
+    };
+  });
 };
 
 const transformCategory = async category => {
@@ -360,25 +435,65 @@ const transformRestaurant = async restaurant => {
   // Handle case when restaurant might be a plain object without _doc property
   const restaurantData = restaurant._doc || restaurant;
   
-  return {
-    ...restaurantData,
-    _id: restaurant.id || restaurant._id?.toString() || 'unknown',
-    categories: (restaurant.categories || []).map(category => ({
-      _id: category._id?.toString() || 'unknown',
+  // Count all foods for logging
+  let totalFoodsCount = 0;
+  
+  const formattedCategories = (restaurant.categories || []).map(category => {
+    const foodItems = (category.foods || []).map(food => {
+      totalFoodsCount++;
+      // Ensure food has all required properties
+      return {
+        _id: food._id?.toString() || new mongoose.Types.ObjectId().toString(),
+        title: food.title || 'Unnamed Food',
+        description: food.description || '',
+        image: food.image || '',
+        isActive: food.isActive !== undefined ? food.isActive : true,
+        isOutOfStock: food.isOutOfStock !== undefined ? food.isOutOfStock : false,
+        subCategory: food.subCategory || '',
+        variations: (food.variations || []).map(variation => {
+          const variationId = variation._id || new mongoose.Types.ObjectId();
+          return {
+            _id: variationId.toString(),
+            title: variation.title || 'Default Variation', 
+            price: variation.price || 0,
+            discounted: variation.discounted || null,
+            addons: variation.addons || [],
+            isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+          };
+        }),
+        createdAt: food.createdAt ? dateToString(food.createdAt) : dateToString(new Date()),
+        updatedAt: food.updatedAt ? dateToString(food.updatedAt) : dateToString(new Date())
+      };
+    });
+    
+    // Log the number of foods in this category
+    console.log(`Category ${category.title || 'Unnamed'} has ${foodItems.length} foods`);
+    
+    return {
+      _id: category._id?.toString() || new mongoose.Types.ObjectId().toString(),
       title: category.title || '',
       description: category.description || '',
       image: category.image || '',
+      isActive: category.isActive !== undefined ? category.isActive : true,
+      foods: foodItems,
       subCategories: (category.subCategories || []).map(sub => ({
-        _id: sub._id?.toString() || 'unknown',
+        _id: sub._id?.toString() || new mongoose.Types.ObjectId().toString(),
         title: sub.title || '',
         description: sub.description || '',
-        isActive: sub.isActive !== undefined ? sub.isActive : true
+        isActive: sub.isActive !== undefined ? sub.isActive : true,
+        parentCategoryId: category._id?.toString() || new mongoose.Types.ObjectId().toString()
       })),
-      foods: categoryFoods.bind(this, category.foods || []),
-      isActive: category.isActive !== undefined ? category.isActive : true,
-      createdAt: dateToString(category.createdAt || new Date()),
-      updatedAt: dateToString(category.updatedAt || new Date())
-    })),
+      createdAt: category.createdAt ? dateToString(category.createdAt) : dateToString(new Date()),
+      updatedAt: category.updatedAt ? dateToString(category.updatedAt) : dateToString(new Date())
+    };
+  });
+  
+  console.log(`Restaurant ${restaurant.name || 'Unknown'} has ${totalFoodsCount} total foods across all categories`);
+  
+  return {
+    ...restaurantData,
+    _id: restaurant.id || restaurant._id?.toString() || 'unknown',
+    categories: formattedCategories,
     options: populateOptions.bind(this, restaurant.options || []),
     addons: populateAddons.bind(this, restaurant.addons || []),
     reviewData: populateReviewsDetail.bind(this, restaurant.id || restaurant._id?.toString() || 'unknown'),

@@ -10,6 +10,15 @@ const variationSchema = new Schema({
     type: Number,
     required: true
   },
+  discounted: Number,
+  addons: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Addon'
+  }],
+  isOutOfStock: {
+    type: Boolean,
+    default: false
+  },
   food: {
     type: Schema.Types.ObjectId,
     ref: 'Food',

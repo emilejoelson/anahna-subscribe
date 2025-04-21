@@ -21,14 +21,28 @@ const foodSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Category'
   },
+  subCategory: String,
   variations: [{
     title: String,
-    price: Number
+    price: Number,
+    discounted: Number,
+    addons: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Addon'
+    }],
+    isOutOfStock: {
+      type: Boolean,
+      default: false
+    }
   }],
   addons: [{
     type: Schema.Types.ObjectId,
     ref: 'Addon'
   }],
+  isOutOfStock: {
+    type: Boolean,
+    default: false
+  },
   isAvailable: {
     type: Boolean,
     default: true

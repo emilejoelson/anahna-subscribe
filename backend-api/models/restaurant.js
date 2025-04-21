@@ -115,8 +115,42 @@ const restaurantSchema = new Schema({
     },
     description: String,
     foods: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Food'
+      title: {
+        type: String,
+        required: true
+      },
+      description: String,
+      image: String,
+      isOutOfStock: {
+        type: Boolean,
+        default: false
+      },
+      isActive: {
+        type: Boolean,
+        default: true
+      },
+      subCategory: String,
+      variations: [{
+        title: String,
+        price: Number,
+        discounted: Number,
+        addons: [{
+          type: Schema.Types.ObjectId,
+          ref: 'Addon'
+        }],
+        isOutOfStock: {
+          type: Boolean,
+          default: false
+        }
+      }],
+      createdAt: {
+        type: Date,
+        default: Date.now
+      },
+      updatedAt: {
+        type: Date,
+        default: Date.now
+      }
     }],
     subCategories: [{
       title: {

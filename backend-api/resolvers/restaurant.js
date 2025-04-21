@@ -149,7 +149,31 @@ module.exports = {
       } catch (error) {
         throw new Error(`Could not fetch cloned restaurants: ${error.message}`);
       }
-    }
+    },
+    subCategories: async (_, { categoryId }) => {
+      try {
+        const restaurant = await Restaurant.findOne({ 'categories._id': categoryId });
+        if (!restaurant) {
+          return [];
+        }
+        
+        const category = restaurant.categories.find(cat => cat._id.toString() === categoryId);
+        if (!category || !category.subCategories) {
+          return [];
+        }
+        
+        return category.subCategories.map(sub => ({
+          _id: sub._id.toString(),
+          title: sub.title || '',
+          description: sub.description || '',
+          isActive: sub.isActive !== undefined ? sub.isActive : true,
+          parentCategoryId: categoryId
+        }));
+      } catch (error) {
+        console.error('Error fetching subCategories:', error);
+        return [];
+      }
+    },
   },
   Mutation: {
     createRestaurant: async(_, args, { req }) => {
@@ -524,6 +548,76 @@ module.exports = {
         console.error(`Error formatting addons for restaurant ${parent._id}:`, error);
         console.log(`===== ADDON DEBUG END WITH ERROR =====`);
         // Return empty array instead of throwing
+        return [];
+      }
+    },
+    categories: async (parent) => {
+      try {
+        if (!parent.categories || parent.categories.length === 0) {
+          console.log(`No categories found for restaurant ${parent._id}`);
+          return [];
+        }
+        
+        console.log(`Found ${parent.categories.length} categories for restaurant ${parent._id}`);
+        let totalFoods = 0;
+        
+        const formattedCategories = parent.categories.map(category => {
+          // Process foods directly from embedded documents
+          const foodItems = (category.foods || []).map(food => {
+            totalFoods++;
+            // Ensure food properties are never null/undefined
+            return {
+              _id: food._id ? food._id.toString() : new mongoose.Types.ObjectId().toString(),
+              title: food.title || 'Unnamed Food',
+              description: food.description || '',
+              image: food.image || '',
+              isActive: food.isActive !== undefined ? food.isActive : true,
+              isOutOfStock: food.isOutOfStock !== undefined ? food.isOutOfStock : false,
+              subCategory: food.subCategory || '',
+              variations: (food.variations || []).map(variation => {
+                // Generate a new _id if missing
+                const variationId = variation._id || new mongoose.Types.ObjectId();
+                return {
+                  _id: variationId.toString(), // Ensure it's a string
+                  title: variation.title || 'Default Variation', 
+                  price: variation.price || 0,
+                  discounted: variation.discounted || null,
+                  addons: variation.addons || [],
+                  isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+                };
+              }),
+              createdAt: food.createdAt ? new Date(food.createdAt).toISOString() : new Date().toISOString(),
+              updatedAt: food.updatedAt ? new Date(food.updatedAt).toISOString() : new Date().toISOString()
+            };
+          });
+          
+          console.log(`Category ${category.title || "Unnamed"} has ${foodItems.length} foods`);
+          
+          // Format the category
+          return {
+            _id: category._id.toString(),
+            title: category.title || 'Unnamed Category',
+            description: category.description || '',
+            image: category.image || '',
+            isActive: category.isActive !== undefined ? category.isActive : true,
+            foods: foodItems,
+            // Explicitly set an empty array if no subCategories exist
+            subCategories: (category.subCategories || []).map(subCategory => ({
+              _id: subCategory._id ? subCategory._id.toString() : new mongoose.Types.ObjectId().toString(),
+              title: subCategory.title || '',
+              description: subCategory.description || '',
+              isActive: subCategory.isActive !== undefined ? subCategory.isActive : true,
+              parentCategoryId: category._id.toString() // Always include parentCategoryId
+            })),
+            createdAt: category.createdAt ? new Date(category.createdAt).toISOString() : new Date().toISOString(),
+            updatedAt: category.updatedAt ? new Date(category.updatedAt).toISOString() : new Date().toISOString()
+          };
+        });
+        
+        console.log(`Total foods processed: ${totalFoods}`);
+        return formattedCategories;
+      } catch (error) {
+        console.error(`Error formatting categories for restaurant ${parent._id}:`, error);
         return [];
       }
     }
