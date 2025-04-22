@@ -415,20 +415,43 @@ module.exports = {
     },
     updateDeliveryBoundsAndLocation: async (_, { id, boundType, bounds, circleBounds, location, address, postCode, city }) => {
       try {
-        const updateData = { boundType, location, address, postCode, city };
-        if (boundType === 'polygon' && bounds) {
-          updateData.deliveryBounds = { coordinates: bounds };
-          updateData.circleBounds = null;
-          updateData.boundType = 'polygon';
-        } else if (boundType === 'circle' && circleBounds) {
-          updateData.circleBounds = circleBounds;
-          updateData.deliveryBounds = null;
-          updateData.location = { type: 'Point', coordinates: circleBounds.center };
-          updateData.boundType = 'circle';
-        } else {
-          updateData.deliveryBounds = null;
-          updateData.circleBounds = null;
+        let updateData = { boundType };
+
+        if (address) updateData.address = address;
+        if (postCode) updateData.postCode = postCode;
+        if (city) updateData.city = city;
+
+        function isValidPolygonCoordinates(bounds) {
+          return Array.isArray(bounds) && bounds.length > 0 && bounds.every(polygon => 
+            polygon.every(point => Array.isArray(point) && point.length === 2 && point.every(coord => typeof coord === 'number'))
+          );
         }
+
+        console.log('updateData', updateData);
+        
+        // boundType in front refere to deliveryZoneType
+        if (boundType === 'polygon' && isValidPolygonCoordinates(bounds)) {
+          updateData.boundType = 'polygon';
+          updateData.deliveryBounds = {
+            type: 'Polygon',
+            coordinates: bounds,
+          };
+        } else if (boundType === 'radius' && circleBounds?.radius && isValidPolygonCoordinates(bounds)) {
+          updateData.boundType = 'radius';
+          updateData.circleBounds = {
+            radius: circleBounds.radius,
+          };
+          updateData.deliveryBounds = {
+            coordinates: bounds,
+          };
+        } else if (boundType === 'point' && location && location.latitude && location.longitude) {
+          updateData.boundType = 'point';
+          updateData.location = {
+            type: 'Point',
+            coordinates: [location.longitude, location.latitude],
+          };
+        }
+
         const updatedRestaurant = await Restaurant.findByIdAndUpdate(id, updateData, { new: true });
         if (!updatedRestaurant) {
           return { success: false, message: 'Restaurant not found' };
