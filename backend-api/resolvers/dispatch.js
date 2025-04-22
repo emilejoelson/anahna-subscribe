@@ -29,20 +29,41 @@ module.exports = {
     getActiveOrders: async (_, args, { req }) => {
       console.log('Fetching active orders with arguments:', args);
       try {
-        if (!req.isAuth) {
+        if (!req?.isAuth) {
+          console.log('Authentication check failed:', { 
+            reqExists: !!req,
+            authHeader: req?.get?.('Authorization'),
+            isAuth: req?.isAuth
+          });
           throw new AuthenticationError('Unauthenticated');
         }
+
         const filters = {
           orderStatus: { $in: ['PENDING', 'ACCEPTED', 'PICKED', 'ASSIGNED'] }
         };
+
         if (args.restaurantId) {
           filters.restaurant = args.restaurantId;
         }
-        const orders = await Order.find(filters).sort({ createdAt: -1 });
-        return orders.map(transformOrder);
+        if (args.search) {
+          filters.orderId = new RegExp(args.search, 'i');
+        }
+        if (args.actions && args.actions.length > 0) {
+          filters.orderStatus = { $in: args.actions };
+        }
+
+        const orders = await Order.find(filters)
+          .sort({ createdAt: -1 })
+          .populate('restaurant')
+          .populate('deliveryAddress')
+          .populate('user')
+          .populate('rider')
+          .populate('zone');
+
+        return orders.map(order => transformOrder(order));
       } catch (err) {
         console.error('Error fetching active orders:', err);
-        throw new Error('Failed to fetch active orders');
+        throw err;
       }
     },
     orderDetails: async (_, args, { req }) => {
