@@ -1559,6 +1559,7 @@ type RiderVehicleDetails {
       deliveryCharges: Float!
       instructions: String
     ): Order!
+    updateStatus(id: String, orderStatus: String!): Order!
     editOrder(_id: String!, orderInput: [OrderInput!]!): Order!
     reviewOrder(reviewInput: ReviewInput!): Order!
     acceptOrder(_id: String!, time: String): Order!
