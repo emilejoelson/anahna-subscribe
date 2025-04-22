@@ -14,6 +14,7 @@ const {
   scriptCacheMiddleware
 } = require('./middleware');
 
+
 // Set Mongoose options
 mongoose.set('strictQuery', true);
 
