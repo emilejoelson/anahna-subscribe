@@ -192,7 +192,6 @@ const restaurantSchema = new Schema({
   orderPrefix: String,
   orderId: {
     type: Number,
-    required: true,
     default: 0
   },
   slug: String,

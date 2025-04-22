@@ -90,7 +90,7 @@ module.exports = {
           __typename: "ReviewData"
         }
 
-        // Ensure orderId is a number, defaulting to 0 if not set or invalid
+        // Ensure orderId exists and is a number
         const transformedRestaurant = {
           ...restaurant,
           orderId: typeof restaurant.orderId === 'number' ? restaurant.orderId : 0,
