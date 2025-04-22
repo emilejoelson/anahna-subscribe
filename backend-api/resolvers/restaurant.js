@@ -64,13 +64,16 @@ module.exports = {
           throw new Error('Invalid request, restaurant id not provided')
         }
         console.log('Finding restaurant with filters:', filters)
-        const restaurant = await Restaurant.findOne(filters).select('-password').lean()
+        const restaurant = await Restaurant.findOne(filters)
+          .select('-password')
+          .populate('owner')
+          .lean()
+
         if (!restaurant) {
-          console.log('Restaurant not found with filters:', filters)
+          console.log(`Restaurant not found with filters:`, filters)
           throw Error('Restaurant not found')
         }
 
-        // Get review data
         const reviews = await Review.find({ restaurant: restaurant._id })
           .sort({ createdAt: -1 })
           .populate({
@@ -90,11 +93,14 @@ module.exports = {
           __typename: "ReviewData"
         }
 
-        // Ensure orderId exists and is a number
         const transformedRestaurant = {
           ...restaurant,
           orderId: typeof restaurant.orderId === 'number' ? restaurant.orderId : 0,
           reviewData,
+          owner: restaurant.owner ? {
+            _id: restaurant.owner._id,
+            email: restaurant.owner.email || '',  // Ensure email is never null
+          } : null,
           __typename: "Restaurant"
         }
 
