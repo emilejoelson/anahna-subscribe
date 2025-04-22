@@ -1,118 +1,81 @@
+// resolvers/rider.js
 const Rider = require('../models/rider');
+const Zone = require('../models/zone');
 
 module.exports = {
   Query: {
     riders: async () => {
       try {
-        return await Rider.find().populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        return await Rider.find().populate('zone').select('-password');
+      } catch (err) {
+        throw err;
       }
     },
     rider: async (_, { id }) => {
       try {
-        return await Rider.findById(id).populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        return await Rider.findById(id).populate('zone').select('-password');
+      } catch (err) {
+        throw err;
       }
     },
     availableRiders: async () => {
       try {
-        return await Rider.find({ available: true }).populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        return await Rider.find({ available: true }).populate('zone').select('-password');
+      } catch (err) {
+        throw err;
       }
     },
     ridersByZone: async (_, { id }) => {
       try {
-        return await Rider.find({ zone: id }).populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        return await Rider.find({ zone: id }).populate('zone').select('-password');
+      } catch (err) {
+        throw err;
       }
     },
   },
   Mutation: {
     createRider: async (_, { riderInput }) => {
-      const { name, username, password, phone, zone, vehicleType } = riderInput;
-
       try {
-        // Check if username already exists
-        const existingRider = await Rider.findOne({ username });
-        if (existingRider) {
-          throw new Error('Username already exists');
-        }
-
-        const rider = new Rider({
-          name,
-          username,
-          password, // Note: In production, you should hash this password
-          phone,
-          zone,
-          vehicleType,
-          available: true,
-          assigned: false,
-        });
-
-        const result = await rider.save();
-        return await Rider.findById(result._id).populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        const rider = new Rider(riderInput);
+        const savedRider = await rider.save();
+        return await Rider.findById(savedRider._id).populate('zone').select('-password');
+      } catch (err) {
+        throw err;
       }
     },
     editRider: async (_, { riderInput }) => {
-      const { _id, name, username, password, phone, zone, vehicleType, available } = riderInput;
-
       try {
-        // Check if modifying an existing username to one that already exists
-        const existingRider = await Rider.findOne({ username, _id: { $ne: _id } });
-        if (existingRider) {
-          throw new Error('Username already exists');
-        }
-
-        const rider = await Rider.findById(_id);
-        if (!rider) {
+        const updatedRider = await Rider.findByIdAndUpdate(riderInput._id, riderInput, { new: true }).populate('zone').select('-password');
+        if (!updatedRider) {
           throw new Error('Rider not found');
         }
-
-        rider.name = name || rider.name;
-        rider.username = username || rider.username;
-        if (password) rider.password = password;
-        rider.phone = phone || rider.phone;
-        rider.zone = zone || rider.zone;
-        rider.vehicleType = vehicleType || rider.vehicleType;
-        rider.available = available !== undefined ? available : rider.available;
-
-        await rider.save();
-        return await Rider.findById(_id).populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        return updatedRider;
+      } catch (err) {
+        throw err;
       }
     },
     deleteRider: async (_, { id }) => {
       try {
-        const rider = await Rider.findById(id);
-        if (!rider) {
+        const deletedRider = await Rider.findByIdAndDelete(id);
+        if (!deletedRider) {
           throw new Error('Rider not found');
         }
-
-        await Rider.findByIdAndDelete(id);
         return { _id: id };
-      } catch (error) {
-        throw new Error(error);
+      } catch (err) {
+        throw err;
       }
     },
     toggleAvailablity: async (_, { id }) => {
       try {
-        const rider = await Rider.findById(id);
+        const rider = await Rider.findById(id).populate('zone').select('-password');
         if (!rider) {
           throw new Error('Rider not found');
         }
-
         rider.available = !rider.available;
-        await rider.save();
-        return await Rider.findById(id).populate('zone');
-      } catch (error) {
-        throw new Error(error);
+        const updatedRider = await rider.save();
+        return updatedRider;
+      } catch (err) {
+        throw err;
       }
     },
   },
