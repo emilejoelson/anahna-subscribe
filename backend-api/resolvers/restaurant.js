@@ -6,7 +6,7 @@ const Owner = require('../models/owner')
 const Offer = require('../models/offer')
 const Order = require('../models/order')
 const Point = require('../models/point')
-const Sections = require('../models/section')
+const Section = require('../models/section')
 const Zone = require('../models/zone')
 const User = require('../models/user')
 const Option = require('../models/option')
@@ -62,7 +62,7 @@ module.exports = {
           throw new Error('Invalid request, restaurant id not provided')
         }
         console.log('Finding restaurant with filters:', filters)
-        const restaurant = await Restaurant.findOne(filters).lean()
+        const restaurant = await Restaurant.findOne(filters).select('-password').lean()
         if (!restaurant) {
           console.log('Restaurant not found with filters:', filters)
           throw Error('Restaurant not found')
@@ -148,6 +148,114 @@ module.exports = {
         return restaurants.map(restaurant => transformRestaurant(restaurant));
       } catch (error) {
         throw new Error(`Could not fetch cloned restaurants: ${error.message}`);
+      }
+    },
+    nearByRestaurants: async (_, { latitude, longitude, shopType }) => {
+      try {
+        if (!latitude || !longitude) {
+          throw new Error("Latitude and Longitude are required.");
+        }
+        const maxDistanceInMeters = 5000; // 5 km radius
+        
+        const query = {
+          location: {
+            $near: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [longitude, latitude], 
+              },
+              $maxDistance: maxDistanceInMeters,
+            },
+          },
+          isActive: true,
+          isAvailable: true,
+        };
+
+        if (shopType) {
+          query.shopType = shopType;
+        }
+
+        const restaurants = await Restaurant.find(query)
+        .populate('reviewData')
+        .populate('addons')
+        .populate('options')
+        .populate({
+          path: 'categories.foods',
+          model: 'Food',
+          populate: {
+            path: 'variations.addons',
+            model: 'Addon'
+          }
+        })
+        .populate({
+          path: 'orderId',
+          model: 'Order',
+        });
+
+        const offers = await Offer.find({
+          restaurants: { $in: restaurants.map((r) => r._id.toString()) },
+        });
+
+        const sections = await Section.find({
+          restaurants: { $in: restaurants.map((r) => r._id.toString()) },
+        });
+
+        return {
+          restaurants,
+          offers,
+          sections,
+        };
+      } catch (error) {
+        console.error("Error in nearByRestaurants:", error);
+        throw new Error("Could not fetch nearby restaurants.");
+      }
+    },
+    nearByRestaurantsPreview: async (_, { latitude, longitude, shopType }) => {
+      try {
+        if (!latitude || !longitude) {
+          throw new Error("Latitude and Longitude are required.");
+        }
+        const maxDistanceInMeters = 5000; // 5 km radius
+        
+        const query = {
+          location: {
+            $near: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [longitude, latitude], 
+              },
+              $maxDistance: maxDistanceInMeters,
+            },
+          },
+          isActive: true,
+          isAvailable: true,
+        };
+
+        if (shopType) {
+          query.shopType = shopType;
+        }
+
+        const restaurants = await Restaurant.find(query)
+        .populate('reviewData')
+        .populate('addons')
+        .populate('options');
+
+        const offers = await Offer.find({
+          restaurants: { $in: restaurants.map((r) => r._id.toString()) },
+        });
+
+        const sections = await Section.find({
+          restaurants: { $in: restaurants.map((r) => r._id.toString()) },
+        });
+
+        return {
+          restaurants,
+          offers,
+          sections,
+        };
+      } catch (error) {
+        console.error("Error in nearByRestaurants:", error);
+        throw new Error("Could not fetch nearby restaurants.");
       }
     },
     subCategories: async (_, { categoryId }) => {
@@ -269,7 +377,7 @@ module.exports = {
     },
     editRestaurant: async (_, { restaurant: restaurantInput }) => {
       try {
-        log('editRestaurant', restaurantInput)
+        console.log('editRestaurant', restaurantInput)
         const restaurant = await Restaurant.findByIdAndUpdate(restaurantInput._id, { ...restaurantInput }, { new: true });
         if (!restaurant) {
           throw new Error('Restaurant not found');

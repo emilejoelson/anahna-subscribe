@@ -20,7 +20,7 @@ const coordinatesSchema = new Schema({
   },
   coordinates: {
     type: [Number],
-    default: [0, 0]
+    default: [0.0, 0.0]
   }
 });
 
@@ -265,7 +265,15 @@ const restaurantSchema = new Schema({
   withdrawnWalletAmount: {
     type: Number,
     default: 0
-  }
+  },
+  reviewData: {
+    total: Number,
+    ratings: Number,
+    reviews:[{
+      type: Schema.Types.ObjectId,
+      ref: 'Review'
+    }],
+  },
 }, {
   timestamps: true
 });

@@ -639,13 +639,88 @@ const typeDefs = gql`
     origin: String!
   }
 
+  type RestaurantNearDetails {
+    _id : ID!
+    unique_restaurant_id: String
+    orderId : [Order]
+    orderPrefix: String
+    name: String!
+    image: String
+    logo: String
+    address: String
+    location: Point
+    deliveryTime: Int
+    minimumOrder: Int
+    tax: Float
+    shopType: String
+    cuisines: [String]
+    reviewData: ReviewData
+    categories: [CategoryNearDetails!]
+    options: [Option!]
+    addons: [Addon!]
+    rating: Float
+    isAvailable: Boolean!
+    openingTimes: [OpeningTimes]
+    zone: Zone
+    username: String
+    password: String
+    isActive: Boolean!
+    slug: String
+    stripeDetailsSubmitted: Boolean
+    commissionRate: Float
+    owner: OwnerData
+    deliveryBounds: Polygon
+    notificationToken: String
+    enableNotification: Boolean
+    keywords: [String]
+    tags: [String]
+    reviewCount: Int
+    reviewAverage: Float
+    restaurantUrl: String
+    phone: String
+    salesTax: Float
+    deliveryInfo: DeliveryInfo
+    boundType: String
+    city: String
+    postCode: String
+    circleBounds: RadiusCircle
+
+    bussinessDetails: BussinessDetails
+    currentWalletAmount: Float
+    totalWalletAmount: Float
+    withdrawnWalletAmount: Float
+  }
+
+  type VariationNearDetails {
+    _id: ID!
+    title: String!
+    price: Float!
+    discounted: Float
+    addons: [Addon!]
+  }
+
+  type FoodNearDetails {
+    _id: ID!
+    title: String!
+    image: String
+    description: String
+    subCategory: String
+    variations: [VariationNearDetails!]!
+  }
+
+  type CategoryNearDetails {
+    _id: ID!
+    title: String!
+    foods: [FoodNearDetails!]
+  }
+    
   type NearByData {
-    restaurants: [Restaurant!]
+    restaurants: [RestaurantNearDetails!]
     offers: [OfferInfo!]
     sections: [SectionInfo!]
   }
   type NearByDataPreview {
-    restaurants: [RestaurantPreview!]
+    restaurants: [RestaurantNearDetails!]
     offers: [OfferInfo!]
     sections: [SectionInfo!]
   }
