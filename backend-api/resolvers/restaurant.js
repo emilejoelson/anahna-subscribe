@@ -10,6 +10,8 @@ const Section = require('../models/section')
 const Zone = require('../models/zone')
 const User = require('../models/user')
 const Option = require('../models/option')
+const Review = require('../models/review')
+const Addon = require('../models/addon')
 const {
   sendNotificationToCustomerWeb
 } = require('../helpers/firebase-web-notifications')
@@ -67,8 +69,37 @@ module.exports = {
           console.log('Restaurant not found with filters:', filters)
           throw Error('Restaurant not found')
         }
-        console.log(`Found restaurant: ${restaurant.name}, has ${restaurant.addons?.length || 0} addons`)
-        return transformRestaurant(restaurant)
+
+        // Get review data
+        const reviews = await Review.find({ restaurant: restaurant._id })
+          .sort({ createdAt: -1 })
+          .populate({
+            path: 'order',
+            populate: {
+              path: 'user',
+              select: '_id name email'
+            }
+          })
+
+        const reviewData = {
+          total: reviews.length,
+          ratings: reviews.length > 0 
+            ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length 
+            : 0,
+          reviews: reviews,
+          __typename: "ReviewData"
+        }
+
+        // Ensure orderId is a number, defaulting to 0 if not set or invalid
+        const transformedRestaurant = {
+          ...restaurant,
+          orderId: typeof restaurant.orderId === 'number' ? restaurant.orderId : 0,
+          reviewData,
+          __typename: "Restaurant"
+        }
+
+        console.log('Found restaurant:', restaurant.name)
+        return transformedRestaurant
       } catch (e) {
         console.error('Error in restaurant query:', e)
         throw e
@@ -540,7 +571,6 @@ module.exports = {
       console.log(`===== ADDON DEBUG START =====`);
       console.log(`Processing addons for restaurant: ${parent.name || parent._id}`);
       
-      // If parent (restaurant) doesn't have addons or they're empty, return empty array
       if (!parent.addons || parent.addons.length === 0) {
         console.log(`No addons found for restaurant ${parent._id}`);
         return [];
@@ -549,44 +579,67 @@ module.exports = {
       console.log(`Found ${parent.addons.length} addons in restaurant document`);
       
       try {
-        // Filter out null or invalid addons first
-        const validAddons = parent.addons.filter(addon => addon !== null && addon !== undefined);
-        
-        // Format each addon with error handling
-        const formattedAddons = validAddons.map((addon, index) => {
-          try {
-            // Handle reference addons (strings or ObjectIds)
-            if (typeof addon === 'string' || addon instanceof mongoose.Types.ObjectId) {
-              const addonId = typeof addon === 'string' ? addon : addon._id.toString();
-              console.log(`Processing reference addon ${index} with ID: ${addonId}`);
+        // First, populate any addon references
+        const populatedAddonPromises = parent.addons.map(async addon => {
+          if (typeof addon === 'string' || addon instanceof mongoose.Types.ObjectId) {
+            try {
+              const populatedAddon = await Addon.findById(addon).populate('options');
+              if (populatedAddon) {
+                return populatedAddon;
+              }
+              // If addon not found, return a placeholder
+              console.log(`Referenced addon ${addon} not found, using placeholder`);
               return {
-                _id: addonId,
-                title: "Loading...", // Placeholder title
+                _id: addon,
+                title: "Loading Addon",
                 description: "",
                 options: [],
                 quantityMinimum: 0,
                 quantityMaximum: 1,
                 isActive: true
               };
+            } catch (error) {
+              console.error(`Error populating addon ${addon}:`, error);
+              return null;
+            }
+          }
+          return addon;
+        });
+
+        const resolvedAddons = await Promise.all(populatedAddonPromises);
+        const validAddons = resolvedAddons.filter(addon => addon !== null && addon !== undefined);
+        
+        return validAddons.map(addon => {
+          try {
+            // Handle populated Addon documents
+            if (addon._doc) {
+              return {
+                _id: addon._id.toString(),
+                title: addon.title || "Unnamed Addon",
+                description: addon.description || "",
+                options: Array.isArray(addon.options) ? addon.options.map(opt => 
+                  typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
+                ) : [],
+                quantityMinimum: addon.quantityMinimum ?? 0,
+                quantityMaximum: addon.quantityMaximum ?? 1,
+                isActive: addon.isActive ?? true
+              };
             }
             
-            // Handle addon objects
-            console.log(`Processing addon ${index}`);
+            // Handle embedded addon documents
             return {
               _id: addon._id ? addon._id.toString() : new mongoose.Types.ObjectId().toString(),
-              // IMPORTANT: Ensure title is never null
               title: addon.title || "Unnamed Addon",
               description: addon.description || "",
               options: Array.isArray(addon.options) ? addon.options.map(opt => 
                 typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
               ) : [],
-              quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
-              quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
-              isActive: addon.isActive !== undefined ? addon.isActive : true
+              quantityMinimum: addon.quantityMinimum ?? 0,
+              quantityMaximum: addon.quantityMaximum ?? 1,
+              isActive: addon.isActive ?? true
             };
           } catch (error) {
-            console.error(`Error processing addon ${index}:`, error);
-            // Return a valid fallback addon
+            console.error(`Error processing addon:`, error);
             return {
               _id: new mongoose.Types.ObjectId().toString(),
               title: "Error Addon",
@@ -598,14 +651,9 @@ module.exports = {
             };
           }
         });
-        
-        console.log(`Returning ${formattedAddons.length} formatted addons`);
-        console.log(`===== ADDON DEBUG END =====`);
-        return formattedAddons;
       } catch (error) {
         console.error(`Error formatting addons for restaurant ${parent._id}:`, error);
         console.log(`===== ADDON DEBUG END WITH ERROR =====`);
-        // Return empty array instead of throwing
         return [];
       }
     },

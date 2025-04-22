@@ -1,8 +1,83 @@
 const Restaurant = require("../../models/restaurant");
 const mongoose = require("mongoose");
+const Review = require("../../models/review");
+const Category = require("../../models/category");
+const Option = require("../../models/option");
+const Addon = require("../../models/addon");
+const Zone = require("../../models/zone");
 
 const resolvers = {
-  // ...existing resolvers...
+  Query: {
+    restaurant: async (_, { id, slug }) => {
+      try {
+        let restaurant;
+        if (id) {
+          restaurant = await Restaurant.findById(id);
+        } else if (slug) {
+          restaurant = await Restaurant.findOne({ slug });
+        }
+        if (!restaurant) {
+          throw new Error("Restaurant not found");
+        }
+
+        // Get review data
+        const reviews = await Review.find({ restaurant: restaurant._id }).populate({
+          path: "order",
+          populate: {
+            path: "user",
+            select: "_id name email",
+          },
+        });
+
+        const reviewData = {
+          total: reviews.length,
+          ratings:
+            reviews.length > 0
+              ? reviews.reduce((acc, review) => acc + review.rating, 0) /
+                reviews.length
+              : 0,
+          reviews: reviews,
+          __typename: "ReviewData",
+        };
+
+        // Get categories with foods
+        const categories = await Category.find({ restaurant: restaurant._id }).populate({
+          path: "foods",
+          populate: {
+            path: "variations",
+          },
+        });
+
+        // Get options and addons
+        const options = await Option.find({ restaurant: restaurant._id });
+        const addons = await Addon.find({ restaurant: restaurant._id });
+
+        // Get zone information
+        const zone = await Zone.findOne({
+          "location.coordinates": {
+            $geoIntersects: {
+              $geometry: {
+                type: "Point",
+                coordinates: restaurant.location.coordinates.map(Number),
+              },
+            },
+          },
+        });
+
+        return {
+          ...restaurant._doc,
+          reviewData,
+          categories,
+          options,
+          addons,
+          zone,
+          __typename: "Restaurant",
+        };
+      } catch (error) {
+        throw error;
+      }
+    },
+  },
 
   createSubCategories: async (args, req) => {
     try {
@@ -79,8 +154,6 @@ const resolvers = {
       throw error;
     }
   },
-
-  // ...existing resolvers...
 };
 
 module.exports = resolvers;

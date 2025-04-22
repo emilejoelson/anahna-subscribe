@@ -121,7 +121,7 @@ const typeDefs = gql`
     address: String
     location: Point
     categories: [Category!]
-    orderId: [Order]
+    orderId: Int!
     options: [Option!]
     addons: [Addon!]
     reviewData: ReviewData

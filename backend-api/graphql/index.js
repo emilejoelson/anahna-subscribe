@@ -1,7 +1,5 @@
 const { gql } = require('apollo-server-express')
 
-
-
 const typeDefs = gql`
   type Location {
     location: Point
@@ -48,9 +46,10 @@ const typeDefs = gql`
   }
 
   type ReviewData {
-    reviews: [Review]
-    ratings: Float
     total: Int
+    ratings: Float
+    reviews: [Review]
+    __typename: String
   }
 
   type Owner {
@@ -101,7 +100,7 @@ const typeDefs = gql`
 
   type Restaurant {
     _id: ID!
-    orderId: String!
+    orderId: Int!
     orderPrefix: String
     name: String!
     image: String
@@ -143,11 +142,13 @@ const typeDefs = gql`
   type OpeningTimes {
     day: String!
     times: [Timings]
+    __typename: String
   }
 
   type Timings {
     startTime: [String]
     endTime: [String]
+    __typename: String
   }
 
   type Variation {
@@ -380,25 +381,14 @@ const typeDefs = gql`
   type OwnerAuthData {
     userId: ID!
     token: String!
-    tokenExpiration: Int!
     email: String!
-    userType: String!
-    restaurants: [Restaurant]!
-    pushToken: String
+    userType: String
+    restaurants: [Restaurant]
+    permissions: [String]  # Add this field
+    userTypeId: ID         # Add this field (though userType exists already)
+    image: String          # Add this field
+    name: String           # Add this field
   }
-
-  type OwnerAuthData {
-  userId: ID!
-  token: String!
-  email: String!
-  userType: String
-  restaurants: [Restaurant]
-  permissions: [String]  # Add this field
-  userTypeId: ID         # Add this field (though userType exists already)
-  image: String          # Add this field
-  name: String           # Add this field
-  }
-    
 
   type Review {
     _id: ID!
@@ -406,9 +396,10 @@ const typeDefs = gql`
     restaurant: Restaurant!
     rating: Int!
     description: String
-    isActive: Boolean!
     createdAt: String!
+    isActive: Boolean!
     updatedAt: String!
+    __typename: String
   }
 
   type ReviewOutput {
@@ -581,6 +572,7 @@ const typeDefs = gql`
 
   type Point {
     coordinates: [String!]
+    __typename: String
   }
 
   type Zone {
