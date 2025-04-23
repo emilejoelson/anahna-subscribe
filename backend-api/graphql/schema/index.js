@@ -1381,7 +1381,8 @@ input TippingInput {
   type Query {
     staffs: [Staff]
     staff(id: ID!): Staff
-    subCategory(_id: ID!): SubCategory
+    subCategory(_id: String): SubCategory
+    GetSubCategoriesByParentId(parentCategoryId: String!): [SubCategory!]
     getClonedRestaurants: [Restaurant!]!
     allOrdersWithoutPagination(
       dateKeyword: String

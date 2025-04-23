@@ -6,6 +6,40 @@ const mongoose = require('mongoose');
 module.exports = {
   Query: {
     // Get all subcategories for a specific category
+    GetSubCategoriesByParentId: async (_, { parentCategoryId }, context) => {
+      console.log("Fetching subcategories for category:", parentCategoryId);
+
+      if (!parentCategoryId) {
+        console.log("Missing required parameter parentCategoryId");
+        throw new Error("parentCategoryId is required");
+      }
+
+      try {
+        const restaurant = await Restaurant.findOne({
+          "categories._id": parentCategoryId
+        });
+
+        if (!restaurant) {
+          console.log(`No restaurant found with category ID: ${parentCategoryId}`);
+          return [];
+        }
+
+        const category = restaurant.categories.id(parentCategoryId);
+        if (!category) {
+          console.log(`No category found with ID: ${parentCategoryId}`);
+          return [];
+        }
+
+        return category.subCategories.map((subCat) => ({
+          _id: subCat._id,
+          title: subCat.title,
+          parentCategoryId: parentCategoryId,
+        }));
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+        throw error;
+      }
+    },
     subCategories: async (_, { categoryId }, context) => {
       console.log("Fetching subcategories for category:", categoryId);
 
