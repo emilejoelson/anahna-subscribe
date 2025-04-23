@@ -224,10 +224,6 @@ module.exports = {
             model: 'Addon'
           }
         })
-        .populate({
-          path: 'orderId',
-          model: 'Order',
-        });
 
         const offers = await Offer.find({
           restaurants: { $in: restaurants.map((r) => r._id.toString()) },
