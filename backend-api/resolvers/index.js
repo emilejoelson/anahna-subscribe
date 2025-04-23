@@ -19,7 +19,7 @@ const dispatchResolver = require('./dispatch')
 const taxationResolver = require('./taxation')
 const tippingResolver = require('./tipping')
 const sectionResolver = require('./section')
-const notificationMutation = require('./notification')
+const notificationResolver = require('./notification')
 const earningsResolver = require('./earnings')
 const withdrawRequestResolver = require('./withdrawRequest')
 const chatResolver = require('./chat')
@@ -98,7 +98,8 @@ const rootResolver = {
     ...banner.Query,
     ...demo.Query,
     ...categoryResolver.Query,
-    ...staff.Query
+    ...notificationResolver.Query,
+    ...staff.Query,
   },
   Mutation: {
     ...dashboardResolver.Mutation,
@@ -122,14 +123,14 @@ const rootResolver = {
     ...tippingResolver.Mutation,
     ...taxationResolver.Mutation,
     ...sectionResolver.Mutation,
-    ...notificationMutation.Mutation,
+    ...notificationResolver.Mutation,
     ...withdrawRequestResolver.Mutation,
     ...earningsResolver.Mutation,
     ...chatResolver.Mutation,
     ...cuisine.Mutation,
     ...banner.Mutation,
     ...demo.Mutation,
-    ...staff.Mutation
+    ...staff.Mutation,
   },
   Subscription: {
     ...orderResolver.Subscription,
