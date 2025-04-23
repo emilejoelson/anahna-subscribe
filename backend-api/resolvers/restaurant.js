@@ -446,6 +446,32 @@ module.exports = {
         throw new Error(`Could not duplicate restaurant: ${error.message}`);
       }
     },
+    updateCommission: async (_, { id, commissionRate } ) => {
+      try {
+        console.log('========updateCommission========', id, commissionRate)
+        
+        if (!id || !commissionRate) {
+          throw new Error('Restaurant ID and commission rate are required');
+        }
+        
+        const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+          id,
+          { commissionRate },
+          { new: true } // return restaurant after update
+        );
+
+        if (!updatedRestaurant) {
+          throw new Error('Restaurant not found');
+        }
+
+        return { 
+          _id: updatedRestaurant._id.toString(),
+          commissionRate: updatedRestaurant.commissionRate
+        };
+      } catch (error) {
+        throw new Error(`Could not update commission: ${error.message}`);
+      }
+    },
     updateDeliveryBoundsAndLocation: async (_, { id, boundType, bounds, circleBounds, location, address, postCode, city }) => {
       try {
         let updateData = { boundType };

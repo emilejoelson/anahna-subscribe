@@ -97,7 +97,7 @@ export interface IEditRestaurant extends IGlobalComponentProps {
   logo: string;
   minimumOrder: number;
   name: string;
-  orderId: string[];
+  orderId: number;
   orderPrefix: string;
   password: string;
   shopType: string;

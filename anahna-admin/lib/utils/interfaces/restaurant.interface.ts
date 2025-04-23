@@ -90,7 +90,7 @@ export interface IDeliveryInfo {
 export interface IRestaurantByOwner {
   _id: string;
   unique_restaurant_id: string;
-  orderId: string[];
+  orderId: string;
   orderPrefix: string;
   name: string;
   slug: string;
@@ -130,7 +130,7 @@ export interface ICreateRestaurant {
   logo: string;
   minimumOrder: number;
   name: string;
-  orderId: string[];
+  orderId: number;
   orderPrefix: string;
   password: string;
   shopType: string;
@@ -159,7 +159,7 @@ export interface ICreateRestaurantResponse {
 /* Get Restaurant By ID Profile */
 export interface IRestaurantProfile {
   _id: string;
-  orderId: string[];
+  orderId: number;
   orderPrefix: string;
   slug: string;
   name: string;
