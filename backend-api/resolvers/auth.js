@@ -10,6 +10,9 @@ const { transformUser, transformOwner } = require('./merge');
 const { sendEmail, sendVerificationEmail, sendPasswordResetEmail } = require('../helpers/email');
 const templates = require('../helpers/templates');
 const restaurant = require('../models/restaurant');
+require('dotenv').config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'customsecretkey';
 
 module.exports = {
   Mutation: {
@@ -70,8 +73,7 @@ module.exports = {
           throw new Error('Invalid credentials');
         }
     
-        // Ensure userType matches a key in DEFAULT_ROUTES (uppercase in this case)
-        const userType = owner.userType ? String(owner.userType).toUpperCase() : 'ADMIN'; // Or 'STAFF'
+        const userType = owner.userType ? String(owner.userType).toUpperCase() : 'ADMIN';
     
         const token = jwt.sign(
           {
@@ -79,10 +81,9 @@ module.exports = {
             email: owner.email,
             userType: userType,
           },
-          process.env.JWT_SECRET || 'customsecretkey'
+          JWT_SECRET
         );
     
-        // Get restaurants data if needed
         const restaurants = await restaurant.find({ _id: { $in: owner.restaurants || [] } });
     
         console.log("Logged in owner userType:", userType);
@@ -160,7 +161,7 @@ module.exports = {
           userId: user.id,
           email: user.email || user.appleId,
         },
-        process.env.JWT_SECRET || 'customsecretkey'
+        JWT_SECRET
       );
 
       if (isNewUser) {
@@ -190,7 +191,7 @@ module.exports = {
 
       const token = jwt.sign(
         { userId: rider.id, email: rider.username },
-        process.env.JWT_SECRET || 'somesupersecretkey'
+        JWT_SECRET
       );
 
       return {

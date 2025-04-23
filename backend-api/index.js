@@ -90,10 +90,14 @@ useServer(
 // GraphQL endpoint
 app.use(
   '/graphql',
-  graphqlHTTP({
+  graphqlHTTP((req, res) => ({
     schema: executableSchema,
     rootValue: rootValue,
     graphiql: true,
+    context: {
+      req,
+      res
+    },
     customFormatErrorFn: (error) => {
       console.error('GraphQL Error:', error);
       const isSchemaError = error.message.includes('GraphQL schema');
@@ -110,7 +114,7 @@ app.use(
         path: error.path
       };
     }
-  })
+  }))
 );
 
 // Error handling middleware should be last

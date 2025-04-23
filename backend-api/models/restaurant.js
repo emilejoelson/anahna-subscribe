@@ -190,11 +190,10 @@ const restaurantSchema = new Schema({
   deliveryBounds: deliveryBoundsSchema,
   address: String,
   orderPrefix: String,
-  orderId: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Order',
-    required: false,
-  }],
+  orderId: {
+    type: Number,
+    default: 0
+  },
   slug: String,
   deliveryTime: {
     type: Number,

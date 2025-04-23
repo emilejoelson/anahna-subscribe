@@ -26,6 +26,9 @@ import './global.css';
 // Apollo
 import { useSetupApollo } from '@/lib/hooks/useSetApollo';
 
+import Script from 'next/script';
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,6 +47,22 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <FontawesomeConfig />
+        <Script
+          src="https://cdn.amplitude.com/libs/analytics-browser-2.11.1-min.js.gz"
+          strategy="beforeInteractive"
+        />
+        <Script
+          src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.8.0-min.js.gz"
+          strategy="beforeInteractive"
+        />
+        <Script id="amplitude-init" strategy="beforeInteractive">
+          {`
+      window.amplitude.add(window.sessionReplay.plugin({sampleRate: 1}));
+      window.amplitude.init('c3172763ba1e7748d7b284239a85f5fa', {
+        autocapture: { elementInteractions: true }
+      });
+    `}
+        </Script>
       </head>
       <body className={'flex flex-col flex-wrap'}>
         <PrimeReactProvider value={value}>

@@ -121,7 +121,7 @@ const typeDefs = gql`
     address: String
     location: Point
     categories: [Category!]
-    orderId: [Order]
+    orderId: Int!
     options: [Option!]
     addons: [Addon!]
     reviewData: ReviewData
@@ -1347,6 +1347,12 @@ input TippingInput {
     _id: String
     commissionRate: Float
   }
+
+  type ActiveOrdersResponse {
+    orders: [Order!]!
+    totalCount: Int!
+  }
+
   type Query {
     subCategory(_id: ID!): SubCategory
     getClonedRestaurants: [Restaurant!]!
@@ -1462,7 +1468,13 @@ input TippingInput {
     zone(id: String!): Zone!
     unassignedOrdersByZone: [Order!]
     riderOrders: [Order!]
-    getActiveOrders(restaurantId: ID): [Order!]
+    getActiveOrders(
+      restaurantId: ID
+      page: Int
+      rowsPerPage: Int
+      actions: [String]
+      search: String
+    ): ActiveOrdersResponse!
     orderDetails(id: String!): Order!
     chat(order: ID!): [ChatMessageOutput!]
     getAllWithdrawRequests(offset: Int): WithdrawRequestReponse!

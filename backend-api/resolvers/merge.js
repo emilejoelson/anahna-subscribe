@@ -341,15 +341,14 @@ const transformAddon = async addon => {
     return {
       ...addon,
       _id: addon._id.toString ? addon._id.toString() : addon._id,
-      // Ensure title is NEVER null
-      title: addon.title || "Unnamed Addon",
+      title: addon.title || "Unnamed Addon", // Ensure title is never null
       description: addon.description || "",
-      // Ensure quantityMinimum and quantityMaximum are present
-      quantityMinimum: addon.quantityMinimum ?? 0,
-      quantityMaximum: addon.quantityMaximum ?? 1,
       options: Array.isArray(addon.options) ? addon.options.map(opt => 
         typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
-      ) : []
+      ) : [],
+      quantityMinimum: addon.quantityMinimum ?? 0,
+      quantityMaximum: addon.quantityMaximum ?? 1,
+      isActive: addon.isActive ?? true
     };
   }
   
@@ -357,15 +356,14 @@ const transformAddon = async addon => {
   return {
     ...addon._doc,
     _id: addon.id,
-    // Ensure title is NEVER null
-    title: addon._doc.title || "Unnamed Addon",
+    title: addon._doc.title || "Unnamed Addon", // Ensure title is never null
     description: addon._doc.description || "",
-    // Ensure quantityMinimum and quantityMaximum are present
-    quantityMinimum: addon._doc.quantityMinimum ?? 0,
-    quantityMaximum: addon._doc.quantityMaximum ?? 1,
     options: Array.isArray(addon._doc.options) ? addon._doc.options.map(opt => 
       typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
-    ) : []
+    ) : [],
+    quantityMinimum: addon._doc.quantityMinimum ?? 0,
+    quantityMaximum: addon._doc.quantityMaximum ?? 1,
+    isActive: addon._doc.isActive ?? true
   };
 };
 

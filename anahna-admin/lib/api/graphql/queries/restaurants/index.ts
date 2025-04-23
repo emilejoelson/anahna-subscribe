@@ -69,9 +69,7 @@ export const GET_RESTAURANTS_BY_OWNER = gql`
       restaurants {
         unique_restaurant_id
         _id
-        orderId {
-          _id
-        }
+        orderId
         orderPrefix
         name
         slug
@@ -113,11 +111,9 @@ export const GET_RESTAURANT_DELIVERY_ZONE_INFO = gql`
       location {
         coordinates
       }
-
       circleBounds {
         radius
       }
-
       address
       city
       postCode
@@ -129,7 +125,7 @@ export const GET_RESTAURANT_PROFILE = gql`
   query Restaurant($id: String) {
     restaurant(id: $id) {
       _id
-      orderId{ _id }
+      orderId
       orderPrefix
       slug
       name
@@ -168,7 +164,6 @@ export const GET_RESTAURANT_PROFILE = gql`
       }
       shopType
       cuisines
-
       bussinessDetails {
         bankName
         accountName
@@ -178,7 +173,6 @@ export const GET_RESTAURANT_PROFILE = gql`
         companyRegNo
         taxRate
       }
-
       currentWalletAmount
       totalWalletAmount
       withdrawnWalletAmount
