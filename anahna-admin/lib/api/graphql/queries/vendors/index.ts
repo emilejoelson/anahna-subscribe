@@ -53,7 +53,7 @@ export const GET_VENDOR_BY_ID_WITH_RESTAURANTS = gql`
       image
       restaurants {
         _id
-        orderId{ _id }
+        orderId
         orderPrefix
         slug
         name

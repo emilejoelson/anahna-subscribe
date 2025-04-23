@@ -1,6 +1,37 @@
 const { gql } = require("apollo-server-express");
 
 const typeDefs = gql`
+type Staff {
+  _id: ID!
+  name: String!
+  email: String!
+  password: String!
+  plainPassword: String
+  phone: String!
+  isActive: Boolean!
+  permissions: [String]
+  userType: String
+  createdAt: String
+  updatedAt: String
+}
+ type Notification {
+    id: ID!
+    body: String!
+    title: String
+    createdAt: String!
+  }
+
+input StaffInput {
+  _id: ID
+  name: String!
+  email: String!
+  password: String!
+  phone: String
+  isActive: Boolean
+  permissions: [String]
+}
+
+
   type Location {
     location: Point
     deliveryAddress: String
@@ -1315,13 +1346,21 @@ input TippingInput {
     riderPassword: String
   }
 
-  type WebNotification {
+   type WebNotification {
     _id: ID!
     body: String!
     navigateTo: String
     read: Boolean!
     createdAt: String!
   }
+  type MarkWebNotificationsAsReadResponse {
+    _id: ID!
+    body: String!
+    navigateTo: String
+    read: Boolean!
+    createdAt: String!
+  }
+
   type DeliveryBounds {
     type: String!
     coordinates: [[[Float!]!]!]
@@ -1354,6 +1393,8 @@ input TippingInput {
   }
 
   type Query {
+    staffs: [Staff]
+    staff(id: ID!): Staff
     subCategory(_id: ID!): SubCategory
     getClonedRestaurants: [Restaurant!]!
     allOrdersWithoutPagination(
@@ -1374,6 +1415,7 @@ input TippingInput {
     undeliveredOrders(offset: Int): [Order!]!
     deliveredOrders(offset: Int): [Order!]!
     allOrders(page: Int): [Order!]!
+    notifications: [Notification!]!
     webNotifications: [WebNotification!]!
     getDashboardTotal(
       starting_date: String
@@ -1511,6 +1553,10 @@ input BussinessDetailsInput {
   taxRate: Float
 }
   type Mutation {
+    createStaff(staffInput: StaffInput): Staff
+    editStaff(staffInput: StaffInput): Staff
+    deleteStaff(id: String!): Staff
+    toggleStaffActive(id: ID!): Staff
     updateRestaurantBussinessDetails(
       id: String!
       bussinessDetails: BussinessDetailsInput
@@ -1682,10 +1728,8 @@ input BussinessDetailsInput {
     updateTimings(id: String!, openingTimes: [TimingsInput]): Restaurant!
     toggleAvailability: Restaurant!
     addFavourite(id: String!): User!
-    sendNotificationUser(
-      notificationTitle: String
-      notificationBody: String!
-    ): String!
+    sendNotificationUser(notificationTitle: String, notificationBody: String!): Boolean!
+    markWebNotificationsAsRead: [MarkWebNotificationsAsReadResponse!]!
     updateCommission(id: String!, commissionRate: Float!): commissionDetails
     updateDeliveryBoundsAndLocation(
       id: ID!
