@@ -1,90 +1,68 @@
-const { Expo } = require('expo-server-sdk');
-const User = require('../models/user');
-const { sendNotificationMobile } = require('../helpers/utilities');
+const { collection, addDoc, getDocs, doc, updateDoc } = require("firebase/firestore");
+const { getDb } = require("../config/firebase");
+
+const getNotificationCollection = () => collection(getDb(), "notifications");
+const getWebNotificationCollection = () => collection(getDb(), "webNotifications");
 
 module.exports = {
   Query: {
-    webNotifications: async (_, args, { req }) => {
-      if (!req.userId) throw new Error('Unauthenticated');
-      
-      try {
-        const user = await User.findById(req.userId);
-        if (!user) throw new Error('User not found');
-        
-        return user.webNotifications || [];
-      } catch (error) {
-        console.error('Error fetching web notifications:', error);
-        throw error;
-      }
-    }
+    notifications: async () => {
+      const snapshot = await getDocs(getNotificationCollection());
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+        };
+      });
+    },
+    webNotifications: async () => {
+      const snapshot = await getDocs(getWebNotificationCollection());
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          _id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+        };
+      });
+    },
   },
   Mutation: {
-    sendNotificationUser: async (_, args, { req, res }) => {
-      console.log('Sending notification to users');
+    sendNotificationUser: async (
+      _,
+      { notificationTitle, notificationBody }
+    ) => {
       try {
-        const users = await User.find({ isActive: true });
-        const messages = [];
-
-        for (const user of users) {
-          if (user.notificationToken && user.isOfferNotification) {
-            if (Expo.isExpoPushToken(user.notificationToken)) {
-              messages.push({
-                to: user.notificationToken,
-                sound: 'default',
-                body: args.notificationBody,
-                title: args.notificationTitle,
-                channelId: 'default',
-                data: {}
-              });
-            } else {
-              console.warn(`Invalid Expo push token for user ${user._id}`);
-            }
-          }
-        }
-
-        if (messages.length > 0) {
-          await sendNotificationMobile(messages);
-        }
-
-        console.log('Notifications sent successfully');
-        return 'Success';
+        await addDoc(getNotificationCollection(), {
+          title: notificationTitle,
+          body: notificationBody,
+          createdAt: new Date()
+        });
+        return true;
       } catch (error) {
-        console.error('Error sending notifications:', error);
-        throw new Error('Failed to send notifications');
+        console.error("Error sending notification:", error);
+        return false;
       }
     },
-
-    saveNotificationTokenWeb: async (_, args, { req, res }) => {
-      console.log('Saving notification token for web', args);
-      try {
-        if (!req.userId) throw new Error('Unauthenticated');
-
-        const result = await User.updateOne(
-          { _id: req.userId },
-          { $set: { notificationTokenWeb: args.token } },
-          { new: true, useFindAndModify: false }
-        );
-
-        if (result.modifiedCount > 0) {
-          console.log('Notification token saved successfully');
-          return {
-            success: true,
-            message: 'Notification token saved successfully'
-          };
-        } else {
-          console.warn('No changes made while saving notification token');
-          return {
-            success: false,
-            message: 'No changes were made while saving the token'
-          };
+    markWebNotificationsAsRead: async () => {
+      const snapshot = await getDocs(getWebNotificationCollection());
+      const updatedNotifications = [];
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        const docRef = doc(getDb(), "webNotifications", docSnap.id);
+        const updatedData = { ...data, read: true };
+        if (!data.read) {
+          await updateDoc(docRef, { read: true });
         }
-      } catch (error) {
-        console.error('Error saving notification token:', error);
-        return {
-          success: false,
-          message: error.message
-        };
+        updatedNotifications.push({
+          _id: docSnap.id,
+          ...updatedData,
+          createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+        });
       }
-    }
-  }
+      return updatedNotifications;
+    },
+  },
 };

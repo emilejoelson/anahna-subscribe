@@ -14,7 +14,13 @@ type Staff {
   createdAt: String
   updatedAt: String
 }
-  
+ type Notification {
+    id: ID!
+    body: String!
+    title: String
+    createdAt: String!
+  }
+
 input StaffInput {
   _id: ID
   name: String!
@@ -1340,13 +1346,21 @@ input TippingInput {
     riderPassword: String
   }
 
-  type WebNotification {
+   type WebNotification {
     _id: ID!
     body: String!
     navigateTo: String
     read: Boolean!
     createdAt: String!
   }
+  type MarkWebNotificationsAsReadResponse {
+    _id: ID!
+    body: String!
+    navigateTo: String
+    read: Boolean!
+    createdAt: String!
+  }
+
   type DeliveryBounds {
     type: String!
     coordinates: [[[Float!]!]!]
@@ -1401,6 +1415,7 @@ input TippingInput {
     undeliveredOrders(offset: Int): [Order!]!
     deliveredOrders(offset: Int): [Order!]!
     allOrders(page: Int): [Order!]!
+    notifications: [Notification!]!
     webNotifications: [WebNotification!]!
     getDashboardTotal(
       starting_date: String
@@ -1713,10 +1728,8 @@ input BussinessDetailsInput {
     updateTimings(id: String!, openingTimes: [TimingsInput]): Restaurant!
     toggleAvailability: Restaurant!
     addFavourite(id: String!): User!
-    sendNotificationUser(
-      notificationTitle: String
-      notificationBody: String!
-    ): String!
+    sendNotificationUser(notificationTitle: String, notificationBody: String!): Boolean!
+    markWebNotificationsAsRead: [MarkWebNotificationsAsReadResponse!]!
     updateCommission(id: String!, commissionRate: Float!): commissionDetails
     updateDeliveryBoundsAndLocation(
       id: ID!
