@@ -27,6 +27,7 @@ const countries = require('./countries')
 const cuisine = require('./cuisine')
 const banner = require('./banner')
 const demo = require('./demo')
+const staff = require('./staff')
 
 // Make sure to import the Option model
 const Option = require('../models/option');
@@ -96,7 +97,8 @@ const rootResolver = {
     ...cuisine.Query,
     ...banner.Query,
     ...demo.Query,
-    ...categoryResolver.Query
+    ...categoryResolver.Query,
+    ...staff.Query
   },
   Mutation: {
     ...dashboardResolver.Mutation,
@@ -126,7 +128,8 @@ const rootResolver = {
     ...chatResolver.Mutation,
     ...cuisine.Mutation,
     ...banner.Mutation,
-    ...demo.Mutation
+    ...demo.Mutation,
+    ...staff.Mutation
   },
   Subscription: {
     ...orderResolver.Subscription,
