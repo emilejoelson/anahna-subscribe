@@ -1594,7 +1594,7 @@ input BussinessDetailsInput {
       isActive: Boolean
     ): AuthData!
     ownerLogin(email: String!, password: String!): OwnerAuthData!
-    createUser(userInput: UserInput!): User
+    createUser(userInput: UserInput!): AuthData
     createVendor(vendorInput: VendorInput): OwnerData!
     editVendor(vendorInput: VendorInput): OwnerData!
     deleteVendor(id: String!): Boolean

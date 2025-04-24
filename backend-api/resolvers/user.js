@@ -177,22 +177,24 @@ module.exports = {
         }
         const user = new User(userDetails)
 
-        sendUserInfoToZapier({
-          email: args.userInput.email,
-          phone: args.userInput.phone,
-          name: args.userInput.name
-        })
+        // sendUserInfoToZapier({
+        //   email: args.userInput.email,
+        //   phone: args.userInput.phone,
+        //   name: args.userInput.name
+        // })
 
         const result = await user.save()
-        const attachment = path.join(
-          __dirname,
-          '../../public/assets/tempImages/enatega.png'
-        )
-        const signupTemp = await signupTemplate(args.userInput)
+        const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg';
+        // path.join(
+        //   __dirname,
+        //   '../../public/assets/tempImages/enatega.png'
+        // )
+        const signupTemp = await signupTemplate({name: args.userInput.name, email: args.userInput.email})
+        const signupTxt = await signupText({name: args.userInput.name, email: args.userInput.email})
         sendEmail(
           result.email,
           'Account Creation',
-          signupText,
+          signupTxt,
           signupTemp,
           attachment
         )
@@ -303,10 +305,11 @@ module.exports = {
         if (!args.email) throw new Error('Email is required')
         if (!args.otp) throw new Error('Otp is required')
         const resetPasswordTemp = await resetPasswordTemplate(args.otp)
-        const attachment = path.join(
-          __dirname,
-          '../../public/assets/tempImages/enatega.png'
-        )
+        const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg';
+        // path.join(
+        //   __dirname,
+        //   '../../public/assets/tempImages/enatega.png'
+        // )
         sendEmail(
           args.email,
           'OTP to confirm email',

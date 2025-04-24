@@ -165,8 +165,9 @@ module.exports = {
       );
 
       if (isNewUser) {
-        const attachment = path.join(__dirname, '../../public/assets/tempImages/enatega.png');
-        const signupTemp = await templates.signupTemplate({ email: user.name, password: '' });
+        // const attachment = path.join(__dirname, '../../public/assets/tempImages/enatega.png');
+        const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg';
+        const signupTemp = await templates.signupTemplate({ name: user.name, email: user.email });
         sendEmail(user.email, 'Account Creation', '', signupTemp, attachment);
       }
 
@@ -232,7 +233,8 @@ module.exports = {
 
       const resetPasswordTemp = await templates.resetPasswordTemplate(otp);
       const resetPasswordTxt = templates.resetPasswordText(otp);
-      const attachment = path.join(__dirname, '../../public/assets/tempImages/enatega.png');
+      // const attachment = path.join(__dirname, '../../public/assets/tempImages/enatega.png');
+      const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg';
 
       sendEmail(user.email, 'Forgot Password', resetPasswordTxt, resetPasswordTemp, attachment);
 

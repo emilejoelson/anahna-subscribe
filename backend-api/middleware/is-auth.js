@@ -43,6 +43,8 @@ const authMiddleware = (req, res, next) => {
     req.userId = decodedToken.userId;
     req.userType = decodedToken.userType || null;
     req.restaurantId = decodedToken.restaurantId;
+    console.log(req.userId, req.userType, req.restaurantId);
+    
     return next();
   } catch (err) {
     console.error('Token verification failed:', err);

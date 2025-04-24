@@ -27,8 +27,26 @@ const placeOrderTemplate = async (orderDetails) => {
   `;
 };
 
+const signupTemplate = async ({ name, email }) => {
+  return `
+    <div>
+      <h1>Welcome to Anahna, ${name}!</h1>
+      <p>Thank you for signing up with your email: <strong>${email}</strong>.</p>
+      <p>We're excited to have you with us.</p>
+    </div>
+  `;
+};
+
+const signupText = ({ name, email }) => {
+  return `Welcome to Anahna, ${name}!
+          Thank you for signing up with your email: ${email}.
+          We're excited to have you with us.`;
+};
+
 module.exports = {
   verificationTemplate,
   resetPasswordTemplate,
-  placeOrderTemplate
+  placeOrderTemplate,
+  signupTemplate,
+  signupText,
 };

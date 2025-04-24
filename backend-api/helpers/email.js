@@ -20,10 +20,12 @@ const sendEmail = async (to, subject, text, html, attachment) => {
     };
     
     if (attachment) {
-      mailOptions.attachments = [{
+      mailOptions.attachments = [
+        {
         filename: 'logo.png',
         path: attachment
-      }];
+        }
+      ];
     }
 
     await transporter.sendMail(mailOptions);
