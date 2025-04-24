@@ -26,6 +26,7 @@ export default function NotificationMain() {
     {}
   ) as IQueryResult<IGetNotifications | undefined, undefined>;
 
+  console.log("All notifications : ",notificationData);
   // States
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
 
