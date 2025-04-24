@@ -66,11 +66,6 @@ export const NOTIFICATIONS_TABLE_COLUMNS = () => {
       {
         headerName: t('Date'),
         propertyName: 'createdAt',
-        body: (rowData: INotification) => {
-          const seconds = parseInt(rowData.createdAt);
-          const newDate = new Date(seconds).toDateString();
-          return <span>{newDate}</span>;
-        },
       },
       {
         headerName: t('Change Status'),

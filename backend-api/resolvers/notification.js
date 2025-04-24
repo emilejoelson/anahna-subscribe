@@ -10,10 +10,12 @@ module.exports = {
       const snapshot = await getDocs(getNotificationCollection());
       return snapshot.docs.map(doc => {
         const data = doc.data();
+        const createdAtDate = data.createdAt ? data.createdAt.toDate() : null;
+        const formattedCreatedAt = createdAtDate ? createdAtDate.toLocaleDateString('en-GB') : null;
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+          createdAt: formattedCreatedAt,
         };
       });
     },
