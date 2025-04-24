@@ -18,16 +18,16 @@ module.exports = {
         const user = await User.findById(req.userId);
         if (!user) throw new Error('User not found');
 
-        const address = new Address({
-          ...addressInput,
-          location: new Point({
+        const address = {
+          location: {
             type: 'Point',
-            coordinates: [
-              parseFloat(addressInput.longitude),
-              parseFloat(addressInput.latitude),
-            ],
-          }),
-        });
+            coordinates: [addressInput.lng, addressInput.lat]
+          },
+          deliveryAddress: addressInput.location,
+          details: addressInput.details || '',
+          label: addressInput.label || 'Home',
+          selected: true
+        };
 
         user.addresses.push(address);
         const updatedUser = await user.save();
@@ -46,24 +46,20 @@ module.exports = {
         const user = await User.findById(req.userId);
         if (!user) throw new Error('User not found');
 
-        const location = new Point({
-          type: 'Point',
-          coordinates: [
-            parseFloat(addressInput.longitude),
-            parseFloat(addressInput.latitude),
-          ],
-        });
-
         const addressToUpdate = user.addresses.id(addressInput._id);
+        if (!addressToUpdate) throw new Error('Address not found');
+
         Object.assign(addressToUpdate, {
-          location,
-          deliveryAddress: addressInput.deliveryAddress,
-          details: addressInput.details,
-          label: addressInput.label,
+          location: {
+            type: 'Point',
+            coordinates: [addressInput.lng, addressInput.lat]
+          },
+          deliveryAddress: addressInput.location,
+          details: addressInput.details || addressToUpdate.details,
+          label: addressInput.label || addressToUpdate.label
         });
 
         const updatedUser = await user.save();
-
         return transformUser(updatedUser);
       } catch (error) {
         console.error(error);

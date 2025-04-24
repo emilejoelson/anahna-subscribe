@@ -20,17 +20,38 @@ const Configuration = require('../models/configuration')
 
 module.exports = {
   Query: {
-    profile: async(_, args, { req, res }) => {
+    profile: async(_, args, { req }) => {
       if (!req.isAuth) {
         throw new Error('Unauthenticated')
       }
       try {
         const user = await User.findById(req.userId)
+          .select('-password') // Exclure le mot de passe
+          .lean() // Pour de meilleures performances
+        
         if (!user) throw new Error('User does not exist')
-        return transformUser(user)
-      } catch (err) {
-        console.log(err)
-        throw err
+
+        return {
+          ...user,
+          _id: user._id.toString(),
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          phoneIsVerified: user.phoneIsVerified || false,
+          emailIsVerified: user.emailIsVerified || false,
+          isActive: user.isActive || false,
+          isOrderNotification: user.isOrderNotification || false,
+          isOfferNotification: user.isOfferNotification || false,
+          addresses: user.addresses || [],
+          notificationToken: user.notificationToken || '',
+          favourite: user.favourite || [],
+          userType: user.userType || 'user',
+          createdAt: user.createdAt ? user.createdAt.toISOString() : null,
+          updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
+        }
+      } catch (error) {
+        console.error('Profile error:', error)
+        throw error
       }
     },
     users: async(_, args, context) => {
@@ -238,9 +259,7 @@ module.exports = {
       const user = await User.findById(req.userId)
       if (!user) throw new Error('Please logout and login again')
       // check if phone number is already associated with another account
-      if (
-        !(await checkPhoneAlreadyUsed(req.userId, args.updateUserInput.phone))
-      ) {
+      if (!(await checkPhoneAlreadyUsed(req.userId, args.updateUserInput.phone))) {
         try {
           if (args.updateUserInput.phone !== user.phone) {
             user.phoneIsVerified = args.updateUserInput.phoneIsVerified
@@ -250,16 +269,25 @@ module.exports = {
           }
           user.name = args.updateUserInput.name
           user.phone = args.updateUserInput.phone
-          const result = await user.save()
-          return transformUser(result)
+          await user.save()
+          
+          return {
+            _id: user._id.toString(),
+            name: user.name || '',
+            phone: user.phone || '',
+            phoneIsVerified: user.phoneIsVerified || false,
+            emailIsVerified: user.emailIsVerified || false,
+            email: user.email || '',
+            isActive: user.isActive || false,
+            isOrderNotification: user.isOrderNotification || false,
+            isOfferNotification: user.isOfferNotification || false
+          }
         } catch (err) {
           console.log(err)
           throw err
         }
       } else {
-        throw new Error(
-          'Phone number is already associated with another account'
-        )
+        throw new Error('Phone number is already associated with another account')
       }
     },
     updateNotificationStatus: async(_, args, { req, res }) => {

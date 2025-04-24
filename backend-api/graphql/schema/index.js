@@ -1140,11 +1140,11 @@ input TippingInput {
   }
   input AddressInput {
     _id: String
-    longitude: String
-    latitude: String
-    deliveryAddress: String!
+    lat: Float!
+    lng: Float!
+    location: String!
     details: String
-    label: String!
+    label: String
   }
   input CartFoodInput {
     _id: String
