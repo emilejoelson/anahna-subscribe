@@ -6,6 +6,52 @@ const mongoose = require('mongoose');
 
 module.exports = {
   Mutation: {
+    updateFoodOutOfStock: async (_, { id, restaurant, categoryId }) => {
+      try {
+        // 1. Trouver le restaurant
+        const restaurantDoc = await Restaurant.findOne({
+          _id: restaurant,
+          'categories._id': categoryId,
+          'categories.foods._id': id
+        });
+    
+        if (!restaurantDoc) return false;
+    
+        // 2. Trouver la catégorie et le plat
+        const category = restaurantDoc.categories.find(cat => cat._id.toString() === categoryId);
+        const food = category?.foods.find(fd => fd._id.toString() === id);
+    
+        if (!food) return false;
+    
+        // 3. Inverser la valeur actuelle
+        const newOutOfStockValue = !food.isOutOfStock;
+    
+        // 4. Mettre à jour dans Mongo
+        const updated = await Restaurant.updateOne(
+          {
+            _id: restaurant,
+            'categories._id': categoryId,
+            'categories.foods._id': id
+          },
+          {
+            $set: {
+              'categories.$[cat].foods.$[food].isOutOfStock': newOutOfStockValue
+            }
+          },
+          {
+            arrayFilters: [
+              { 'cat._id': categoryId },
+              { 'food._id': id }
+            ]
+          }
+        );
+    
+        return updated.modifiedCount > 0;
+      } catch (error) {
+        console.error(error);
+        return false;
+      }
+    },    
     createFood: async (_, args, context) => {
       console.log('Creating food item with arguments:', args);
       const { 

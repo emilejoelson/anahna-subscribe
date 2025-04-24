@@ -82,6 +82,84 @@ module.exports = {
     }
   },
   Query: {
+    ordersByRestIdWithoutPagination: async (_, args) => {
+      try {
+        const { restaurant, search } = args;
+
+        const filter = {
+          restaurant: restaurant
+        };
+
+        if (search && search.trim() !== '') {
+          filter.orderId = { $regex: search, $options: 'i' };
+        }
+
+        const orders = await Order.find(filter)
+          .populate('user', '_id name phone email')
+          .populate('restaurant', '_id name address location image')
+          .populate('rider', '_id name username available')
+          .populate({
+            path: 'items',
+            populate: [
+              {
+                path: 'variation',
+                select: '_id title price discounted'
+              },
+              {
+                path: 'addons',
+                populate: {
+                  path: 'options',
+                  select: '_id title description price'
+                }
+              }
+            ]
+          })
+          .lean();
+
+        return orders;
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        throw new Error('Failed to fetch restaurant orders');
+      }
+    },
+    allOrdersWithoutPagination: async (_, args) => {
+      try {
+        const { dateKeyword, starting_date, ending_date } = args;
+
+        const filter = {};
+
+        if (dateKeyword === 'All') {
+          if (starting_date && ending_date) {
+            filter.createdAt = {
+              $gte: new Date(starting_date),
+              $lte: new Date(ending_date),
+            };
+          }
+        }
+
+        const orders = await Order.find(filter)
+          .populate('restaurant', '_id name image address location')
+          .populate('user', '_id name phone email')
+          .populate('rider', '_id name username available')
+          .populate({
+            path: 'items',
+            populate: [
+              { path: 'variation', select: '_id title price discounted' },
+              {
+                path: 'addons',
+                populate: { path: 'options', select: '_id title description price' }
+              }
+            ]
+          })
+          .lean()
+          .exec();
+
+        return orders;
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        throw new Error('Failed to fetch orders');
+      }
+    },
     order: async(_, args, { req, res }) => {
       console.log('order')
       if (!req.isAuth) {
