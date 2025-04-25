@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const mongoose = require("mongoose");
-const { graphqlHTTP } = require("express-graphql");
+const { ApolloServer } = require("apollo-server-express");
 const schema = require("./schema");
 const { createServer } = require("http");
 const { WebSocketServer } = require("ws");
@@ -94,19 +94,15 @@ useServer(
   wsServer
 );
 
-app.use(
-  "/graphql",
-   (req, res) => {
-  return graphqlHTTP({
+async function startApolloServer() {
+  const server = new ApolloServer({
     schema: executableSchema,
-    rootValue: rootValue,
-    graphiql: true,
-    context: {
+    context: ({ req }) => ({
       mongoConnected: mongoose.connection.readyState === 1,
       firebaseDb,
       req,
-    },
-    customFormatErrorFn: (error) => {
+    }),
+    formatError: (error) => {
       console.error("GraphQL Error:", error);
       const isSchemaError = error.message.includes("GraphQL schema");
       if (isSchemaError) {
@@ -126,13 +122,19 @@ app.use(
           stack: error.stack
         })
       };
-    }
-  })(req, res);
-});
+    },
+  });
+
+  await server.start();
+  server.applyMiddleware({ app, path: '/graphql' });
+}
+
+startApolloServer();
 
 app.use(errorHandler);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`WebSocket server is ready at ws://localhost:${PORT}/graphql`);
+  console.log(`GraphQL endpoint available at http://localhost:${PORT}/graphql`);
 });
