@@ -1,4 +1,5 @@
 const { Expo } = require('expo-server-sdk');
+const User = require('../models/user'); 
 
 const expo = new Expo();
 
@@ -49,8 +50,14 @@ const deg2rad = (deg) => {
   return deg * (Math.PI/180);
 };
 
+const checkPhoneAlreadyUsed = async (currentUserId, phone) => {
+  const existingUser = await User.findOne({ phone, _id: { $ne: currentUserId } })
+  return !!existingUser // true si trouvé, false sinon
+}
+
 module.exports = {
   sendNotification,
   calculateDistance,
-  sendNotificationMobile
+  sendNotificationMobile,
+  checkPhoneAlreadyUsed
 };

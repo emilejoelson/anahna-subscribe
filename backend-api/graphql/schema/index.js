@@ -1140,9 +1140,9 @@ input TippingInput {
   }
   input AddressInput {
     _id: String
-    lat: Float!
-    lng: Float!
-    location: String!
+    longitude: String!
+    latitude: String!
+    deliveryAddress: String!
     details: String
     label: String
   }
@@ -1607,18 +1607,6 @@ input BussinessDetailsInput {
     editCategory(category: CategoryInput): Restaurant!
     createFood(foodInput: FoodInput): Restaurant!
     editFood(foodInput: FoodInput): Restaurant!
-    createOrder(
-      restaurant: String!
-      orderInput: [OrderInput!]!
-      paymentMethod: String!
-      couponCode: String
-      address: AddressInput!
-      tipping: Float!
-      orderDate: String!
-      isPickedUp: Boolean!
-      userId: String!
-
-    ): Order!
     placeOrder(
       restaurant: String!
       orderInput: [OrderInput!]!

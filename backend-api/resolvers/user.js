@@ -17,6 +17,7 @@ const { transformUser, transformRestaurants } = require('./merge')
 const { sendSMS } = require('../helpers/sms')
 const { get, post } = require('../helpers/api')
 const Configuration = require('../models/configuration')
+require('dotenv').config();
 
 module.exports = {
   Query: {
@@ -145,7 +146,10 @@ module.exports = {
     phoneExist: async(_, args, { res, req }) => {
       console.log('CheckingPhone')
       try {
-        const phoneExist = await User.findOne({ phone: args.phone })
+        const phoneExist = await User.findOne({ 
+          phone: args.phone,
+          _id: { $ne: req.userId }  // exclude current user
+        })
         if (phoneExist) {
           return phoneExist
         } else {
@@ -224,7 +228,7 @@ module.exports = {
             userId: result.id,
             email: result.email || result.appleId
           },
-          'somesupersecretkey'
+          process.env.JWT_SECRET,
         )
         console.log({
           ...result._doc,

@@ -11,6 +11,9 @@ const Restaurant = require('../models/restaurant')
 const Configuration = require('../models/configuration')
 const Paypal = require('../models/paypal')
 const Stripe = require('../models/stripe')
+const {
+  sendNotificationToCustomerWeb
+} = require('../helpers/firebase-web-notifications')
 const { transformOrder, transformReviews } = require('./merge')
 const {
   payment_status,
@@ -36,9 +39,6 @@ const {
   ASSIGN_RIDER,
   SUBSCRIPTION_ORDER
 } = require('../helpers/pubsub')
-const {
-  sendNotificationToCustomerWeb
-} = require('../helpers/firebase-web-notifications')
 
 var DELIVERY_CHARGES = 0.0
 module.exports = {
@@ -98,6 +98,7 @@ module.exports = {
           .populate('user', '_id name phone email')
           .populate('restaurant', '_id name address location image')
           .populate('rider', '_id name username available')
+          .populate('zone')
           .populate({
             path: 'items',
             populate: [
@@ -115,7 +116,8 @@ module.exports = {
             ]
           })
           .lean();
-
+          console.log('===orders', orders);
+          
         return orders;
       } catch (err) {
         console.error('Error fetching orders:', err);
@@ -202,8 +204,8 @@ module.exports = {
         throw err
       }
     },
-    orders: async(_, args, { req, res }) => {
-      console.log('orders')
+    orders: async(_, args, {req}) => {
+      console.log('isAuth', req.isAuth, req.userId, req.userType)
       if (!req.isAuth) {
         throw new Error('Unauthenticated!')
       }
@@ -415,17 +417,19 @@ module.exports = {
         const foods = restaurant.categories.map(c => c.foods).flat()
         const availableAddons = restaurant.addons
         const availableOptions = restaurant.options
-        const ItemsData = args.orderInput.map(item => {
-          const food = foods.find(
-            element => element._id.toString() === item.food
-          )
-          const variation = food.variations.find(
-            v => v._id.toString() === item.variation
-          )
+
+        // Partie à modifier pour sauvegarder les items dans la base de données
+        const ItemsData = []
+
+        // Pour chaque item dans orderInput
+        for (const item of args.orderInput) {
+          const food = foods.find(element => element._id.toString() === item.food)
+          const variation = food.variations.find(v => v._id.toString() === item.variation)
+
           const addonList = []
-          item.addons.forEach((data, index) => {
+          item.addons.forEach((data) => {
             const selectedOptions = []
-            data.options.forEach((option, inx) => {
+            data.options.forEach((option) => {
               selectedOptions.push(
                 availableOptions.find(op => op._id.toString() === option)
               )
@@ -440,7 +444,8 @@ module.exports = {
             })
           })
 
-          return new Item({
+          // Créer l'objet Item
+          const itemData = new Item({
             food: item.food,
             title: food.title,
             description: food.description,
@@ -450,7 +455,13 @@ module.exports = {
             quantity: item.quantity,
             specialInstructions: item.specialInstructions
           })
-        })
+
+          // Sauvegarder l'item dans la base de données
+          const savedItem = await itemData.save()
+
+          // Ajouter l'item sauvegardé dans le tableau ItemsData
+          ItemsData.push(savedItem)
+        }
 
         const user = await User.findById(req.userId)
         if (!user) {
@@ -573,10 +584,11 @@ module.exports = {
             'new'
           )
           publishToDispatcher(transformedOrder)
-          const attachment = path.join(
-            __dirname,
-            '../../public/assets/tempImages/enatega.png'
-          )
+          const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg';
+          // path.join(
+          //   __dirname,
+          //   '../../public/assets/tempImages/enatega.png'
+          // )
           sendEmail(
             user.email,
             'Order Placed',

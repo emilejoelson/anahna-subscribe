@@ -82,6 +82,10 @@ const transformRider = rider => {
 const zone = async id => {
   try {
     const zone = await Zone.findById(id);
+    if (!zone) {
+      console.log('Zone not found for ID:', id);
+      return null;  
+    }
     return {
       ...zone._doc,
       _id: zone.id

@@ -41,7 +41,8 @@ const orderSchema = new Schema({
       coordinates: [Number]
     },
     deliveryAddress: String,
-    details: String
+    details: String,
+    label: String,
   },
   orderStatus: {
     type: String,

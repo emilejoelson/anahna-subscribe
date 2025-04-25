@@ -96,15 +96,16 @@ useServer(
 
 app.use(
   "/graphql",
-  graphqlHTTP({
+   (req, res) => {
+  return graphqlHTTP({
     schema: executableSchema,
     rootValue: rootValue,
     graphiql: true,
-    context: async (req) => ({
-      mongoConnected,
+    context: {
+      mongoConnected: mongoose.connection.readyState === 1,
       firebaseDb,
       req,
-    }),
+    },
     customFormatErrorFn: (error) => {
       console.error("GraphQL Error:", error);
       const isSchemaError = error.message.includes("GraphQL schema");
@@ -121,10 +122,13 @@ app.use(
         message: error.message,
         locations: error.locations,
         path: error.path,
+        ...(process.env.NODE_ENV === "development" && {
+          stack: error.stack
+        })
       };
-    },
-  })
-);
+    }
+  })(req, res);
+});
 
 app.use(errorHandler);
 
