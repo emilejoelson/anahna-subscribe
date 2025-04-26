@@ -161,52 +161,64 @@ const transformFoods = async foodIds => {
   return await foods(foodIds);
 };
 
+const restaurant = async restaurantId => {
+  try {
+    const restaurant = await Restaurant.findById(restaurantId.toString());
+    if (!restaurant) {
+      console.warn('Restaurant not found for ID:', restaurantId);
+      return null;
+    }
+    return {
+      _id: restaurant.id,
+      name: restaurant.name,
+      image: restaurant.image || '',
+      address: restaurant.address || '',
+      location: restaurant.location,
+      slug: restaurant.slug,
+      keywords: restaurant.keywords || [],
+      tags: restaurant.tags || [],
+      reviewCount: restaurant.reviewCount || 0,
+      reviewAverage: restaurant.reviewAverage || 0
+    };
+  } catch (err) {
+    console.error('Error fetching restaurant:', err);
+    return null;
+  }
+};
+
 const transformOrder = async order => {
-  return {
-    ...order._doc,
-    _id: order.id,
-    zone: zone(order.zone),
-    review: review.bind(this, order.review),
-    user: await user.bind(this, order._doc.user),
-    userId: order._doc.user.toString(),
-    orderDate: dateToString(order._doc.orderDate) || dateToString(new Date()),
-    items: await order.items.map(item => {
+  try {
+    if (!order) {
+      throw new Error('Order is null or undefined');
+    }
+
+    const items = (order.items || []).map(item => {
       return {
-        ...item._doc,
-        _id: item.id,
-        variation: {
-          ...item.variation._doc,
-          _id: item.variation.id
-        },
-        addons: item.addons.map(populateOrderAddons)
+        ...item,
+        variation: item.variation ? {
+          ...item.variation,
+          ...(item.variation._doc || {})
+        } : null,
+        addons: (item.addons || []).map(addon => ({
+          ...addon,
+          ...(addon._doc || {})
+        }))
       };
-    }),
-    restaurant: await populateRestaurantDetail.bind(
-      this,
-      order._doc.restaurant
-    ),
-    restaurantId: order.restaurant,
-    isRinged: order.isRinged,
-    isRiderRinged: order.isRiderRinged,
-    rider: order._doc.rider ? rider.bind(this, order._doc.rider) : null,
-    riderId: order._doc.rider ? order._doc.rider.toString() : '',
-    createdAt: dateToString(order._doc.createdAt),
-    updatedAt: dateToString(order._doc.updatedAt),
-    completionTime: dateToString(order._doc.completionTime),
-    expectedTime: dateToString(order._doc.expectedTime),
-    preparationTime: dateToString(order._doc.preparationTime),
-    acceptedAt: order._doc.acceptedAt
-      ? dateToString(order._doc.acceptedAt)
-      : '',
-    pickedAt: order._doc.pickedAt ? dateToString(order._doc.pickedAt) : '',
-    deliveredAt: order._doc.deliveredAt
-      ? dateToString(order._doc.deliveredAt)
-      : '',
-    cancelledAt: order._doc.cancelledAt
-      ? dateToString(order._doc.cancelledAt)
-      : '',
-    assignedAt: order._doc.assignedAt ? dateToString(order._doc.assignedAt) : ''
-  };
+    });
+
+    return {
+      ...order._doc,
+      items,
+      user: order.user ? user.bind(this, order.user) : null,
+      restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
+      rider: order.rider ? rider.bind(this, order.rider) : null,
+      createdAt: dateToString(order._doc.createdAt),
+      updatedAt: dateToString(order._doc.updatedAt)
+    };
+  } catch (err) {
+    console.error('Error transforming order:', err);
+    throw err;
+  }
 };
 
 const populateReviewsDetail = async restaurantId => {
@@ -412,9 +424,6 @@ const populateAddons = async addons => {
   
   return transformedAddons;
 };
-
-
-
 
 /**
  * Transform an array of restaurant documents into properly formatted objects

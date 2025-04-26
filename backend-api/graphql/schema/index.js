@@ -50,7 +50,6 @@ input StaffInput {
     deliveryAddress: String!
     details: String
     label: String!
-
     id: String
   }
 
@@ -390,42 +389,42 @@ input StaffInput {
     delivered: String
     cancelled: String
   }
+
+  type ActiveOrdersResponse {
+    orders: [Order!]!
+    totalCount: Int!
+  }
+
   type Order {
     _id: ID!
     orderId: String!
+    zone: Zone
     restaurant: RestaurantDetail!
     deliveryAddress: OrderAddress!
-    items: [Item!]!
-    user: User!
+    user: UserBasic!
     paymentMethod: String
-    paidAmount: Float
-    orderAmount: Float
-    status: Boolean
-    paymentStatus: String!
     orderStatus: String
-    reason: String
+    isPickedUp: Boolean!
+    status: Boolean
     isActive: Boolean!
     createdAt: String!
-    updatedAt: String!
-    deliveryCharges: Float
-    tipping: Float!
-    taxationAmount: Float!
-    rider: Rider
-    review: Review
-    zone: Zone!
-    completionTime: String
-    orderDate: String!
-    expectedTime: String
-    preparationTime: String
-    isPickedUp: Boolean!
-    acceptedAt: String
-    pickedAt: String
-    deliveredAt: String
-    cancelledAt: String
-    assignedAt: String
-    isRinged: Boolean!
-    isRiderRinged: Boolean!
-    instructions: String
+    rider: RiderBasic
+  }
+
+  type UserBasic {
+    name: String
+    phone: String
+  }
+
+  type RiderBasic {
+    _id: ID!
+    name: String!
+    username: String!
+    available: Boolean!
+  }
+
+  type Point {
+    coordinates: [Float!]
   }
 
   type MyOrders {
@@ -444,7 +443,6 @@ input StaffInput {
     image: String!
     address: String!
     location: Point
-
     slug: String
     keywords: [String]
     tags: [String]
@@ -765,10 +763,6 @@ input StaffInput {
     coordinates: [[[Float!]]]
   }
 
-  type Point {
-    coordinates: [Float!]
-  }
-  
   type DeliveryInfo {
     minDeliveryFee: Float!
     deliveryDistance: Float!
@@ -1501,7 +1495,13 @@ input TippingInput {
     subCategory(_id: String): SubCategory
     GetSubCategoriesByParentId(parentCategoryId: String!): [SubCategory!]!
     orderDetails(id: String!): Order!
-    getActiveOrders(page: Int, rows: Int): ActiveOrdersResponse!
+    getActiveOrders(
+      restaurantId: ID
+      page: Int
+      rowsPerPage: Int
+      actions: [String]
+      search: String
+    ): ActiveOrdersResponse!
     getClonedRestaurants: [Restaurant!]!
     lastOrderCreds: DemoCredentails
     allOrdersWithoutPagination(
