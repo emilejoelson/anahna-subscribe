@@ -9,8 +9,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <GoogleMapsLoader>
-      <RestaurantsProvider>{children}</RestaurantsProvider>
-    </GoogleMapsLoader>
+    <RestaurantsProvider>{children}</RestaurantsProvider>
   );
 }

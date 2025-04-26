@@ -15,7 +15,14 @@ const getCache = async (key) => {
     const cachedData = await redisClient.get(key);
     if (cachedData) {
       console.log(`✅ CACHE HIT for key: ${key}`);
-      return JSON.parse(cachedData);
+      console.log(`Raw cached data: ${cachedData.substring(0, 100)}...`); // Log first 100 chars
+      try {
+        const parsed = JSON.parse(cachedData);
+        return parsed;
+      } catch (parseError) {
+        console.error(`Failed to parse JSON for key ${key}:`, parseError);
+        return null;
+      }
     } else {
       console.log(`❌ CACHE MISS for key: ${key}`);
       return null;
@@ -26,9 +33,8 @@ const getCache = async (key) => {
   }
 };
 
-const setCache = async (key, data, ttl = DEFAULT_TTL) => {
+const setCache = async (key, value, ttl = DEFAULT_TTL) => {
   const redisClient = getRedisClient();
-  console.log(`Attempting to set cache for key: ${key}`);
   
   if (!redisClient) {
     console.log('Redis client is null, cannot set cache');
@@ -36,8 +42,16 @@ const setCache = async (key, data, ttl = DEFAULT_TTL) => {
   }
   
   try {
-    await redisClient.set(key, JSON.stringify(data), { EX: ttl });
-    console.log(`✅ Cache set successfully for key: ${key}`);
+    console.log(`Setting cache for key: ${key}, TTL: ${ttl}`);
+    
+    // Ensure value doesn't contain functions or circular references
+    const cleanedValue = JSON.parse(JSON.stringify(value));
+    const serializedValue = JSON.stringify(cleanedValue);
+    
+    // Log a sample of the data being cached for debugging
+    console.log(`Caching data sample for ${key}: ${serializedValue.substring(0, 100)}...`);
+    
+    await redisClient.set(key, serializedValue, 'EX', ttl);
     return true;
   } catch (error) {
     console.error(`Redis cache set error for key ${key}:`, error);
