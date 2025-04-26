@@ -1,4 +1,4 @@
-/* eslint-disable no-tabs */
+
 const path = require('path')
 const User = require('../models/user')
 const Rider = require('../models/rider')
@@ -39,8 +39,20 @@ const {
   ASSIGN_RIDER,
   SUBSCRIPTION_ORDER
 } = require('../helpers/pubsub')
+const {
+  getCache,
+  setCache,
+  deleteCache,
+  clearCachePattern
+} = require('../helpers/redisCache')
+
+const ORDERS_CACHE_KEY = "orders:all"
+const ORDER_CACHE_KEY_PREFIX = "order:"
+const RESTAURANT_ORDERS_PREFIX = "restaurant:orders:"
+const DEFAULT_TTL = parseInt(process.env.REDIS_TTL) || 3600
 
 var DELIVERY_CHARGES = 0.0
+
 module.exports = {
   Subscription: {
     subscribePlaceOrder: {
@@ -84,14 +96,23 @@ module.exports = {
   Query: {
     ordersByRestIdWithoutPagination: async (_, args) => {
       try {
-        const { restaurant, search } = args;
+        const { restaurant, search } = args
+        const cacheKey = `${RESTAURANT_ORDERS_PREFIX}${restaurant}:${search || 'all'}`
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log(`✅ CACHE HIT: Returning restaurant ${restaurant} orders from Redis cache`)
+          return cachedOrders
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching restaurant ${restaurant} orders from database`)
 
         const filter = {
           restaurant: restaurant
-        };
+        }
 
         if (search && search.trim() !== '') {
-          filter.orderId = { $regex: search, $options: 'i' };
+          filter.orderId = { $regex: search, $options: 'i' }
         }
 
         const orders = await Order.find(filter)
@@ -115,27 +136,43 @@ module.exports = {
               }
             ]
           })
-          .lean();
-          console.log('===orders', orders);
+          .lean()
           
-        return orders;
+        console.log('===orders', orders)
+          
+        await setCache(cacheKey, orders)
+        
+        return orders
       } catch (err) {
-        console.error('Error fetching orders:', err);
-        throw new Error('Failed to fetch restaurant orders');
+        console.error('Error fetching orders:', err)
+        throw new Error('Failed to fetch restaurant orders')
       }
     },
     allOrdersWithoutPagination: async (_, args) => {
       try {
-        const { dateKeyword, starting_date, ending_date } = args;
+        const { dateKeyword, starting_date, ending_date } = args
+        
+        let cacheKey = `${ORDERS_CACHE_KEY}:${dateKeyword || 'all'}`
+        if (starting_date && ending_date) {
+          cacheKey += `:${starting_date}-${ending_date}`
+        }
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log('✅ CACHE HIT: Returning all orders from Redis cache')
+          return cachedOrders
+        }
+        
+        console.log('❌ CACHE MISS: Fetching all orders from database')
 
-        const filter = {};
+        const filter = {}
 
         if (dateKeyword === 'All') {
           if (starting_date && ending_date) {
             filter.createdAt = {
               $gte: new Date(starting_date),
               $lte: new Date(ending_date),
-            };
+            }
           }
         }
 
@@ -154,12 +191,14 @@ module.exports = {
             ]
           })
           .lean()
-          .exec();
+          .exec()
 
-        return orders;
+        await setCache(cacheKey, orders)
+        
+        return orders
       } catch (error) {
-        console.error('Error fetching orders:', error);
-        throw new Error('Failed to fetch orders');
+        console.error('Error fetching orders:', error)
+        throw new Error('Failed to fetch orders')
       }
     },
     order: async(_, args, { req, res }) => {
@@ -168,10 +207,23 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const cacheKey = `${ORDER_CACHE_KEY_PREFIX}${args.id}`
+        
+        const cachedOrder = await getCache(cacheKey)
+        if (cachedOrder) {
+          console.log(`✅ CACHE HIT: Returning order ${args.id} from Redis cache`)
+          return cachedOrder
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching order ${args.id} from database`)
+        
         const order = await Order.findById(args.id)
         if (!order) throw new Error('Order does not exist')
-        console.log(order)
-        return transformOrder(order)
+        
+        const transformedOrder = transformOrder(order)
+        await setCache(cacheKey, transformedOrder)
+        
+        return transformedOrder
       } catch (err) {
         throw err
       }
@@ -182,10 +234,24 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const cacheKey = `paypal:${ORDER_CACHE_KEY_PREFIX}${args.id}`
+        
+        const cachedOrder = await getCache(cacheKey)
+        if (cachedOrder) {
+          console.log(`✅ CACHE HIT: Returning paypal order ${args.id} from Redis cache`)
+          return cachedOrder
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching paypal order ${args.id} from database`)
+        
         const paypal = await Paypal.findById(args.id)
         console.log('PAYPAL: ', paypal)
         if (!paypal) throw new Error('Order does not exist')
-        return transformOrder(paypal)
+        
+        const transformedOrder = transformOrder(paypal)
+        await setCache(cacheKey, transformedOrder)
+        
+        return transformedOrder
       } catch (err) {
         throw err
       }
@@ -196,10 +262,24 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const cacheKey = `stripe:${ORDER_CACHE_KEY_PREFIX}${args.id}`
+        
+        const cachedOrder = await getCache(cacheKey)
+        if (cachedOrder) {
+          console.log(`✅ CACHE HIT: Returning stripe order ${args.id} from Redis cache`)
+          return cachedOrder
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching stripe order ${args.id} from database`)
+        
         const stripe = await Stripe.findById(args.id)
         console.log('STRIPE: ', stripe)
         if (!stripe) throw new Error('Order does not exist')
-        return transformOrder(stripe)
+        
+        const transformedOrder = transformOrder(stripe)
+        await setCache(cacheKey, transformedOrder)
+        
+        return transformedOrder
       } catch (err) {
         throw err
       }
@@ -210,21 +290,45 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const cacheKey = `user:${req.userId}:orders:${args.offset || 0}`
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log(`✅ CACHE HIT: Returning user ${req.userId} orders from Redis cache`)
+          return cachedOrders
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching user ${req.userId} orders from database`)
+        
         const orders = await Order.find({ user: req.userId })
           .sort({ createdAt: -1 })
           .skip(args.offset || 0)
           .limit(50)
         const filterOrders = orders.filter(order => order.restaurant)
-        return filterOrders.map(order => {
+        
+        const transformedOrders = filterOrders.map(order => {
           return transformOrder(order)
         })
+        
+        await setCache(cacheKey, transformedOrders)
+        
+        return transformedOrders
       } catch (err) {
         throw err
       }
     },
-
     getOrdersByDateRange: async(_, args, context) => {
       try {
+        const cacheKey = `restaurant:${args.restaurant}:dateRange:${args.startingDate}-${args.endingDate}`
+        
+        const cachedData = await getCache(cacheKey)
+        if (cachedData) {
+          console.log(`✅ CACHE HIT: Returning orders by date range from Redis cache`)
+          return cachedData
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching orders by date range from database`)
+        
         const orders = await Order.find({
           restaurant: args.restaurant,
           createdAt: {
@@ -244,11 +348,15 @@ module.exports = {
 
         const countCashOnDeliveryOrders = cashOnDeliveryOrders.length
 
-        return {
+        const result = {
           orders: orders.map(order => transformOrder(order)),
           totalAmountCashOnDelivery,
           countCashOnDeliveryOrders
         }
+        
+        await setCache(cacheKey, result)
+        
+        return result
       } catch (err) {
         throw err
       }
@@ -256,6 +364,21 @@ module.exports = {
     ordersByRestId: async(_, args, context) => {
       console.log('restaurant orders')
       try {
+        let cacheKey
+        if (args.search) {
+          cacheKey = `${RESTAURANT_ORDERS_PREFIX}${args.restaurant}:search:${args.search}`
+        } else {
+          cacheKey = `${RESTAURANT_ORDERS_PREFIX}${args.restaurant}:page:${args.page || 0}:rows:${args.rows}`
+        }
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log(`✅ CACHE HIT: Returning restaurant orders from Redis cache`)
+          return cachedOrders
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching restaurant orders from database`)
+        
         let orders = []
         if (args.search) {
           const search = new RegExp(
@@ -267,18 +390,20 @@ module.exports = {
             restaurant: args.restaurant,
             orderId: search
           }).sort({ createdAt: -1 })
-          return orders.map(order => {
-            return transformOrder(order)
-          })
         } else {
           orders = await Order.find({ restaurant: args.restaurant })
             .sort({ createdAt: -1 })
             .skip((args.page || 0) * args.rows)
             .limit(args.rows)
-          return orders.map(order => {
-            return transformOrder(order)
-          })
         }
+        
+        const transformedOrders = orders.map(order => {
+          return transformOrder(order)
+        })
+        
+        await setCache(cacheKey, transformedOrders)
+        
+        return transformedOrders
       } catch (err) {
         throw err
       }
@@ -289,6 +414,16 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const cacheKey = `user:${req.userId}:undeliveredOrders:${args.offset || 0}`
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log(`✅ CACHE HIT: Returning undelivered orders from Redis cache`)
+          return cachedOrders
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching undelivered orders from database`)
+        
         const orders = await Order.find({
           user: req.userId,
           $or: [
@@ -300,9 +435,14 @@ module.exports = {
           .sort({ createdAt: -1 })
           .skip(args.offset || 0)
           .limit(10)
-        return orders.map(order => {
+          
+        const transformedOrders = orders.map(order => {
           return transformOrder(order)
         })
+        
+        await setCache(cacheKey, transformedOrders)
+        
+        return transformedOrders
       } catch (err) {
         throw err
       }
@@ -313,6 +453,16 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const cacheKey = `user:${req.userId}:deliveredOrders:${args.offset || 0}`
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log(`✅ CACHE HIT: Returning delivered orders from Redis cache`)
+          return cachedOrders
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching delivered orders from database`)
+        
         const orders = await Order.find({
           user: req.userId,
           $or: [{ orderStatus: 'DELIVERED' }, { orderStatus: 'COMPLETED' }]
@@ -320,43 +470,89 @@ module.exports = {
           .sort({ createdAt: -1 })
           .skip(args.offset || 0)
           .limit(10)
-        return orders.map(order => {
+          
+        const transformedOrders = orders.map(order => {
           return transformOrder(order)
         })
+        
+        await setCache(cacheKey, transformedOrders)
+        
+        return transformedOrders
       } catch (err) {
         throw err
       }
     },
     allOrders: async(_, args, context) => {
       try {
+        const cacheKey = `${ORDERS_CACHE_KEY}:page:${args.page || 0}`
+        
+        const cachedOrders = await getCache(cacheKey)
+        if (cachedOrders) {
+          console.log(`✅ CACHE HIT: Returning all orders from Redis cache`)
+          return cachedOrders
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching all orders from database`)
+        
         const orders = await Order.find()
           .sort({ createdAt: -1 })
           .skip((args.page || 0) * 10)
           .limit(10)
-        return orders.map(order => {
+          
+        const transformedOrders = orders.map(order => {
           return transformOrder(order)
         })
+        
+        await setCache(cacheKey, transformedOrders)
+        
+        return transformedOrders
       } catch (err) {
         throw err
       }
     },
     pageCount: async(_, args, context) => {
       try {
+        const cacheKey = `restaurant:${args.restaurant}:pageCount`
+        
+        const cachedCount = await getCache(cacheKey)
+        if (cachedCount !== null) {
+          console.log(`✅ CACHE HIT: Returning page count from Redis cache`)
+          return cachedCount
+        }
+        
+        console.log(`❌ CACHE MISS: Calculating page count from database`)
+        
         const orderCount = await Order.countDocuments({
           restaurant: args.restaurant
         })
-        const pageCount = orderCount / 10
-        return Math.ceil(pageCount)
+        const pageCount = Math.ceil(orderCount / 10)
+        
+        await setCache(cacheKey, pageCount)
+        
+        return pageCount
       } catch (err) {
         throw err
       }
     },
     orderCount: async(_, args, context) => {
       try {
+        const cacheKey = `restaurant:${args.restautant}:orderCount`
+        
+        const cachedCount = await getCache(cacheKey)
+        if (cachedCount !== null) {
+          console.log(`✅ CACHE HIT: Returning order count from Redis cache`)
+          return cachedCount
+        }
+        
+        console.log(`❌ CACHE MISS: Calculating order count from database`)
+        
         const orderCount = await Order.find({
           isActive: true,
           restaurant: args.restautant
         }).countDocuments()
+        
+        await setCache(cacheKey, orderCount)
+        
         return orderCount
       } catch (err) {
         throw err
@@ -368,12 +564,27 @@ module.exports = {
         throw new Error('Unauthenticated')
       }
       try {
+        const cacheKey = `user:${req.userId}:reviews:${args.offset || 0}`
+        
+        const cachedReviews = await getCache(cacheKey)
+        if (cachedReviews) {
+          console.log(`✅ CACHE HIT: Returning reviews from Redis cache`)
+          return cachedReviews
+        }
+        
+        console.log(`❌ CACHE MISS: Fetching reviews from database`)
+        
         const orders = await Order.find({ user: req.userId })
           .sort({ createdAt: -1 })
           .skip(args.offset || 0)
           .limit(10)
           .populate('review')
-        return transformReviews(orders)
+          
+        const transformedReviews = transformReviews(orders)
+        
+        await setCache(cacheKey, transformedReviews)
+        
+        return transformedReviews
       } catch (err) {
         throw err
       }
@@ -418,10 +629,8 @@ module.exports = {
         const availableAddons = restaurant.addons
         const availableOptions = restaurant.options
 
-        // Partie à modifier pour sauvegarder les items dans la base de données
         const ItemsData = []
 
-        // Pour chaque item dans orderInput
         for (const item of args.orderInput) {
           const food = foods.find(element => element._id.toString() === item.food)
           const variation = food.variations.find(v => v._id.toString() === item.variation)
@@ -444,7 +653,6 @@ module.exports = {
             })
           })
 
-          // Créer l'objet Item
           const itemData = new Item({
             food: item.food,
             title: food.title,
@@ -456,10 +664,8 @@ module.exports = {
             specialInstructions: item.specialInstructions
           })
 
-          // Sauvegarder l'item dans la base de données
           const savedItem = await itemData.save()
 
-          // Ajouter l'item sauvegardé dans le tableau ItemsData
           ItemsData.push(savedItem)
         }
 
@@ -467,7 +673,6 @@ module.exports = {
         if (!user) {
           throw new Error('invalid request')
         }
-        // get previous orderid from db
         let configuration = await Configuration.findOne()
         if (!configuration) {
           configuration = new Configuration()
@@ -584,11 +789,8 @@ module.exports = {
             'new'
           )
           publishToDispatcher(transformedOrder)
-          const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg';
-          // path.join(
-          //   __dirname,
-          //   '../../public/assets/tempImages/enatega.png'
-          // )
+          const attachment = 'https://res.cloudinary.com/dzdohbv3s/image/upload/v1745357465/cdmlathwtjtub8ko5z3q.jpg'
+          
           sendEmail(
             user.email,
             'Order Placed',
@@ -603,16 +805,27 @@ module.exports = {
             `Order ID ${result.orderId}`
           )
           sendNotificationToRestaurant(result.restaurant, result)
+          
+          await setCache(`${ORDER_CACHE_KEY_PREFIX}${result._id}`, transformedOrder)
+          await clearCachePattern('orders:*')
+          await clearCachePattern(`user:${req.userId}:*`)
+          await clearCachePattern(`restaurant:${args.restaurant}:*`)
         } else if (args.paymentMethod === 'PAYPAL') {
           orderObj.paymentMethod = args.paymentMethod
           const paypal = new Paypal(orderObj)
           result = await paypal.save()
+          
+          const transformedOrder = await transformOrder(result)
+          await setCache(`paypal:${ORDER_CACHE_KEY_PREFIX}${result._id}`, transformedOrder)
         } else if (args.paymentMethod === 'STRIPE') {
           console.log('stripe')
           orderObj.paymentMethod = args.paymentMethod
           const stripe = new Stripe(orderObj)
           result = await stripe.save()
           console.log(result)
+          
+          const transformedOrder = await transformOrder(result)
+          await setCache(`stripe:${ORDER_CACHE_KEY_PREFIX}${result._id}`, transformedOrder)
         } else {
           throw new Error('Invalid Payment Method')
         }
@@ -641,7 +854,15 @@ module.exports = {
         }
         order.items = completed
         const result = await order.save()
-        return transformOrder(result)
+        
+        const transformedOrder = transformOrder(result)
+        
+        await setCache(`${ORDER_CACHE_KEY_PREFIX}${args._id}`, transformedOrder)
+        await clearCachePattern('orders:*')
+        await clearCachePattern(`user:${req.userId}:*`)
+        await clearCachePattern(`restaurant:${order.restaurant}:*`)
+        
+        return transformedOrder
       } catch (err) {
         throw err
       }

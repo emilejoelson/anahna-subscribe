@@ -413,24 +413,71 @@ const populateAddons = async addons => {
   return transformedAddons;
 };
 
-const transformRestaurants = async restaurants => {
-  return restaurants.map(transformRestaurant);
-};
-const transformMinimalRestaurants = async restaurants => {
-  return restaurants.map(transformMinimalRestaurantData);
+
+
+
+/**
+ * Transform an array of restaurant documents into properly formatted objects
+ * @param {Array} restaurants - Array of restaurant documents from MongoDB
+ * @returns {Promise<Array>} - Promise resolving to an array of transformed restaurant objects
+ */
+const transformRestaurants = async (restaurants) => {
+  try {
+    // Log the input data for debugging
+    console.log(`Processing ${restaurants.length} restaurants for transformation`);
+    
+    // Use Promise.all to handle the async transformations in parallel
+    const transformedRestaurants = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        try {
+          return await transformRestaurant(restaurant);
+        } catch (error) {
+          console.error(`Error transforming restaurant ${restaurant._id || 'unknown'}:`, error);
+          // Return a minimal valid object to prevent the entire array from failing
+          return {
+            _id: restaurant._id?.toString() || 'unknown',
+            name: restaurant.name || 'Error in Restaurant',
+            categories: [],
+            options: [],
+            addons: [],
+            isActive: false
+          };
+        }
+      })
+    );
+    
+    // Log the output data for debugging
+    console.log(`Successfully transformed ${transformedRestaurants.length} restaurants`);
+    if (transformedRestaurants.length > 0) {
+      console.log(`First transformed restaurant _id: ${transformedRestaurants[0]._id}`);
+    }
+    
+    return transformedRestaurants;
+  } catch (error) {
+    console.error("Error in transformRestaurants:", error);
+    throw error;
+  }
 };
 
-const transformRestaurant = async restaurant => {
+/**
+ * Transform a single restaurant document into a properly formatted object
+ * @param {Object} restaurant - Restaurant document from MongoDB
+ * @returns {Promise<Object>} - Promise resolving to a transformed restaurant object
+ */
+const transformRestaurant = async (restaurant) => {
   // Add a safety check to prevent returning null for _id
   if (!restaurant) {
     console.error('Attempted to transform null or undefined restaurant');
-    // Return a minimal valid restaurant object to prevent GraphQL errors
     return {
       _id: 'unknown',
       name: 'Unknown Restaurant',
       categories: [],
       options: [],
-      addons: []
+      addons: [],
+      reviewData: { avgRating: 0, totalReviews: 0, ratings: [] },
+      zone: null,
+      owner: null,
+      shopType: SHOP_TYPE.RESTAURANT
     };
   }
   
@@ -443,7 +490,6 @@ const transformRestaurant = async restaurant => {
   const formattedCategories = (restaurant.categories || []).map(category => {
     const foodItems = (category.foods || []).map(food => {
       totalFoodsCount++;
-      // Ensure food has all required properties
       return {
         _id: food._id?.toString() || new mongoose.Types.ObjectId().toString(),
         title: food.title || 'Unnamed Food',
@@ -468,9 +514,6 @@ const transformRestaurant = async restaurant => {
       };
     });
     
-    // Log the number of foods in this category
-    console.log(`Category ${category.title || 'Unnamed'} has ${foodItems.length} foods`);
-    
     return {
       _id: category._id?.toString() || new mongoose.Types.ObjectId().toString(),
       title: category.title || '',
@@ -490,21 +533,51 @@ const transformRestaurant = async restaurant => {
     };
   });
   
-  console.log(`Restaurant ${restaurant.name || 'Unknown'} has ${totalFoodsCount} total foods across all categories`);
+  // IMPORTANT: Actually resolve these promises rather than storing function references
+  const options = await populateOptions(restaurant.options || []);
+  const addons = await populateAddons(restaurant.addons || []);
+  const restaurantId = restaurant.id || restaurant._id?.toString() || 'unknown';
+  const reviewData = await populateReviewsDetail(restaurantId);
   
-  return {
-    ...restaurantData,
-    _id: restaurant.id || restaurant._id?.toString() || 'unknown',
+  let owner = null;
+  try {
+    if (restaurant.owner) {
+      owner = await populateOwner(restaurant.owner);
+    }
+  } catch (error) {
+    console.error(`Error populating owner for restaurant ${restaurantId}:`, error);
+  }
+  
+  // Create a clean object with all required fields
+  const result = {
+    _id: restaurantId,
+    name: restaurantData.name || 'Unnamed Restaurant',
+    description: restaurantData.description || '',
+    image: restaurantData.image || '',
+    cover: restaurantData.cover || '',
+    address: restaurantData.address || {},
+    location: restaurantData.location || { coordinates: [0, 0] },
     categories: formattedCategories,
-    options: populateOptions.bind(this, restaurant.options || []),
-    addons: populateAddons.bind(this, restaurant.addons || []),
-    reviewData: populateReviewsDetail.bind(this, restaurant.id || restaurant._id?.toString() || 'unknown'),
-    zone: null,
-    owner: restaurant.owner ? populateOwner.bind(this, restaurant.owner) : null,
-    shopType: restaurant.shopType || SHOP_TYPE.RESTAURANT
+    options: options,
+    addons: addons,
+    reviewData: reviewData,
+    zone: restaurantData.zone || null,
+    owner: owner,
+    shopType: restaurantData.shopType || SHOP_TYPE.RESTAURANT,
+    isActive: restaurantData.isActive !== undefined ? restaurantData.isActive : true,
+    openingTimes: restaurantData.openingTimes || [],
+    tags: restaurantData.tags || [],
+    isCloned: restaurantData.isCloned || false,
+    createdAt: restaurantData.createdAt ? dateToString(restaurantData.createdAt) : dateToString(new Date()),
+    updatedAt: restaurantData.updatedAt ? dateToString(restaurantData.updatedAt) : dateToString(new Date())
   };
+  
+  return result;
 };
 
+const transformMinimalRestaurants = async restaurants => {
+  return restaurants.map(transformMinimalRestaurantData);
+};
 const transformMinimalRestaurantData = async restaurant => {
   // Add a safety check to prevent returning null for _id
   if (!restaurant) {
