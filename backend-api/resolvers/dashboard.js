@@ -1,4 +1,8 @@
 const Order = require('../models/order');
+const User = require('../models/user');
+const Owner = require('../models/owner');
+const Restaurant = require('../models/restaurant');
+const Rider = require('../models/rider');
 const { months } = require('../helpers/enum');
 
 module.exports = {
@@ -116,6 +120,88 @@ module.exports = {
         throw new Error('Failed to fetch dashboard orders');
       }
     },
+
+    getDashboardUsers: async () => {
+      try {
+        const [usersCount, vendorsCount, restaurantsCount, ridersCount] = await Promise.all([
+          User.countDocuments(),
+          Owner.countDocuments(),
+          Restaurant.countDocuments(),
+          Rider.countDocuments()
+        ]);
+
+        return {
+          usersCount,
+          vendorsCount,
+          restaurantsCount,
+          ridersCount,
+          __typename: 'DashboardUsers'
+        };
+      } catch (err) {
+        console.error('Error in getDashboardUsers:', err);
+        throw new Error('Failed to fetch dashboard users statistics');
+      }
+    },
+
+    getDashboardUsersByYear: async (_, { year }) => {
+      try {
+        const startDate = new Date(year, 0, 1); // January 1st of the given year
+        const endDate = new Date(year + 1, 0, 1); // January 1st of the next year
+
+        // Arrays to store monthly counts for each type
+        const usersCount = new Array(12).fill(0);
+        const vendorsCount = new Array(12).fill(0);
+        const restaurantsCount = new Array(12).fill(0);
+        const ridersCount = new Array(12).fill(0);
+
+        // Get all entities created during the year
+        const [users, vendors, restaurants, riders] = await Promise.all([
+          User.find({
+            createdAt: { $gte: startDate, $lt: endDate }
+          }).select('createdAt'),
+          Owner.find({
+            createdAt: { $gte: startDate, $lt: endDate }
+          }).select('createdAt'),
+          Restaurant.find({
+            createdAt: { $gte: startDate, $lt: endDate }
+          }).select('createdAt'),
+          Rider.find({
+            createdAt: { $gte: startDate, $lt: endDate }
+          }).select('createdAt')
+        ]);
+
+        // Count by month
+        users.forEach(user => {
+          const month = new Date(user.createdAt).getMonth();
+          usersCount[month]++;
+        });
+
+        vendors.forEach(vendor => {
+          const month = new Date(vendor.createdAt).getMonth();
+          vendorsCount[month]++;
+        });
+
+        restaurants.forEach(restaurant => {
+          const month = new Date(restaurant.createdAt).getMonth();
+          restaurantsCount[month]++;
+        });
+
+        riders.forEach(rider => {
+          const month = new Date(rider.createdAt).getMonth();
+          ridersCount[month]++;
+        });
+
+        return {
+          usersCount,
+          vendorsCount,
+          restaurantsCount,
+          ridersCount
+        };
+      } catch (err) {
+        console.error('Error in getDashboardUsersByYear:', err);
+        throw new Error('Failed to fetch dashboard users yearly statistics');
+      }
+    }
   },
   Mutation: {},
 };

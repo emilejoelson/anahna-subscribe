@@ -1392,16 +1392,49 @@ input TippingInput {
     totalCount: Int!
   }
 
+  type DashboardUsers {
+    usersCount: Int!
+    vendorsCount: Int!
+    restaurantsCount: Int!
+    ridersCount: Int!
+  }
+
+  type DashboardUsersYearly {
+    usersCount: [Int!]!
+    vendorsCount: [Int!]!
+    restaurantsCount: [Int!]!
+    ridersCount: [Int!]!
+  }
+
+  type OrdersByType {
+    value: String!
+    label: String!
+  }
+
   type Query {
     staffs: [Staff]
     staff(id: ID!): Staff
+    zones: [Zone!]!
+    zone(id: ID!): Zone
+    vendors: [OwnerData!]!
+    getVendor(id: ID!): OwnerData!
+    sections: [Section!]!
     subCategory(_id: String): SubCategory
-    GetSubCategoriesByParentId(parentCategoryId: String!): [SubCategory!]
+    GetSubCategoriesByParentId(parentCategoryId: String!): [SubCategory!]!
+    orderDetails(id: String!): Order!
+    getActiveOrders(page: Int, rows: Int): ActiveOrdersResponse!
     getClonedRestaurants: [Restaurant!]!
+    lastOrderCreds: DemoCredentails
     allOrdersWithoutPagination(
       dateKeyword: String
       starting_date: String
       ending_date: String
+    ): [Order!]!
+    ordersByRestId(
+      restaurant: String!
+      page: Int
+      rows: Int
+      search: String
     ): [Order!]!
     ordersByRestIdWithoutPagination(
       restaurant: String!, 
@@ -1409,6 +1442,11 @@ input TippingInput {
     ): [Order!]!
     banners: [Banner!]!
     withdrawRequests: [WithdrawRequest!]!
+    getAllWithdrawRequests(
+      offset: Int
+      limit: Int
+      search: String
+    ): WithdrawRequestReponse!
     earnings: [Earnings!]!
     categories: [Category!]!
     foods: [Food!]!
@@ -1469,80 +1507,30 @@ input TippingInput {
     bannerActions: [String!]!
     taxes: Taxation!
     tips: Tipping
-    nearByRestaurants(
-      latitude: Float
-      longitude: Float
-      shopType: String
-    ): NearByData!
-    nearByRestaurantsPreview(
-      latitude: Float
-      longitude: Float
-      shopType: String
-    ): NearByDataPreview!
+    nearByRestaurants(latitude: Float!, longitude: Float!, shopType: String): NearByData!
+    nearByRestaurantsPreview(latitude: Float!, longitude: Float!, shopType: String): NearByDataPreview!
     restaurantList: [Restaurant!]
-    restaurantListPreview: [RestaurantPreview!]
-    ordersByRestId(
-      restaurant: String!
-      page: Int
-      rows: Int
-      search: String
-    ): [Order!]
+    restaurants: [Restaurant!]!
+    restaurant(id: String, slug: String): Restaurant
+    restaurantByOwner(id: String): OwnerData
+    restaurantsPreview: [RestaurantPreview!]!
+    restaurantPreview(id: ID!): RestaurantPreview
+    getRestaurantDeliveryZoneInfo(id: ID!): RestaurantDeliveryZoneInfo
+    offers: [Offer!]!
+    getDashboardUsers: DashboardUsers!
+    getDashboardUsersByYear(year: Int!): DashboardUsersYearly!
+    subCategories(categoryId: ID!): [SubCategory!]
+    subCategoriesByParentId(parentId: ID, parentCategoryId: String): [SubCategory!]!
     getOrdersByDateRange(
       startingDate: String!
       endingDate: String!
       restaurant: String!
     ): OrdersWithCashOnDeliveryInfo!
-
-    riderCompletedOrders: [Order!]
-    restaurant(id: String, slug: String): Restaurant!
-    restaurantPreview(id: String, slug: String): RestaurantPreview!
-    restaurants: [Restaurant!]!
-    restaurantsPreview: [RestaurantPreview!]
-    restaurantByOwner(id: String): OwnerData!
-    
-    getRestaurantDeliveryZoneInfo(id: ID!): Restaurant!
-    offers: [Offer]
-    sections: [Section]
-    vendors: [OwnerData]
-    getVendor(id: String!): OwnerData
-    orderCount(restaurant: String!): Int
-    restaurantOrders: [Order!]!
-    zones: [Zone!]!
-    zone(id: String!): Zone!
-    unassignedOrdersByZone: [Order!]
-    riderOrders: [Order!]
-    getActiveOrders(
-      restaurantId: ID
-      page: Int
-      rowsPerPage: Int
-      actions: [String]
-      search: String
-    ): ActiveOrdersResponse!
-    orderDetails(id: String!): Order!
-    chat(order: ID!): [ChatMessageOutput!]
-    getAllWithdrawRequests(offset: Int): WithdrawRequestReponse!
-    getCountries: [Country]
+    getCountries: [Country!]!
     getCountryByIso(iso: String!): Country
-    recentOrderRestaurants(latitude: Float!, longitude: Float!): [Restaurant!]
-    recentOrderRestaurantsPreview(
-      latitude: Float!
-      longitude: Float!
-    ): [RestaurantPreview!]
-    mostOrderedRestaurants(latitude: Float!, longitude: Float!): [Restaurant!]
-    mostOrderedRestaurantsPreview(
-      latitude: Float!
-      longitude: Float!
-    ): [RestaurantPreview!]
-    relatedItems(itemId: String!, restaurantId: String!): [String!]!
-    popularItems(restaurantId: String!): [PopularItemsResponse!]!
-    topRatedVendors(latitude: Float!, longitude: Float!): [Restaurant!]
-    topRatedVendorsPreview(
-      latitude: Float!
-      longitude: Float!
-    ): [RestaurantPreview!]
-    lastOrderCreds: DemoCredentails
-    subCategories(categoryId: ID!): [SubCategory!]
-    subCategoriesByParentId(parentId: ID, parentCategoryId: String): [SubCategory!]!
+    orderCount(restaurant: String!): Int!
+    chat(orderId: ID!): [ChatMessageOutput!]!
+    getDashboardOrdersByType: [OrdersByType!] # Removed the '!' to make it nullable
   }
 input BussinessDetailsInput {
   bankName: String

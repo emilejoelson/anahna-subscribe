@@ -116,26 +116,44 @@ let firebaseDb = null;
         };
       },
       formatError: (error) => {
-        console.error("GraphQL Error:", error);
-        const isSchemaError = error.message.includes("GraphQL schema");
-        if (isSchemaError) {
-          return {
-            message: "Internal server error",
-            type: "SCHEMA_ERROR",
-            ...(process.env.NODE_ENV === "development" && {
-              details: error.message,
-            }),
-          };
-        }
-        return {
+        console.error("GraphQL Error:", {
           message: error.message,
           locations: error.locations,
           path: error.path,
+          extensions: error.extensions
+        });
+        
+        if (error.extensions?.code === 'GRAPHQL_VALIDATION_FAILED') {
+          return {
+            message: "Invalid query structure",
+            code: "VALIDATION_ERROR",
+            details: process.env.NODE_ENV === "development" ? error.message : undefined
+          };
+        }
+
+        return {
+          message: error.message,
+          code: error.extensions?.code || "INTERNAL_SERVER_ERROR",
+          locations: error.locations,
+          path: error.path,
           ...(process.env.NODE_ENV === "development" && {
-            stack: error.stack
+            stack: error.stack,
+            details: error.extensions?.exception?.stacktrace
           })
         };
       },
+      plugins: [
+        {
+          requestDidStart: async () => ({
+            willSendResponse: async (requestContext) => {
+              const { response } = requestContext;
+              if (response.errors) {
+                console.error("GraphQL Response Errors:", response.errors);
+              }
+            }
+          })
+        }
+      ]
     });
 
     await server.start();
