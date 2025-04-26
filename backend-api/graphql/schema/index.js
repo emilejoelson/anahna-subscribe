@@ -1411,6 +1411,85 @@ input TippingInput {
     label: String!
   }
 
+  type ToBank {
+    accountName: String
+    bankName: String
+    accountNumber: String
+    accountCode: String
+  }
+
+  type Transaction {
+    _id: ID!
+    amountCurrency: String
+    status: String
+    transactionId: String
+    userType: String
+    userId: String
+    amountTransferred: Float
+    createdAt: String
+    toBank: ToBank
+    rider: TransactionRider
+    store: TransactionStore
+  }
+
+  type TransactionRider {
+    _id: ID
+    name: String
+    email: String
+    username: String
+    password: String
+    phone: String
+    image: String
+    available: Boolean
+    isActive: Boolean
+    accountNumber: String
+    currentWalletAmount: Float
+    totalWalletAmount: Float
+    withdrawnWalletAmount: Float
+    createdAt: String
+    updatedAt: String
+  }
+
+  type TransactionStore {
+    unique_restaurant_id: String
+    _id: ID
+    name: String
+    rating: Float
+    reviewAverage: Float
+    isActive: Boolean
+    isAvailable: Boolean
+    slug: String
+    stripeDetailsSubmitted: Boolean
+    address: String
+    phone: String
+    city: String
+    postCode: String
+  }
+
+  type TransactionPagination {
+    total: Int
+  }
+
+  type TransactionHistoryResponse {
+    data: [Transaction]!
+    pagination: TransactionPagination
+  }
+
+  input PaginationInput {
+    pageSize: Int!
+    pageNo: Int!
+  }
+
+  input DateFilterInput {
+    starting_date: String
+    ending_date: String
+  }
+
+  enum UserTypeEnum {
+    RIDER
+    STORE
+  }
+
   type Query {
     staffs: [Staff]
     staff(id: ID!): Staff
@@ -1531,6 +1610,13 @@ input TippingInput {
     orderCount(restaurant: String!): Int!
     chat(orderId: ID!): [ChatMessageOutput!]!
     getDashboardOrdersByType: [OrdersByType!] # Removed the '!' to make it nullable
+    transactionHistory(
+      userType: UserTypeEnum
+      userId: String
+      search: String
+      pagination: PaginationInput!
+      dateFilter: DateFilterInput
+    ): TransactionHistoryResponse
   }
 input BussinessDetailsInput {
   bankName: String
