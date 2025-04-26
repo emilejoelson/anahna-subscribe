@@ -66,11 +66,19 @@ module.exports = {
           console.log("✅ CACHE HIT: Returning restaurants from Redis cache");
           return cachedRestaurants;
         }
-
+    
         console.log("❌ CACHE MISS: Fetching restaurants from database");
         const restaurants = await Restaurant.find();
-        const transformedRestaurants = transformRestaurants(restaurants);
-
+        
+        // Make sure to wait for the transformation to complete
+        const transformedRestaurants = await transformRestaurants(restaurants);
+        console.log("Transformed restaurants count:", transformedRestaurants.length);
+    
+        // Verify that the first item has an _id to debug
+        if (transformedRestaurants.length > 0) {
+          console.log("First restaurant _id:", transformedRestaurants[0]._id);
+        }
+        
         await setCache(
           RESTAURANTS_CACHE_KEY,
           transformedRestaurants,
@@ -80,6 +88,44 @@ module.exports = {
       } catch (err) {
         console.error("Error in restaurants resolver:", err);
         throw err;
+      }
+    },
+    getClonedRestaurants: async () => {
+      try {
+        // Try to get data from cache first
+        const cachedCloned = await getCache(RESTAURANTS_CLONED_CACHE_KEY);
+        if (cachedCloned) {
+          console.log(
+            "✅ CACHE HIT: Returning cloned restaurants from Redis cache"
+          );
+          return cachedCloned;
+        }
+    
+        console.log("❌ CACHE MISS: Fetching cloned restaurants from database");
+        const restaurants = await Restaurant.find({ isCloned: true });
+        
+        // Important: await the transformation process since transformRestaurant is async
+        const transformedRestaurants = await Promise.all(
+          restaurants.map(restaurant => transformRestaurant(restaurant))
+        );
+        
+        // Log some details for debugging
+        console.log(`Transformed ${transformedRestaurants.length} cloned restaurants`);
+        if (transformedRestaurants.length > 0) {
+          console.log(`First cloned restaurant _id: ${transformedRestaurants[0]._id}`);
+        }
+    
+        // Cache the results
+        await setCache(
+          RESTAURANTS_CLONED_CACHE_KEY,
+          transformedRestaurants,
+          DEFAULT_TTL
+        );
+        
+        return transformedRestaurants;
+      } catch (error) {
+        console.error("Error in getClonedRestaurants resolver:", error);
+        throw new Error(`Could not fetch cloned restaurants: ${error.message}`);
       }
     },
 
@@ -300,33 +346,7 @@ module.exports = {
       }
     },
 
-    getClonedRestaurants: async () => {
-      try {
-        const cachedCloned = await getCache(RESTAURANTS_CLONED_CACHE_KEY);
-        if (cachedCloned) {
-          console.log(
-            "✅ CACHE HIT: Returning cloned restaurants from Redis cache"
-          );
-          return cachedCloned;
-        }
 
-        console.log("❌ CACHE MISS: Fetching cloned restaurants from database");
-        const restaurants = await Restaurant.find({ isCloned: true });
-        const transformedRestaurants = restaurants.map((restaurant) =>
-          transformRestaurant(restaurant)
-        );
-
-        await setCache(
-          RESTAURANTS_CLONED_CACHE_KEY,
-          transformedRestaurants,
-          DEFAULT_TTL
-        );
-        return transformedRestaurants;
-      } catch (error) {
-        console.error("Error in getClonedRestaurants resolver:", error);
-        throw new Error(`Could not fetch cloned restaurants: ${error.message}`);
-      }
-    },
 
     nearByRestaurants: async (_, { latitude, longitude, shopType }) => {
       try {
@@ -974,39 +994,46 @@ module.exports = {
       }
     },
     categories: async (parent) => {
-      console.log(`Getting categories for restaurant ${parent._id}`)
+      console.log(`Getting categories for restaurant ${parent._id}`);
       try {
-        const cacheKey = `${RESTAURANT_CACHE_KEY_PREFIX}${parent._id}:categories`
-        
-        const cachedCategories = await getCache(cacheKey)
+        const cacheKey = `${RESTAURANT_CACHE_KEY_PREFIX}${parent._id}:categories`;
+
+        const cachedCategories = await getCache(cacheKey);
         if (cachedCategories) {
-          console.log(`✅ CACHE HIT: Returning categories from Redis cache for restaurant ${parent._id}`)
-          return cachedCategories
+          console.log(
+            `✅ CACHE HIT: Returning categories from Redis cache for restaurant ${parent._id}`
+          );
+          return cachedCategories;
         }
-        
-        console.log(`❌ CACHE MISS: Fetching categories for restaurant ${parent._id}`)
-        
+
+        console.log(
+          `❌ CACHE MISS: Fetching categories for restaurant ${parent._id}`
+        );
+
         if (!parent.categories || parent.categories.length === 0) {
-          console.log(`No categories found for restaurant ${parent._id}`)
-          return []
+          console.log(`No categories found for restaurant ${parent._id}`);
+          return [];
         }
-        
-        const categories = parent.categories.map(category => ({
+
+        const categories = parent.categories.map((category) => ({
           _id: category._id || new mongoose.Types.ObjectId(),
           title: category.title,
           description: category.description || "",
           foods: category.foods || [],
           restaurant: parent._id,
           isActive: category.isActive !== undefined ? category.isActive : true,
-          subCategories: category.subCategories || []
-        }))
-        
-        await setCache(cacheKey, categories, DEFAULT_TTL)
-        return categories
+          subCategories: category.subCategories || [],
+        }));
+
+        await setCache(cacheKey, categories, DEFAULT_TTL);
+        return categories;
       } catch (error) {
-        console.error(`Error fetching categories for restaurant ${parent._id}:`, error)
-        return []
+        console.error(
+          `Error fetching categories for restaurant ${parent._id}:`,
+          error
+        );
+        return [];
       }
-    }
+    },
   },
 };
