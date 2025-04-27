@@ -390,6 +390,14 @@ input StaffInput {
     cancelled: String
   }
 
+  enum OrderStatusEnum {
+    PENDING
+    PREPARING
+    PICKED
+    DELIVERED
+    CANCELLED
+  }
+
   type ActiveOrdersResponse {
     orders: [Order!]!
     totalCount: Int!
@@ -403,12 +411,35 @@ input StaffInput {
     deliveryAddress: OrderAddress!
     user: UserBasic!
     paymentMethod: String
-    orderStatus: String
+    orderStatus: String!
     isPickedUp: Boolean!
     status: Boolean
     isActive: Boolean!
     createdAt: String!
     rider: RiderBasic
+    items: [Item]
+    orderAmount: Float
+    paymentStatus: String
+    preparationTime: String
+    statusHistory: [OrderStatusHistory!]
+  }
+
+  type OrderStatusHistory {
+    status: String!
+    timestamp: String!
+    note: String
+  }
+
+  interface OrderStatusOperation {
+    _id: String!
+    orderStatus: String!
+    success: Boolean!
+  }
+
+  type OrderStatusUpdateResponse implements OrderStatusOperation {
+    _id: String!
+    orderStatus: String!
+    success: Boolean!
   }
 
   type UserBasic {
@@ -1668,6 +1699,11 @@ input BussinessDetailsInput {
       isActive: Boolean
     ): AuthData!
     ownerLogin(email: String!, password: String!): OwnerAuthData!
+    riderLogin(
+      username: String!
+      password: String!
+      notificationToken: String
+    ): AuthData!
     createUser(userInput: UserInput!): AuthData
     createVendor(vendorInput: VendorInput): OwnerData!
     editVendor(vendorInput: VendorInput): OwnerData!
@@ -1732,14 +1768,11 @@ input BussinessDetailsInput {
     editRider(riderInput: RiderInput!): Rider!
     deleteRider(id: String!): Rider
     toggleAvailablity(id: String!): Rider!
-    updateStatus(id: String, orderStatus: String!): Order!
-    assignRider(id: String!, riderId: String!): Order!
-    riderLogin(
-      username: String
-      password: String
-      notificationToken: String
-    ): AuthData!
-    updateOrderStatusRider(id: String!, status: String!): Order!
+    updateStatus(
+      id: String!
+      orderStatus: String!
+    ): OrderStatusUpdateResponse!
+    updateStatusRider(id: String!, status: String!): Order!
     updatePaymentStatus(id: String, status: String): Order!
     createOption(optionInput: CreateOptionInput): Restaurant!
     createOptions(optionInput: CreateOptionInput): OptionsResponse!
@@ -1780,6 +1813,7 @@ input BussinessDetailsInput {
     addRestaurantToOffer(id: String!, restaurant: String!): Offer
     selectAddress(id: String!): User!
     assignOrder(id: String): Order!
+    assignRider(id: String!, riderId: String!): Order!
     muteRing(orderId: String): Boolean!
     updateRiderLocation(latitude: String!, longitude: String!): Rider!
     restaurantLogin(username: String!, password: String!): RestaurantAuth!
