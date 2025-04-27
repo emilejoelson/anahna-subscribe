@@ -1626,8 +1626,16 @@ input TippingInput {
     bannerActions: [String!]!
     taxes: Taxation!
     tips: Tipping
-    nearByRestaurants(latitude: Float!, longitude: Float!, shopType: String): NearByData!
-    nearByRestaurantsPreview(latitude: Float!, longitude: Float!, shopType: String): NearByDataPreview!
+    nearByRestaurants(
+      latitude: Float
+      longitude: Float
+      shopType: String
+    ): NearByData!
+    nearByRestaurantsPreview(
+      latitude: Float
+      longitude: Float
+      shopType: String
+    ): NearByDataPreview!
     restaurantList: [Restaurant!]
     restaurants: [Restaurant!]!
     restaurant(id: String, slug: String): Restaurant
