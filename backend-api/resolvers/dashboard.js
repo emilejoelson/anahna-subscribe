@@ -201,6 +201,36 @@ module.exports = {
         console.error('Error in getDashboardUsersByYear:', err);
         throw new Error('Failed to fetch dashboard users yearly statistics');
       }
+    },
+
+    getRestaurantDashboardOrdersSalesStats: async (_, { restaurant, starting_date, ending_date }) => {
+      try {
+        const startDate = new Date(starting_date);
+        const endDate = new Date(ending_date);
+
+        const orders = await Order.find({
+          restaurant,
+          createdAt: {
+            $gte: startDate,
+            $lte: endDate
+          }
+        });
+
+        const totalOrders = orders.length;
+        const totalSales = orders.reduce((acc, order) => acc + (order.orderAmount || 0), 0);
+        const totalCODOrders = orders.filter(order => order.paymentMethod === 'COD').length;
+        const totalCardOrders = orders.filter(order => order.paymentMethod === 'CARD').length;
+
+        return {
+          totalOrders,
+          totalSales,
+          totalCODOrders,
+          totalCardOrders
+        };
+      } catch (error) {
+        console.error('Error in getRestaurantDashboardOrdersSalesStats:', error);
+        throw new Error('Failed to fetch restaurant dashboard stats');
+      }
     }
   },
   Mutation: {},

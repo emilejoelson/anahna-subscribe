@@ -1517,6 +1517,13 @@ input TippingInput {
     STORE
   }
 
+  type RestaurantDashboardStats {
+    totalOrders: Int!
+    totalSales: Float!
+    totalCODOrders: Int!
+    totalCardOrders: Int!
+  }
+
   type Query {
     staffs: [Staff]
     staff(id: ID!): Staff
@@ -1650,6 +1657,11 @@ input TippingInput {
       pagination: PaginationInput!
       dateFilter: DateFilterInput
     ): TransactionHistoryResponse
+    getRestaurantDashboardOrdersSalesStats(
+      restaurant: String!
+      starting_date: String!
+      ending_date: String!
+    ): RestaurantDashboardStats!
   }
 input BussinessDetailsInput {
   bankName: String
