@@ -172,34 +172,45 @@ module.exports = {
         if (!req.isAuth) {
           throw new AuthenticationError('Unauthenticated');
         }
+
+        // Find and validate order and rider
         const order = await Order.findById(args.id);
+        if (!order) throw new Error('Order not found');
+
         const rider = await Rider.findById(args.riderId);
-        if (!order) throw new Error('Order does not exist');
-        if (!rider) throw new Error('Rider does not exist');
+        if (!rider) throw new Error('Rider not found');
 
-        const currentTransformedOrder = await transformOrder(order);
-
-        if (order.rider) {
-          publishToAssignedRider(order.rider.toString(), currentTransformedOrder, 'remove');
-          sendNotificationToRider(order.rider.toString(), currentTransformedOrder, `You were removed from Order ${currentTransformedOrder.orderId}`);
+        // Check if rider is available
+        if (!rider.available) {
+          throw new Error('Rider is not available');
         }
 
+        // If order already has a rider, notify them about removal
+        const currentTransformedOrder = await transformOrder(order);
+        if (order.rider) {
+          publishToAssignedRider(order.rider.toString(), currentTransformedOrder, 'remove');
+          sendNotificationToRider(order.rider.toString(), currentTransformedOrder);
+        }
+
+        // Update order with new rider and status
         order.rider = args.riderId;
-        order.orderStatus = order_status[6];
+        order.orderStatus = 'ASSIGNED';
         order.assignedAt = new Date();
 
+        // Save changes
         const result = await order.save();
         const transformedOrder = await transformOrder(result);
 
-        sendNotificationToUser(order.user.toString(), transformedOrder);
+        // Notify relevant parties
         publishToAssignedRider(args.riderId, transformedOrder, 'new');
-        sendNotificationToRider(args.riderId, transformedOrder, `New order was assigned. ${transformedOrder.orderId}`);
+        sendNotificationToRider(args.riderId, transformedOrder);
         publishOrder(transformedOrder);
+        sendNotificationToUser(order.user.toString(), transformedOrder);
 
         return transformedOrder;
       } catch (error) {
         console.error('Error assigning rider:', error);
-        throw new Error('Failed to assign rider');
+        throw error; // Throw the actual error for better debugging
       }
     },
 

@@ -59,23 +59,39 @@ const user = async userId => {
     throw err;
   }
 };
+
 const rider = async riderId => {
   try {
     const rider = await Rider.findById(riderId.toString());
+    if (!rider) {
+      console.log('Rider not found for ID:', riderId);
+      return null;
+    }
     return {
       ...rider._doc,
-      _id: rider.id
+      _id: rider.id,
+      name: rider.name || '',
+      username: rider.username || '',
+      phone: rider.phone || '',
+      isAvailable: rider.isAvailable !== undefined ? rider.isAvailable : false,
+      zone: rider.zone ? zone.bind(this, rider.zone) : null
     };
   } catch (err) {
+    console.error('Error fetching rider:', err);
     throw err;
   }
 };
 
 const transformRider = rider => {
+  if (!rider) return null;
   return {
     ...rider._doc,
     _id: rider.id,
-    zone: rider.zone ? zone.bind(this, rider.zone) : ''
+    name: rider.name || '',
+    username: rider.username || '',
+    phone: rider.phone || '',
+    isAvailable: rider.isAvailable !== undefined ? rider.isAvailable : false,
+    zone: rider.zone ? zone.bind(this, rider.zone) : null
   };
 };
 
@@ -206,12 +222,23 @@ const transformOrder = async order => {
       };
     });
 
+    // Fetch rider data directly if it exists
+    let riderData = null;
+    if (order.rider) {
+      const riderDoc = await Rider.findById(order.rider);
+      if (riderDoc) {
+        riderData = await rider(order.rider);
+      }
+    }
+
     const formattedOrder = {
       ...order._doc,
+      _id: order.id,
       items,
       user: order.user ? user.bind(this, order.user) : null,
       restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
-      rider: order.rider ? rider.bind(this, order.rider) : null,
+      rider: riderData,
+      orderStatus: order.orderStatus || 'PENDING',
       createdAt: order._doc.createdAt ? new Date(order._doc.createdAt).toISOString() : null,
       updatedAt: order._doc.updatedAt ? new Date(order._doc.updatedAt).toISOString() : null,
       acceptedAt: order._doc.acceptedAt ? new Date(order._doc.acceptedAt).toISOString() : null,

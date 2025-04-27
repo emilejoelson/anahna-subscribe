@@ -392,6 +392,8 @@ input StaffInput {
 
   enum OrderStatusEnum {
     PENDING
+    ACCEPTED
+    ASSIGNED
     PREPARING
     PICKED
     DELIVERED

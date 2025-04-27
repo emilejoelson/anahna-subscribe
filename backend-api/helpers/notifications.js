@@ -1,44 +1,79 @@
-// const { sendNotificationToCustomerWeb } = require('./firebase-web-notifications');
+const { sendNotificationToCustomerWeb } = require('./firebase-web-notifications');
+const User = require('../models/user');
+const Rider = require('../models/rider');
 
-const sendNotification = async (userId, title, body, data = {}) => {
+const sendNotification = async (userId, orderData, message = '', type = 'order') => {
   try {
-    // TODO: Implement actual notification logic here
-    // This could involve Firebase Cloud Messaging, WebSockets, etc.
     console.log('Sending notification:', {
       userId,
-      title,
-      body,
-      data
-    })
-    return true
+      orderData,
+      message,
+      type
+    });
+    return true;
   } catch (error) {
-    console.error('Error sending notification:', error)
-    return false
+    console.error('Error sending notification:', error);
+    return false;
   }
-}
+};
+
+const sendNotificationToUser = async (userId, orderData) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user || !user.notificationToken) return false;
+
+    const title = `Order ${orderData.orderId}`;
+    const body = `Your order status has been updated to: ${orderData.orderStatus}`;
+
+    await sendNotificationToCustomerWeb(user.notificationToken, title, body);
+    return true;
+  } catch (error) {
+    console.error('Error sending notification to user:', error);
+    return false;
+  }
+};
+
+const sendNotificationToRider = async (riderId, orderData) => {
+  try {
+    const rider = await Rider.findById(riderId);
+    if (!rider || !rider.notificationToken) return false;
+
+    const title = `Order ${orderData.orderId}`;
+    const body = `Order status updated to: ${orderData.orderStatus}`;
+
+    await sendNotificationToCustomerWeb(rider.notificationToken, title, body);
+    return true;
+  } catch (error) {
+    console.error('Error sending notification to rider:', error);
+    return false;
+  }
+};
+
+const sendNotificationToZoneRiders = async (zoneId, orderData) => {
+  try {
+    const riders = await Rider.find({ zone: zoneId, available: true });
+    const notifications = riders.map(rider => {
+      if (!rider.notificationToken) return null;
+      
+      const title = `New Order Available`;
+      const body = `Order ${orderData.orderId} is available for pickup`;
+      
+      return sendNotificationToCustomerWeb(rider.notificationToken, title, body);
+    });
+
+    await Promise.all(notifications.filter(Boolean));
+    return true;
+  } catch (error) {
+    console.error('Error sending notifications to zone riders:', error);
+    return false;
+  }
+};
 
 const sendNotificationToRestaurant = async (token, title, body) => {
-  // if (!token) return false;
+  if (!token) return false;
 
   try {
-    console.log('Sending notification to restaurant:', {
-      token,
-      title,
-      body
-    });
-    
-    // const message = {
-    //   notification: { title, body },
-    //   webpush: {
-    //     notification: {
-    //       icon: '/restaurant-icon.png',  // Vous pouvez personnaliser l'icône
-    //       click_action: `${process.env.CLIENT_URL}/restaurant/orders`  // URL vers la page des commandes du restaurant
-    //     }
-    //   },
-    //   token
-    // };
-
-    // await sendNotificationToCustomerWeb(token, title, body);  // Réutilisation de la fonction existante
+    await sendNotificationToCustomerWeb(token, title, body);
     return true;
   } catch (error) {
     console.error('Error sending notification to restaurant:', error);
@@ -48,5 +83,8 @@ const sendNotificationToRestaurant = async (token, title, body) => {
 
 module.exports = {
   sendNotification,
+  sendNotificationToUser,
+  sendNotificationToRider,
+  sendNotificationToZoneRiders,
   sendNotificationToRestaurant
-}
+};
