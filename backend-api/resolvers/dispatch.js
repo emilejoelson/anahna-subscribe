@@ -1,5 +1,5 @@
 /* eslint-disable no-tabs */
-const { AuthenticationError } = require('apollo-server-express');
+const { AuthenticationError, UserInputError } = require('apollo-server-express');
 const Order = require('../models/order');
 const Rider = require('../models/rider');
 const Restaurant = require('../models/restaurant');
@@ -19,6 +19,9 @@ const {
 } = require('../helpers/notifications');
 const { order_status } = require('../helpers/enum');
 const { formatOrderDate } = require('../helpers/date');
+
+// Valid order statuses
+const VALID_STATUSES = ['PENDING', 'ACCEPTED', 'ASSIGNED', 'PREPARING', 'PICKED', 'DELIVERED', 'CANCELLED'];
 
 module.exports = {
   Subscription: {
@@ -112,57 +115,92 @@ module.exports = {
     updateStatus: async (_, args, { req }) => {
       console.log('Updating status with arguments:', args.id, args.orderStatus);
       try {
-        if (!req.isAuth) {
+        // Authentication check
+        if (!req?.isAuth) {
           throw new AuthenticationError('Unauthenticated');
         }
-        const order = await Order.findById(args.id);
-        if (!order) throw new Error('Order not found');
-        
-        const restaurant = await Restaurant.findById(order.restaurant);
-        if (!restaurant) throw new Error('Restaurant not found');
 
+        // Validate order status
+        if (!VALID_STATUSES.includes(args.orderStatus)) {
+          throw new UserInputError(`Invalid order status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+        }
+
+        // Find and validate order
+        const order = await Order.findById(args.id);
+        if (!order) {
+          throw new UserInputError('Order not found');
+        }
+
+        // Find and validate restaurant
+        const restaurant = await Restaurant.findById(order.restaurant);
+        if (!restaurant) {
+          throw new UserInputError('Restaurant not found');
+        }
+
+        // Update order timestamps based on status
+        const now = new Date();
+        
         if (args.orderStatus === 'ACCEPTED') {
-          order.completionTime = new Date(Date.now() + restaurant.deliveryTime * 60 * 1000);
-          order.acceptedAt = new Date();
+          order.completionTime = new Date(now.getTime() + restaurant.deliveryTime * 60 * 1000);
+          order.acceptedAt = now;
         }
         if (args.orderStatus === 'PICKED') {
-          order.completionTime = new Date(Date.now() + 15 * 60 * 1000);
-          order.pickedAt = new Date();
+          order.completionTime = new Date(now.getTime() + 15 * 60 * 1000);
+          order.pickedAt = now;
         }
         if (args.orderStatus === 'CANCELLED') {
-          order.cancelledAt = new Date();
+          order.cancelledAt = now;
         }
         if (args.orderStatus === 'DELIVERED') {
-          order.deliveredAt = new Date();
+          order.deliveredAt = now;
         }
         
+        // Update order status
         order.orderStatus = args.orderStatus;
-        const result = await order.save();
+        
+        try {
+          const result = await order.save();
+          const transformedOrder = await transformOrder(result);
 
-        sendNotificationToUser(result.user, result);
-        const transformedOrder = await transformOrder(result);
-        publishOrder(transformedOrder);
-        publishToUser(result.user.toString(), transformedOrder, 'update');
+          // Send notifications
+          await sendNotificationToUser(result.user, result);
+          publishOrder(transformedOrder);
+          
+          if (order.user) {
+            publishToUser(order.user.toString(), transformedOrder, 'update');
+          }
 
-        if (!order.isPickedUp) {
-          if (args.orderStatus === 'ACCEPTED' && order.rider) {
-            publishToAssignedRider(order.rider.toString(), transformedOrder, 'new');
-            sendNotificationToRider(result.rider.toString(), transformedOrder);
+          if (!order.isPickedUp) {
+            if (args.orderStatus === 'ACCEPTED' && order.rider) {
+              await publishToAssignedRider(order.rider.toString(), transformedOrder, 'new');
+              await sendNotificationToRider(order.rider.toString(), transformedOrder);
+            }
+            if (args.orderStatus === 'ACCEPTED' && !order.rider && order.zone) {
+              await publishToZoneRiders(order.zone.toString(), transformedOrder, 'new');
+              await sendNotificationToZoneRiders(order.zone.toString(), transformedOrder);
+            }
+            if (args.orderStatus === 'CANCELLED' && order.rider) {
+              await publishToAssignedRider(order.rider.toString(), transformedOrder, 'remove');
+              await sendNotificationToRider(order.rider.toString(), transformedOrder);
+            }
           }
-          if (args.orderStatus === 'ACCEPTED' && !order.rider) {
-            publishToZoneRiders(order.zone.toString(), transformedOrder, 'new');
-            sendNotificationToZoneRiders(order.zone.toString(), transformedOrder);
-          }
-          if (args.orderStatus === 'CANCELLED' && order.rider) {
-            publishToAssignedRider(order.rider.toString(), transformedOrder, 'remove');
-            sendNotificationToRider(result.rider.toString(), transformedOrder);
-          }
+
+          return {
+            _id: transformedOrder._id,
+            orderStatus: transformedOrder.orderStatus,
+            success: true
+          };
+        } catch (saveError) {
+          console.error('Error saving order:', saveError);
+          throw new Error('Failed to save order status update');
         }
-
-        return transformedOrder;
       } catch (error) {
         console.error('Error updating order status:', error);
-        throw new Error('Failed to update order status');
+        return {
+          _id: args.id,
+          orderStatus: args.orderStatus,
+          success: false
+        };
       }
     },
 
