@@ -1,8 +1,11 @@
 exports.dateToString = date => {
   if (!date) return null;
-  const newDate = new Date(date);
-  if (isNaN(newDate.getTime())) return null;
-  return newDate.toISOString();
+  try {
+    return new Date(date).toISOString();
+  } catch (err) {
+    console.error('Error formatting date:', err);
+    return null;
+  }
 };
 
 exports.addHours = (date, hours) => {
@@ -23,4 +26,26 @@ exports.isDateValid = date => {
 
 exports.formatDate = date => {
   return new Date(date).toLocaleDateString();
+};
+
+exports.formatOrderDate = order => {
+  if (!order) return null;
+  
+  const dateFields = [
+    'createdAt',
+    'updatedAt',
+    'acceptedAt',
+    'pickedAt',
+    'deliveredAt',
+    'cancelledAt',
+    'completionTime'
+  ];
+
+  dateFields.forEach(field => {
+    if (order[field]) {
+      order[field] = exports.dateToString(order[field]);
+    }
+  });
+
+  return order;
 };

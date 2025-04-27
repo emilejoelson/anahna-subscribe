@@ -206,15 +206,22 @@ const transformOrder = async order => {
       };
     });
 
-    return {
+    const formattedOrder = {
       ...order._doc,
       items,
       user: order.user ? user.bind(this, order.user) : null,
       restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
       rider: order.rider ? rider.bind(this, order.rider) : null,
-      createdAt: dateToString(order._doc.createdAt),
-      updatedAt: dateToString(order._doc.updatedAt)
+      createdAt: order._doc.createdAt ? new Date(order._doc.createdAt).toISOString() : null,
+      updatedAt: order._doc.updatedAt ? new Date(order._doc.updatedAt).toISOString() : null,
+      acceptedAt: order._doc.acceptedAt ? new Date(order._doc.acceptedAt).toISOString() : null,
+      pickedAt: order._doc.pickedAt ? new Date(order._doc.pickedAt).toISOString() : null,
+      deliveredAt: order._doc.deliveredAt ? new Date(order._doc.deliveredAt).toISOString() : null,
+      cancelledAt: order._doc.cancelledAt ? new Date(order._doc.cancelledAt).toISOString() : null,
+      completionTime: order._doc.completionTime ? new Date(order._doc.completionTime).toISOString() : null
     };
+
+    return formattedOrder;
   } catch (err) {
     console.error('Error transforming order:', err);
     throw err;

@@ -18,50 +18,7 @@ const {
   sendNotificationToRider
 } = require('../helpers/notifications');
 const { order_status } = require('../helpers/enum');
-
-const getActiveOrders = async (_, { restaurantId, page = 1, rowsPerPage = 10, actions, search }) => {
-  try {
-    let query = {};
-    
-    if (restaurantId) {
-      query.restaurant = restaurantId;
-    }
-    
-    if (search) {
-      query.$or = [
-        { orderId: new RegExp(search, 'i') },
-        { 'restaurant.name': new RegExp(search, 'i') },
-        { 'user.name': new RegExp(search, 'i') }
-      ];
-    }
-    
-    if (actions && actions.length > 0) {
-      query.orderStatus = { $in: actions };
-    }
-
-    const orders = await Order.find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * rowsPerPage)
-      .limit(rowsPerPage)
-      .populate('restaurant')
-      .populate('user')
-      .populate('rider')
-      .populate('zone');
-
-    const totalCount = await Order.countDocuments(query);
-
-    return {
-      orders: orders || [],
-      totalCount
-    };
-  } catch (error) {
-    console.error('Error fetching active orders:', error);
-    return {
-      orders: [],
-      totalCount: 0
-    };
-  }
-};
+const { formatOrderDate } = require('../helpers/date');
 
 module.exports = {
   Subscription: {
@@ -70,7 +27,55 @@ module.exports = {
     }
   },
   Query: {
-    getActiveOrders,
+    getActiveOrders: async (_, args, { req }) => {
+      console.log('Fetching active orders with arguments:', args);
+      try {
+        if (!req?.isAuth) {
+          console.log('Authentication check failed:', { 
+            reqExists: !!req,
+            authHeader: req?.get?.('Authorization'),
+            isAuth: req?.isAuth
+          });
+          throw new AuthenticationError('Unauthenticated');
+        }
+
+        const filters = {
+          orderStatus: { $in: ['PENDING', 'ACCEPTED', 'PICKED', 'ASSIGNED'] }
+        };
+
+        if (args.restaurantId) {
+          filters.restaurant = args.restaurantId;
+        }
+        if (args.search) {
+          filters.orderId = new RegExp(args.search, 'i');
+        }
+        if (args.actions && args.actions.length > 0) {
+          filters.orderStatus = { $in: args.actions };
+        }
+
+        const totalCount = await Order.countDocuments(filters);
+        const skip = (args.page - 1) * args.rowsPerPage;
+
+        const orders = await Order.find(filters)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(args.rowsPerPage)
+          .populate('restaurant')
+          .populate('deliveryAddress')
+          .populate('user')
+          .populate('rider')
+          .populate('zone')
+          .lean();
+
+        return {
+          totalCount,
+          orders: orders.map(order => formatOrderDate(order))
+        };
+      } catch (err) {
+        console.error('Error fetching active orders:', err);
+        throw err;
+      }
+    },
     orderDetails: async (_, args, { req }) => {
       console.log('Fetching order details with arguments:', args);
       try {
