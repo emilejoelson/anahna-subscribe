@@ -258,8 +258,7 @@ module.exports = {
             $gte: startOfYear,
             $lte: endOfYear,
           };
-        }
-         else if (dateKeyword === "Custom") {
+        }else if (dateKeyword === "Custom") {
           // For Custom dateKeyword, always apply the date range if provided
           if (starting_date && ending_date) {
             // Make sure to include the entire day for the end date
