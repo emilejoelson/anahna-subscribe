@@ -17,19 +17,8 @@ const categorySchema = new Schema({
     ref: 'Food'
   }],
   subCategories: [{
-    title: {
-      type: String,
-      required: true
-    },
-    description: String,
-    isActive: {
-      type: Boolean,
-      default: true
-    },
-    parentCategoryId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Category'
-    }
+    type: Schema.Types.ObjectId,
+    ref: 'SubCategory'
   }],
   image: {
     type: String

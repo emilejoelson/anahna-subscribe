@@ -927,29 +927,22 @@ module.exports = {
   Restaurant: {
     options: async (parent) => {
       if (!parent.options || parent.options.length === 0) {
-        console.log(`No options found for restaurant ${parent._id}`);
+        console.log(`No options found for restaurant ${parent._id}`, parent.options);
         return [];
       }
 
+      const options = await Option.find({ _id: { $in: parent.options } });
       console.log(
         `Found ${parent.options.length} options for restaurant ${parent._id}`
       );
 
-      return parent.options.map((option) => ({
-        _id: option._id || new mongoose.Types.ObjectId(),
+      return options.map((option) => ({
+        _id: option._id,
         title: option.title,
         description: option.description || "",
         price: option.price,
         restaurant: parent._id,
-        isActive: option.isActive !== undefined ? option.isActive : true,
-        options: [
-          {
-            _id: option._id || new mongoose.Types.ObjectId(),
-            title: option.title,
-            description: option.description || "",
-            price: option.price,
-          },
-        ],
+        isActive: option.isActive,
       }));
     },
     addons: async (parent) => {

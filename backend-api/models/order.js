@@ -81,7 +81,8 @@ const orderSchema = new Schema({
   isPickedUp: {
     type: Boolean,
     default: false
-  }
+  },
+  status: String,
 }, {
   timestamps: true
 });

@@ -109,71 +109,12 @@ const restaurantSchema = new Schema({
     required: true
   },
   categories: [{
-    title: {
-      type: String,
-      required: true
-    },
-    description: String,
-    foods: [{
-      title: {
-        type: String,
-        required: true
-      },
-      description: String,
-      image: String,
-      isOutOfStock: {
-        type: Boolean,
-        default: false
-      },
-      isActive: {
-        type: Boolean,
-        default: true
-      },
-      subCategory: String,
-      variations: [{
-        title: String,
-        price: Number,
-        discounted: Number,
-        addons: [{
-          type: Schema.Types.ObjectId,
-          ref: 'Addon'
-        }],
-        isOutOfStock: {
-          type: Boolean,
-          default: false
-        }
-      }],
-      createdAt: {
-        type: Date,
-        default: Date.now
-      },
-      updatedAt: {
-        type: Date,
-        default: Date.now
-      }
-    }],
-    subCategories: [{
-      title: {
-        type: String,
-        required: true
-      },
-      description: String,
-      isActive: {
-        type: Boolean,
-        default: true
-      }
-    }],
-    image: String,
-    isActive: {
-      type: Boolean,
-      default: true
-    }
+    type: Schema.Types.ObjectId,
+    ref: 'Category'
   }],
   options: [{
-    title: { type: String, required: true },
-    description: String,
-    price: { type: Number, required: true },
-    isActive: { type: Boolean, default: true }
+    type: Schema.Types.ObjectId,
+    ref: 'Option'
   }],
   addons: [{
     type: Schema.Types.Mixed,
@@ -203,10 +144,10 @@ const restaurantSchema = new Schema({
     type: Number,
     // default: 30
   },
-  sections: {
-    type: [String],
-    default: 30
-  },
+  // sections: {
+  //   type: Schema.Types.ObjectId,
+  //   ref: 'Section'
+  // },
   rating: String,
   isActive: {
     type: Boolean,
