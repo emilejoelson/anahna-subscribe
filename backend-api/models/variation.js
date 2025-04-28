@@ -21,8 +21,7 @@ const variationSchema = new Schema({
   },
   food: {
     type: Schema.Types.ObjectId,
-    ref: 'Food',
-    required: true
+    ref: 'Food'
   },
   isActive: {
     type: Boolean,

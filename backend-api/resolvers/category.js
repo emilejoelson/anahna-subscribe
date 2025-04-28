@@ -118,42 +118,38 @@ module.exports = {
     // Get subcategories by parent category ID and restaurant ID
     subCategoriesByParentId: async (_, args, context) => {
       const parentCategoryId = args.parentCategoryId;
-
+    
       console.log("Fetching subcategories for parentId:", parentCategoryId);
-
+    
       if (!parentCategoryId) {
         console.log("Missing required parameter parentCategoryId");
         throw new Error("parentCategoryId is required");
       }
-
+    
       try {
-        const restaurant = await Restaurant.findOne({
-          "categories._id": parentCategoryId
-        });
-
-        if (!restaurant) {
-          console.log(`No restaurant found with category ID: ${parentCategoryId}`);
-          return [];
-        }
-
-        const category = restaurant.categories.id(parentCategoryId);
-        if (!category) {
+        // find category by parentCategoryId
+        const parentCategory = await Category.findById(parentCategoryId);
+        if (!parentCategory) {
           console.log(`No category found with ID: ${parentCategoryId}`);
           return [];
         }
-
-        return category.subCategories.map((subCat) => ({
+    
+        // find subcategories by parentCategoryId
+        const subCategories = await SubCategory.find({ parentCategoryId });
+    
+        return subCategories.map((subCat) => ({
           _id: subCat._id,
           title: subCat.title,
           description: subCat.description || "",
           isActive: subCat.isActive,
-          parentCategoryId: parentCategoryId,
+          parentCategoryId: subCat.parentCategoryId,
         }));
       } catch (error) {
         console.error("Error fetching subcategories by parent ID:", error);
         throw error;
       }
     },
+    
   },
 
   Mutation: {
@@ -342,51 +338,43 @@ module.exports = {
     },    
     createSubCategories: async (_, { subCategories }) => {
       console.log("Creating subcategories:", subCategories);
-      
+    
       try {
         const results = [];
-        
+    
         for (const subCategoryInput of subCategories) {
           const parentCategoryId = subCategoryInput.parentCategoryId;
-          
-          // Find the restaurant containing the parent category
-          const restaurant = await Restaurant.findOne({
-            "categories._id": parentCategoryId
-          });
-          
-          if (!restaurant) {
+    
+          // find parent category
+          const parentCategory = await Category.findById(parentCategoryId);
+          if (!parentCategory) {
             throw new Error(`Parent category not found: ${parentCategoryId}`);
           }
-          
-          // Find the category within the restaurant
-          const category = restaurant.categories.id(parentCategoryId);
-          if (!category) {
-            throw new Error(`Category not found with ID: ${parentCategoryId}`);
-          }
-          
-          // Create new subcategory
-          const newSubCategory = {
-            _id: new mongoose.Types.ObjectId(),
-            title: subCategoryInput.title,
-            description: "",
-            isActive: true
-          };
-          
-          // Add to subcategories array
-          category.subCategories.push(newSubCategory);
-          
-          // Save restaurant document
-          await restaurant.save();
-          
-          // Add the new subcategory ID to results
+    
+          // Create a new subcategory
+          const newSubCategory = new SubCategory({
+            title: subCategoryInput.title.trim(),
+            description: subCategoryInput.description || "",
+            parentCategoryId: parentCategoryId,
+          });
+    
+          await newSubCategory.save();
+    
+          // Add the new subcategory to the parent category's subCategories array
+          parentCategory.subCategories.push(newSubCategory._id);
+    
+          await parentCategory.save();
+    
+          // store the new subcategory ID in results
           results.push(newSubCategory._id);
         }
-        
+    
         return results;
       } catch (error) {
         console.error('Error creating subcategories:', error);
         throw new Error(`Could not create subcategories: ${error.message}`);
       }
     },
+    
   },
 };

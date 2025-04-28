@@ -1053,6 +1053,7 @@ module.exports = {
         }));
 
         await setCache(cacheKey, formattedCategories, DEFAULT_TTL);
+        
         return formattedCategories;
       } catch (error) {
         console.error(

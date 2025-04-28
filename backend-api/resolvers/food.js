@@ -1,6 +1,7 @@
 const Food = require('../models/food');
 const Restaurant = require('../models/restaurant');
 const Variation = require('../models/variation');
+const Category = require('../models/category');
 const { transformRestaurant } = require('./merge');
 const mongoose = require('mongoose');
 
@@ -66,88 +67,88 @@ module.exports = {
         isActive,
         subCategory 
       } = args.foodInput;
-
-      // Always require a restaurant ID
+    
       if (!restId) {
         throw new Error('Restaurant ID is required');
       }
-
+    
       try {
-        // Check if food variations exist
-        if (!foodVariations || foodVariations.length === 0) {
-          throw new Error('At least one variation is required');
-        }
 
-        // Format variations for storing directly in the restaurant document
-        const variations = foodVariations.map(variation => ({
-          _id: variation._id || new mongoose.Types.ObjectId(),
-          title: variation.title || 'Default Variation',
-          price: variation.price,
-          discounted: variation.discounted || null,
-          addons: variation.addons || [],
-          isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
-        }));
-        
-        // If the _id is empty string or null, it's a new item (create)
         if (!foodId || foodId === '') {
-          // Create a placeholder title if not provided
-          const foodTitle = title || 'New Food Item';
-          
-          // Create a food document for embedding
-          const foodDoc = {
-            _id: new mongoose.Types.ObjectId(),
-            title: foodTitle,
+          if (!foodVariations || foodVariations.length === 0) {
+            throw new Error('At least one variation is required');
+          }
+      
+          // 1. Create Variation
+          const createdVariations = [];
+          for (const variation of foodVariations) {
+            const newVariation = new Variation({
+              title: variation.title,
+              price: variation.price,
+              discounted: variation.discounted || 0,
+              addons: variation.addons || [],
+              isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false,
+              food: null, // will be updated later
+              isActive: true,
+            });
+            const savedVariation = await newVariation.save();
+            createdVariations.push(savedVariation);
+          }
+      
+          // 2. Create food with IDs of Variations
+          const foodDoc = new Food({
+            title: title.trim(),
             description: description || '',
             image: image || '',
+            // price: createdVariations[0].price, 
+            restaurant: restId,
+            category: categoryId,
+            subCategory: subCategory || null,
+            variations: createdVariations.map(v => v._id),
             isOutOfStock: isOutOfStock !== undefined ? isOutOfStock : false,
-            isActive: isActive !== undefined ? isActive : true,
-            subCategory: subCategory || '',
-            variations: variations,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
+            isActive: isActive,
+          });
+      
+          const savedFood = await foodDoc.save();
+      
+          // 3. Add Food ref to Variations
+          await Variation.updateMany(
+            { _id: { $in: createdVariations.map(v => v._id) } },
+            { $set: { food: savedFood._id } }
+          );
 
-          // If category not provided, find first available category
-          if (!categoryId) {
-            const restaurant = await Restaurant.findOne({ _id: restId });
-            if (!restaurant) {
-              throw new Error('Restaurant not found');
-            }
-            
-            if (!restaurant.categories || restaurant.categories.length === 0) {
-              throw new Error('Restaurant has no categories. Please create a category first.');
-            }
-            
-            // Add food to the first category
-            restaurant.categories[0].foods.push(foodDoc);
-            const savedRestaurant = await restaurant.save();
-            
-            return transformRestaurant(savedRestaurant);
-          } else {
-            // Use the specified category
-            // Update using updateOne to avoid race conditions
-            const result = await Restaurant.updateOne(
-              { _id: restId, 'categories._id': categoryId },
-              { $push: { 'categories.$.foods': foodDoc } }
-            );
+          // 4. Add Food to Category
+          const category = await Category.findById(categoryId);
+          if (!category) throw new Error('Category not found');
 
-            if (result.matchedCount === 0) {
-              throw new Error(`Restaurant or category not found`);
+          category.foods.push(savedFood._id);
+          await category.save();
+
+          const restaurant = await Restaurant.findById(restId).populate({
+            path: 'categories',
+            populate: {
+              path: 'foods',
+              populate: {
+                path: 'variations',
+                populate: {
+                  path: 'addons'
+                }
+              }
             }
-            
-            const updatedRestaurant = await Restaurant.findById(restId);
-            return transformRestaurant(updatedRestaurant);
-          }
+          });
+          if (!restaurant) throw new Error('Restaurant not found');  
+          
+          return transformRestaurant(restaurant);
         } else {
           // If _id is provided, it's an edit
           return module.exports.Mutation.editFood(_, args, context);
         }
       } catch (err) {
         console.error('Error creating food item:', err);
-        throw err; // Propagate the actual error message
+        throw err;
       }
     },
-
+    
     editFood: async (_, args, context) => {
       console.log('Editing food item with arguments:', args);
       const { 

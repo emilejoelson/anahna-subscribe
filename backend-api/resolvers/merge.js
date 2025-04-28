@@ -2,6 +2,8 @@ const Food = require('../models/food');
 const User = require('../models/user');
 const Restaurant = require('../models/restaurant');
 const Category = require('../models/category');
+const SubCategory = require('../models/subcategory');
+const Addon = require('../models/addon');
 const Owner = require('../models/owner');
 const Offer = require('../models/offer');
 const Section = require('../models/section');
@@ -318,7 +320,7 @@ const categoryFoods = async foods => {
       subCategory: foodObj.subCategory || '',
       // Directly transform variations here instead of binding
       variations: (food.variations || []).map(variation => {
-        const variationId = variation._id || new mongoose.Types.ObjectId();
+        const variationId = variation._id ;
         return {
           _id: variationId.toString(),
           title: variation.title || 'Default Variation', 
@@ -530,8 +532,16 @@ const transformRestaurant = async (restaurant) => {
   // Count all foods for logging
   let totalFoodsCount = 0;
   
-  const formattedCategories = (restaurant.categories || []).map(category => {
-    const foodItems = (category.foods || []).map(food => {
+  const formattedCategories = (restaurant.categories || []).map(async category => {   
+    const populatedCategory = await Category.findById(category._id)
+      .populate({
+        path: 'foods',
+        populate: {
+          path: 'variations',
+          model: 'Variation', 
+        }
+      }); 
+    const foodItems = populatedCategory.foods.map(food => {
       totalFoodsCount++;
       return {
         _id: food._id?.toString(),
@@ -542,7 +552,7 @@ const transformRestaurant = async (restaurant) => {
         isOutOfStock: food.isOutOfStock !== undefined ? food.isOutOfStock : false,
         subCategory: food.subCategory || '',
         variations: (food.variations || []).map(variation => {
-          const variationId = variation._id || new mongoose.Types.ObjectId();
+          const variationId = variation._id ;
           return {
             _id: variationId.toString(),
             title: variation.title || 'Default Variation', 

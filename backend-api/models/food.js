@@ -10,7 +10,7 @@ const foodSchema = new Schema({
   image: String,
   price: {
     type: Number,
-    required: true
+    // required: true
   },
   restaurant: {
     type: Schema.Types.ObjectId,
