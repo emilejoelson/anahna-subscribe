@@ -157,6 +157,9 @@ module.exports = {
           cacheKey += `:${starting_date}-${ending_date}`
         }
         
+        // Clear cache for development/testing purposes (remove in production)
+        await deleteCache(cacheKey)
+        
         const cachedOrders = await getCache(cacheKey)
         if (cachedOrders) {
           console.log('✅ CACHE HIT: Returning all orders from Redis cache')
@@ -164,10 +167,60 @@ module.exports = {
         }
         
         console.log('❌ CACHE MISS: Fetching all orders from database')
-
+    
         const filter = {}
-
-        if (dateKeyword === 'All') {
+    
+        // Handle different date filters
+        const now = new Date()
+        
+        if (dateKeyword === 'Today') {
+          // Start of today
+          const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+          // End of today
+          const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+          
+          filter.createdAt = {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        } else if (dateKeyword === 'Week') {
+          // Start of this week (Sunday)
+          const startOfWeek = new Date(now)
+          startOfWeek.setDate(now.getDate() - now.getDay())
+          startOfWeek.setHours(0, 0, 0, 0)
+          
+          // End of this week (Saturday)
+          const endOfWeek = new Date(startOfWeek)
+          endOfWeek.setDate(startOfWeek.getDate() + 6)
+          endOfWeek.setHours(23, 59, 59, 999)
+          
+          filter.createdAt = {
+            $gte: startOfWeek,
+            $lte: endOfWeek
+          }
+        } else if (dateKeyword === 'Month') {
+          // Start of this month
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+          
+          // End of this month
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+          
+          filter.createdAt = {
+            $gte: startOfMonth,
+            $lte: endOfMonth
+          }
+        } else if (dateKeyword === 'Year') {
+          // Start of this year
+          const startOfYear = new Date(now.getFullYear(), 0, 1)
+          
+          // End of this year
+          const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+          
+          filter.createdAt = {
+            $gte: startOfYear,
+            $lte: endOfYear
+          }
+        } else if (dateKeyword === 'All') {
           if (starting_date && ending_date) {
             filter.createdAt = {
               $gte: new Date(starting_date),
@@ -175,7 +228,7 @@ module.exports = {
             }
           }
         }
-
+    
         const orders = await Order.find(filter)
           .populate('restaurant', '_id name image address location')
           .populate('user', '_id name phone email')
@@ -192,13 +245,113 @@ module.exports = {
           })
           .lean()
           .exec()
-
-        await setCache(cacheKey, orders)
         
-        return orders
+        // Clean up the data to handle null values before returning
+        const processedOrders = orders.map(order => {
+          // Process items
+          if (order.items && Array.isArray(order.items)) {
+            order.items = order.items.map(item => {
+              // Handle missing fields in items
+              if (item) {
+                // Default values for missing item fields
+                if (item.isActive === null || item.isActive === undefined) {
+                  item.isActive = false;
+                }
+                
+                // Handle missing variation
+                if (!item.variation) {
+                  item.variation = {
+                    _id: null,
+                    title: '',
+                    price: 0,
+                    discounted: 0
+                  };
+                }
+                
+                // Handle addons
+                if (item.addons && Array.isArray(item.addons)) {
+                  item.addons = item.addons.map(addon => {
+                    if (addon) {
+                      // Default values for missing addon fields
+                      if (addon.title === null || addon.title === undefined) {
+                        addon.title = '';
+                      }
+                      if (addon.quantityMinimum === null || addon.quantityMinimum === undefined) {
+                        addon.quantityMinimum = 0;
+                      }
+                      if (addon.quantityMaximum === null || addon.quantityMaximum === undefined) {
+                        addon.quantityMaximum = 0;
+                      }
+                      
+                      // Handle options
+                      if (addon.options && Array.isArray(addon.options)) {
+                        addon.options = addon.options.map(option => {
+                          return option || { _id: null, title: '', description: '', price: 0 };
+                        });
+                      } else {
+                        addon.options = [];
+                      }
+                      return addon;
+                    }
+                    return {
+                      _id: '',
+                      title: '',
+                      description: '',
+                      quantityMinimum: 0,
+                      quantityMaximum: 0,
+                      options: []
+                    };
+                  });
+                } else {
+                  item.addons = [];
+                }
+              }
+              return item || {};
+            });
+          } else {
+            order.items = [];
+          }
+          
+          // Handle missing restaurant data
+          if (!order.restaurant) {
+            order.restaurant = {
+              _id: '',
+              name: '',
+              image: '',
+              address: '',
+              location: { coordinates: [0, 0] }
+            };
+          }
+          
+          // Handle missing user data
+          if (!order.user) {
+            order.user = {
+              _id: '',
+              name: '',
+              phone: '',
+              email: ''
+            };
+          }
+          
+          // Handle missing delivery address
+          if (!order.deliveryAddress) {
+            order.deliveryAddress = {
+              location: { coordinates: [0, 0] },
+              deliveryAddress: '',
+              details: '',
+              label: ''
+            };
+          }
+          
+          return order;
+        });
+    
+        await setCache(cacheKey, processedOrders, DEFAULT_TTL);
+        
+        return processedOrders;
       } catch (error) {
-        console.error('Error fetching orders:', error)
-        throw new Error('Failed to fetch orders')
+        console.error('Error fetching orders:', error, error.stack);
+        throw new Error('Failed to fetch orders: ' + error.message);
       }
     },
     order: async(_, args, { req, res }) => {
