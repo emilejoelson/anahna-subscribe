@@ -1,36 +1,35 @@
 const { gql } = require("apollo-server-express");
 
 const typeDefs = gql`
-type Staff {
-  _id: ID!
-  name: String!
-  email: String!
-  password: String!
-  plainPassword: String
-  phone: String!
-  isActive: Boolean!
-  permissions: [String]
-  userType: String
-  createdAt: String
-  updatedAt: String
-}
- type Notification {
+  type Staff {
+    _id: ID!
+    name: String!
+    email: String!
+    password: String!
+    plainPassword: String
+    phone: String!
+    isActive: Boolean!
+    permissions: [String]
+    userType: String
+    createdAt: String
+    updatedAt: String
+  }
+  type Notification {
     id: ID!
     body: String!
     title: String
     createdAt: String!
   }
 
-input StaffInput {
-  _id: ID
-  name: String!
-  email: String!
-  password: String!
-  phone: String
-  isActive: Boolean
-  permissions: [String]
-}
-
+  input StaffInput {
+    _id: ID
+    name: String!
+    email: String!
+    password: String!
+    phone: String
+    isActive: Boolean
+    permissions: [String]
+  }
 
   type Location {
     location: Point
@@ -45,29 +44,26 @@ input StaffInput {
     selected: Boolean
   }
 
-  type OrderAddress {
-    location: Point
-    deliveryAddress: String!
-    details: String
-    label: String!
-    id: String
-  }
+type OrderAddress {
+  location: Point
+  deliveryAddress: String!
+  details: String
+  label: String
+}
 
-  type Item {
-    _id: ID!
-    title: String!
-    description: String!
-    image: String
-    quantity: Int!
-    variation: ItemVariation!
-    addons: [ItemAddon!]
-    specialInstructions: String
-    isActive: Boolean!
-    createdAt: String!
-    updatedAt: String!
-
-    food: String!
-  }
+type Item {
+  _id: ID!
+  title: String!
+  description: String!
+  image: String
+  quantity: Int!
+  variation: ItemVariation
+  addons: [ItemAddon]
+  specialInstructions: String
+  isActive: Boolean     # Removed ! to make it nullable
+  createdAt: String!
+  updatedAt: String!
+}
 
   type Category {
     _id: ID!
@@ -217,7 +213,7 @@ input StaffInput {
     companyRegNo: Float
     taxRate: Float
   }
-  
+
   type DeliveryUpdateResponse {
     success: Boolean!
     message: String!
@@ -251,13 +247,12 @@ input StaffInput {
     addons: [CartAddon!]
   }
 
-  type ItemVariation {
-    _id: ID!
-    title: String!
-    price: Float!
-    discounted: Float!
-  }
-
+type ItemVariation {
+  _id: ID
+  title: String
+  price: Float
+  discounted: Float
+}
   type Food {
     _id: ID!
     title: String!
@@ -372,7 +367,7 @@ input StaffInput {
     currency: String
     currencySymbol: String
     isPaidVersion: String
-    
+
     pushToken: String
     enableRiderDemo: Boolean
     enableRestaurantDemo: Boolean
@@ -406,31 +401,34 @@ input StaffInput {
   }
 
   type Order {
-    _id: ID!
-    orderId: String!
-    zone: Zone
-    restaurant: RestaurantDetail!
-    deliveryAddress: OrderAddress!
-    user: UserBasic!
-    paymentMethod: String
-    orderStatus: String!
-    isPickedUp: Boolean!
-    status: Boolean
-    isActive: Boolean!
-    createdAt: String!
-    rider: RiderBasic
-    items: [Item]
-    orderAmount: Float
-    paymentStatus: String
-    preparationTime: String
-    statusHistory: [OrderStatusHistory!]
-  }
-
-  type OrderStatusHistory {
-    status: String!
-    timestamp: String!
-    note: String
-  }
+  _id: ID!
+  orderId: String!
+  zone: Zone
+  restaurant: RestaurantDetail!
+  deliveryAddress: OrderAddress!
+  user: UserBasic!
+  paymentMethod: String
+  paidAmount: Float
+  orderAmount: Float
+  orderStatus: String!
+  status: Boolean
+  paymentStatus: String
+  reason: String
+  isActive: Boolean!
+  isPickedUp: Boolean
+  createdAt: String!
+  deliveryCharges: Float
+  tipping: Float
+  taxationAmount: Float
+  rider: RiderBasic
+  items: [Item]
+  statusHistory: [OrderStatusHistory]
+}
+type OrderStatusHistory {
+  status: String!
+  timestamp: String!
+  note: String
+}
 
   interface OrderStatusOperation {
     _id: String!
@@ -444,21 +442,24 @@ input StaffInput {
     success: Boolean!
   }
 
-  type UserBasic {
-    name: String
-    phone: String
-  }
+type UserBasic {
+  _id: ID!
+  name: String!
+  phone: String
+  email: String
+}
 
-  type RiderBasic {
-    _id: ID!
-    name: String!
-    username: String!
-    available: Boolean!
-  }
+type RiderBasic {
+  _id: ID!
+  name: String!
+  username: String!
+  available: Boolean!
+}
 
   type Point {
-    coordinates: [Float!]
-  }
+  coordinates: [Float!]
+  type: String
+}
 
   type MyOrders {
     userId: String!
@@ -470,18 +471,18 @@ input StaffInput {
     orders: [Order!]
   }
 
-  type RestaurantDetail {
-    _id: ID!
-    name: String!
-    image: String!
-    address: String!
-    location: Point
-    slug: String
-    keywords: [String]
-    tags: [String]
-    reviewCount: Int
-    reviewAverage: Float
-  }
+type RestaurantDetail {
+  _id: ID!
+  name: String!
+  image: String!
+  address: String!
+  location: Point
+  slug: String
+  keywords: [String]
+  tags: [String]
+  reviewCount: Int
+  reviewAverage: Float
+}
 
   type AuthData {
     userId: ID!
@@ -578,13 +579,12 @@ input StaffInput {
     price: Float!
   }
 
-  type ItemOption {
-    _id: String!
-    title: String!
-    description: String
-    price: Float!
-  }
-
+type ItemOption {
+  _id: ID
+  title: String
+  description: String
+  price: Float
+}
   type Addon {
     _id: String!
     options: [String!]
@@ -603,14 +603,14 @@ input StaffInput {
     quantityMaximum: Int!
   }
 
-  type ItemAddon {
-    _id: String!
-    options: [ItemOption!]
-    title: String!
-    description: String
-    quantityMinimum: Int!
-    quantityMaximum: Int!
-  }
+type ItemAddon {
+  _id: String!
+  options: [ItemOption]
+  description: String
+  title: String         # Removed ! to make it nullable
+  quantityMinimum: Int
+  quantityMaximum: Int
+}
 
   type DashboardData {
     totalOrders: Int!
@@ -644,12 +644,12 @@ input StaffInput {
     enabled: Boolean!
   }
   type Tipping {
-  _id: ID!
-  tipVariations: [Float!]!
-  enabled: Boolean!
-  createdAt: String!
-  updatedAt: String!
-}
+    _id: ID!
+    tipVariations: [Float!]!
+    enabled: Boolean!
+    createdAt: String!
+    updatedAt: String!
+  }
 
   type OfferInfo {
     _id: String!
@@ -702,9 +702,9 @@ input StaffInput {
   }
 
   type RestaurantNearDetails {
-    _id : ID!
+    _id: ID!
     unique_restaurant_id: String
-    orderId : [Order]
+    orderId: [Order]
     orderPrefix: String
     name: String!
     image: String
@@ -775,7 +775,7 @@ input StaffInput {
     title: String!
     foods: [FoodNearDetails!]
   }
-    
+
   type NearByData {
     restaurants: [RestaurantNearDetails!]
     offers: [OfferInfo!]
@@ -894,24 +894,24 @@ input StaffInput {
   }
 
   input SentryConfigurationInput {
-  dashboardSentryUrl: String
-  webSentryUrl: String
-  apiSentryUrl: String
-  customerAppSentryUrl: String
-  restaurantAppSentryUrl: String
-  riderAppSentryUrl: String
-}
+    dashboardSentryUrl: String
+    webSentryUrl: String
+    apiSentryUrl: String
+    customerAppSentryUrl: String
+    restaurantAppSentryUrl: String
+    riderAppSentryUrl: String
+  }
   input GoogleApiKeyConfigurationInput {
-  googleApiKey: String
-}
- input CloudinaryConfigurationInput {
-  cloudinaryUploadUrl: String
-  cloudinaryApiKey: String
-}
-input AmplitudeApiKeyConfigurationInput {
-  webAmplitudeApiKey: String
-  appAmplitudeApiKey: String
-}
+    googleApiKey: String
+  }
+  input CloudinaryConfigurationInput {
+    cloudinaryUploadUrl: String
+    cloudinaryApiKey: String
+  }
+  input AmplitudeApiKeyConfigurationInput {
+    webAmplitudeApiKey: String
+    appAmplitudeApiKey: String
+  }
   input GoogleClientIDConfigurationInput {
     webClientID: String
     androidClientID: String
@@ -923,7 +923,7 @@ input AmplitudeApiKeyConfigurationInput {
     googleColor: String
   }
   input AppConfigurationsInput {
-     termsAndConditions: String
+    termsAndConditions: String
     privacyPolicy: String
     testOtp: String
   }
@@ -951,8 +951,8 @@ input AmplitudeApiKeyConfigurationInput {
   }
 
   input CurrencyConfigurationInput {
-   currency: String
-   currencySymbol: String
+    currency: String
+    currencySymbol: String
   }
 
   input VerificationConfigurationInput {
@@ -1148,18 +1148,17 @@ input AmplitudeApiKeyConfigurationInput {
     quantityMaximum: Int!
   }
 
-  
   input CouponInput {
     _id: String
     title: String!
     discount: Float!
     enabled: Boolean
   }
-input TippingInput {
-  _id: ID
-  tipVariations: [Float!]
-  enabled: Boolean
-}
+  input TippingInput {
+    _id: ID
+    tipVariations: [Float!]
+    enabled: Boolean
+  }
   input TaxationInput {
     _id: String
     taxationCharges: Float
@@ -1301,7 +1300,7 @@ input TippingInput {
     user: ChatUserInput!
   }
 
- input BannerInput {
+  input BannerInput {
     _id: ID
     title: String!
     description: String
@@ -1373,7 +1372,7 @@ input TippingInput {
     riderPassword: String
   }
 
-   type WebNotification {
+  type WebNotification {
     _id: ID!
     body: String!
     navigateTo: String
@@ -1409,7 +1408,7 @@ input TippingInput {
     type: String!
     coordinates: [Float!]!
   }
-  type commissionDetails{
+  type commissionDetails {
     _id: String
     commissionRate: Float
   }
@@ -1544,11 +1543,11 @@ input TippingInput {
     ): ActiveOrdersResponse!
     getClonedRestaurants: [Restaurant!]!
     lastOrderCreds: DemoCredentails
-    allOrdersWithoutPagination(
-      dateKeyword: String
-      starting_date: String
-      ending_date: String
-    ): [Order!]!
+  allOrdersWithoutPagination(
+    dateKeyword: String
+    starting_date: String
+    ending_date: String
+  ): [Order!]!
     ordersByRestId(
       restaurant: String!
       page: Int
@@ -1556,7 +1555,7 @@ input TippingInput {
       search: String
     ): [Order!]!
     ordersByRestIdWithoutPagination(
-      restaurant: String!, 
+      restaurant: String!
       search: String
     ): [Order!]!
     banners: [Banner!]!
@@ -1647,7 +1646,10 @@ input TippingInput {
     getDashboardUsers: DashboardUsers!
     getDashboardUsersByYear(year: Int!): DashboardUsersYearly!
     subCategories(categoryId: ID!): [SubCategory!]
-    subCategoriesByParentId(parentId: ID, parentCategoryId: String): [SubCategory!]!
+    subCategoriesByParentId(
+      parentId: ID
+      parentCategoryId: String
+    ): [SubCategory!]!
     getOrdersByDateRange(
       startingDate: String!
       endingDate: String!
@@ -1671,15 +1673,15 @@ input TippingInput {
       ending_date: String!
     ): RestaurantDashboardStats!
   }
-input BussinessDetailsInput {
-  bankName: String
-  accountName: String
-  accountCode: String
-  accountNumber: Float
-  bussinessRegNo: Float
-  companyRegNo: Float
-  taxRate: Float
-}
+  input BussinessDetailsInput {
+    bankName: String
+    accountName: String
+    accountCode: String
+    accountNumber: Float
+    bussinessRegNo: Float
+    companyRegNo: Float
+    taxRate: Float
+  }
   type Mutation {
     createStaff(staffInput: StaffInput): Staff
     editStaff(staffInput: StaffInput): Staff
@@ -1758,22 +1760,54 @@ input BussinessDetailsInput {
     orderPickedUp(_id: String!): Order!
     cancelOrder(_id: String!, reason: String!): Order!
     likeFood(foodId: String!): Food!
-    saveEmailConfiguration(configurationInput: EmailConfigurationInput!): Configuration
-    saveFormEmailConfiguration(configurationInput: FormEmailConfigurationInput!): Configuration
-    saveSendGridConfiguration(configurationInput: SendGridConfigurationInput!): Configuration
-    saveFirebaseConfiguration(configurationInput: FirebaseConfigurationInput!): Configuration
-    saveSentryConfiguration(configurationInput: SentryConfigurationInput!): Configuration
-    saveGoogleApiKeyConfiguration(configurationInput: GoogleApiKeyConfigurationInput!): Configuration
-    saveCloudinaryConfiguration(configurationInput: CloudinaryConfigurationInput!): Configuration
-    saveAmplitudeApiKeyConfiguration(configurationInput: AmplitudeApiKeyConfigurationInput!): Configuration
-    saveGoogleClientIDConfiguration(configurationInput: GoogleClientIDConfigurationInput!): Configuration
-    saveWebConfiguration(configurationInput: WebConfigurationInput!): Configuration
-    saveAppConfigurations(configurationInput: AppConfigurationsInput!): Configuration
-    saveDeliveryRateConfiguration(configurationInput: DeliveryCostConfigurationInput!): Configuration
-    savePaypalConfiguration(configurationInput: PaypalConfigurationInput!): Configuration
-    saveStripeConfiguration(configurationInput: StripeConfigurationInput!): Configuration
-    saveTwilioConfiguration(configurationInput: TwilioConfigurationInput!): Configuration
-    saveCurrencyConfiguration(configurationInput: CurrencyConfigurationInput!): Configuration
+    saveEmailConfiguration(
+      configurationInput: EmailConfigurationInput!
+    ): Configuration
+    saveFormEmailConfiguration(
+      configurationInput: FormEmailConfigurationInput!
+    ): Configuration
+    saveSendGridConfiguration(
+      configurationInput: SendGridConfigurationInput!
+    ): Configuration
+    saveFirebaseConfiguration(
+      configurationInput: FirebaseConfigurationInput!
+    ): Configuration
+    saveSentryConfiguration(
+      configurationInput: SentryConfigurationInput!
+    ): Configuration
+    saveGoogleApiKeyConfiguration(
+      configurationInput: GoogleApiKeyConfigurationInput!
+    ): Configuration
+    saveCloudinaryConfiguration(
+      configurationInput: CloudinaryConfigurationInput!
+    ): Configuration
+    saveAmplitudeApiKeyConfiguration(
+      configurationInput: AmplitudeApiKeyConfigurationInput!
+    ): Configuration
+    saveGoogleClientIDConfiguration(
+      configurationInput: GoogleClientIDConfigurationInput!
+    ): Configuration
+    saveWebConfiguration(
+      configurationInput: WebConfigurationInput!
+    ): Configuration
+    saveAppConfigurations(
+      configurationInput: AppConfigurationsInput!
+    ): Configuration
+    saveDeliveryRateConfiguration(
+      configurationInput: DeliveryCostConfigurationInput!
+    ): Configuration
+    savePaypalConfiguration(
+      configurationInput: PaypalConfigurationInput!
+    ): Configuration
+    saveStripeConfiguration(
+      configurationInput: StripeConfigurationInput!
+    ): Configuration
+    saveTwilioConfiguration(
+      configurationInput: TwilioConfigurationInput!
+    ): Configuration
+    saveCurrencyConfiguration(
+      configurationInput: CurrencyConfigurationInput!
+    ): Configuration
     pushToken(token: String): User!
     updateOrderStatus(id: String!, status: String!, reason: String): Order!
     uploadToken(id: String!, pushToken: String!): OwnerData!
@@ -1790,10 +1824,7 @@ input BussinessDetailsInput {
     editRider(riderInput: RiderInput!): Rider!
     deleteRider(id: String!): Rider
     toggleAvailablity(id: String!): Rider!
-    updateStatus(
-      id: String!
-      orderStatus: String!
-    ): OrderStatusUpdateResponse!
+    updateStatus(id: String!, orderStatus: String!): OrderStatusUpdateResponse!
     updateStatusRider(id: String!, status: String!): Order!
     updatePaymentStatus(id: String, status: String): Order!
     createOption(optionInput: CreateOptionInput): Restaurant!
@@ -1847,7 +1878,10 @@ input BussinessDetailsInput {
     updateTimings(id: String!, openingTimes: [TimingsInput]): Restaurant!
     toggleAvailability: Restaurant!
     addFavourite(id: String!): User!
-    sendNotificationUser(notificationTitle: String, notificationBody: String!): Boolean!
+    sendNotificationUser(
+      notificationTitle: String
+      notificationBody: String!
+    ): Boolean!
     markWebNotificationsAsRead: [MarkWebNotificationsAsReadResponse!]!
     updateCommission(id: String!, commissionRate: Float!): commissionDetails
     updateDeliveryBoundsAndLocation(
