@@ -1,4 +1,5 @@
 const Addon = require('../models/addon');
+const Option = require('../models/option');
 const Restaurant = require('../models/restaurant');
 const mongoose = require('mongoose');
 const { transformAddon, transformRestaurant } = require('./merge');
@@ -98,77 +99,60 @@ module.exports = {
     }
   },
   Mutation: {
-    createAddons: async (_, { addonInput }) => {
-      console.log('Creating addons with input:', JSON.stringify(addonInput));
+    createAddons: async (_, args) => {
       try {
-        const restaurant = await Restaurant.findById(addonInput.restaurant);
+        console.log("createAddons mutation with args:", JSON.stringify(args));
+
+        if (!args.addonInput) {
+          throw new Error("Addon input is required");
+        }
+
+        const { restaurant: restaurantId, addons } = args.addonInput;
+
+        if (!restaurantId || !addons || addons.length === 0) {
+          throw new Error("Missing required fields: restaurant or addons");
+        }
+
+        // find the restaurant by ID
+        const restaurant = await Restaurant.findById(restaurantId);
         if (!restaurant) {
-          throw new Error(`Restaurant with ID ${addonInput.restaurant} not found`);
+          throw new Error(`Restaurant with ID ${restaurantId} not found`);
         }
-        
-        const { addons } = addonInput;
-        const createdAddons = [];
 
-        // Create new addons with properly formatted _id fields
+        // find the options by IDs
+        const optionIds = addons.flatMap(addon => addon.options);
+        const options = await Option.find({ '_id': { $in: optionIds } });
+        
+        // create addons
+        const newAddons = [];
         for (const addon of addons) {
-          // Create a new MongoDB ObjectId
-          const addonId = new mongoose.Types.ObjectId();
-          
-          console.log(`Creating addon: ${addon.title} with _id: ${addonId}`);
-          
-          // Create the addon document with required quantity fields
-          const newAddon = {
-            ...addon,
-            _id: addonId,
-            restaurant: addonInput.restaurant,
-            // Ensure quantity fields are set with defaults if not provided
-            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
-            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
-            isActive: true
-          };
-          
-          // Convert options array to strings if they are ObjectIds
-          if (addon.options && Array.isArray(addon.options)) {
-            newAddon.options = addon.options.map(opt => 
-              typeof opt === 'object' && opt._id ? opt._id.toString() : opt.toString()
-            );
-          }
-          
-          // Store the addon in the Addon collection for standalone access
-          const addonDoc = new Addon({
-            ...newAddon,
-            _id: addonId
+          const newAddon = new Addon({
+            title: addon.title,
+            description: addon.description || "",
+            quantityMinimum: addon.quantityMinimum,
+            quantityMaximum: addon.quantityMaximum,
+            restaurant: restaurantId,
+            options: options.filter(option => addon.options.includes(option._id.toString())).map(option => option._id)
           });
-          await addonDoc.save();
-          
-          // Add to restaurant's addons array - include the full document, not just an ID reference
-          restaurant.addons.push({
-            ...newAddon,
-            _id: addonId
-          });
-          
-          // Add to our result array
-          createdAddons.push({
-            ...newAddon,
-            _id: addonId.toString() // Ensure _id is a string for response
-          });
+
+          await newAddon.save();
+          newAddons.push(newAddon);
         }
 
-        // Save the restaurant with new addons
-        const updatedRestaurant = await restaurant.save();
-        console.log(`Restaurant saved with ${restaurant.addons.length} addons`);
-        
-        // Return a properly formatted response
+        // add IDs of addons
+        restaurant.addons = [...restaurant.addons, ...newAddons.map(addon => addon._id)];
+        await restaurant.save();
+
         return {
-          _id: updatedRestaurant._id.toString(),
-          addons: createdAddons.map(addon => ({
-            ...addon,
-            _id: addon._id.toString(),
-            options: Array.isArray(addon.options) 
-              ? addon.options.map(opt => opt.toString()) 
-              : [],
-            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
-            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1
+          _id: restaurant._id,
+          addons: newAddons.map(addon => ({
+            _id: addon._id,
+            title: addon.title,
+            description: addon.description,
+            quantityMinimum: addon.quantityMinimum,
+            quantityMaximum: addon.quantityMaximum,
+            isActive: addon.isActive,
+            options: addon.options,
           }))
         };
       } catch (error) {
@@ -177,72 +161,68 @@ module.exports = {
       }
     },
     editAddon: async (_, { addonInput }) => {
-      console.log('Editing addon:', JSON.stringify(addonInput));
-      try {
-        const restaurant = await Restaurant.findById(addonInput.restaurant);
-        if (!restaurant) {
-          throw new Error(`Restaurant with ID ${addonInput.restaurant} not found`);
+      try{
+        console.log("editAddon mutation with args:", JSON.stringify(addonInput));
+
+        if (!addonInput || !addonInput.restaurant || !addonInput.addons) {
+          throw new Error("Missing required fields: restaurant or addons");
         }
+
+        const { restaurant: restaurantId, addons } = addonInput;
         
-        const { addons } = addonInput;
-        
-        // Find the addon in the restaurant's addons array
+        // find restaurant
+        const restaurant = await Restaurant.findById(restaurantId);
+        if (!restaurant) {
+          throw new Error(`Restaurant with ID ${restaurantId} not found`);
+        }
+
+        // find list of addons from restaurant
         const addonIndex = restaurant.addons.findIndex(
-          addon => addon._id.toString() === addons._id
+          addon => addon.toString() === addons._id
         );
         
         if (addonIndex === -1) {
           throw new Error(`Addon with ID ${addons._id} not found in restaurant`);
         }
-        
+
         console.log(`Found addon at index ${addonIndex}, updating...`);
-        
-        // Format options as ObjectIds if they're string IDs
-        const formattedOptions = Array.isArray(addons.options) 
-          ? addons.options.map(opt => 
-              typeof opt === 'string' ? opt : opt.toString()
-            )
-          : [];
-        
-        // Update the addon with new values, preserving the _id
-        restaurant.addons[addonIndex] = {
-          _id: restaurant.addons[addonIndex]._id,
-          title: addons.title || "Unnamed Addon",
-          description: addons.description || "",
-          options: formattedOptions,
-          quantityMinimum: addons.quantityMinimum !== undefined ? addons.quantityMinimum : 0,
-          quantityMaximum: addons.quantityMaximum !== undefined ? addons.quantityMaximum : 1,
-          isActive: true
-        };
-        
-        // Also update the standalone Addon document if it exists
+
+        // edit Addon
         const existingAddon = await Addon.findById(addons._id);
-        if (existingAddon) {
-          console.log(`Also updating standalone addon document`);
-          existingAddon.title = addons.title || "Unnamed Addon";
-          existingAddon.description = addons.description || "";
-          existingAddon.options = formattedOptions;
-          existingAddon.quantityMinimum = addons.quantityMinimum !== undefined ? addons.quantityMinimum : 0;
-          existingAddon.quantityMaximum = addons.quantityMaximum !== undefined ? addons.quantityMaximum : 1;
-          await existingAddon.save();
+        if (!existingAddon) {
+          throw new Error(`Addon with ID ${addons._id} not found`);
         }
-        
+
+        existingAddon.title = addons.title || existingAddon.title;
+        existingAddon.description = addons.description || existingAddon.description;
+        existingAddon.quantityMinimum = addons.quantityMinimum || existingAddon.quantityMinimum;
+        existingAddon.quantityMaximum = addons.quantityMaximum || existingAddon.quantityMaximum;
+        existingAddon.isActive = addons.isActive !== undefined ? addons.isActive : existingAddon.isActive;
+
+        // Formater les options comme des ObjectIds si ce sont des chaînes
+        existingAddon.options = Array.isArray(addons.options)
+          ? addons.options.map(opt => (typeof opt === 'string' ? opt : opt.toString()))
+          : [];
+
+        await existingAddon.save();
+        console.log(`Updated standalone addon document ${existingAddon._id}`);
+
+        // edit addon in restaurant by ID
+        restaurant.addons[addonIndex] = existingAddon._id;
+
         await restaurant.save();
-        console.log(`Successfully updated addon ${addons._id}`);
-        
-        // Return the updated restaurant with properly formatted addons
+        console.log(`Successfully updated addon ${addons._id} in restaurant`);
+
         return {
           _id: restaurant._id.toString(),
-          addons: restaurant.addons.map(addon => ({
-            _id: addon._id.toString(),
-            title: addon.title || "Unnamed Addon",
-            description: addon.description || "",
-            options: Array.isArray(addon.options) 
-              ? addon.options.map(opt => typeof opt === 'object' ? opt.toString() : opt) 
-              : [],
-            quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
-            quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
-            isActive: addon.isActive !== undefined ? addon.isActive : true
+          addons: restaurant.addons.map(addonId => ({
+            _id: addonId.toString(),
+            title: existingAddon.title,
+            description: existingAddon.description || "",
+            options: existingAddon.options,
+            quantityMinimum: existingAddon.quantityMinimum,
+            quantityMaximum: existingAddon.quantityMaximum,
+            isActive: existingAddon.isActive
           }))
         };
       } catch (error) {
@@ -251,15 +231,26 @@ module.exports = {
       }
     },
     deleteAddon: async (_, { id, restaurant }) => {
-      console.log(`Deleting addon with ID ${id} from restaurant ${restaurant}`);
       try {
-        // Find the target restaurant
-        const targetRestaurant = await Restaurant.findById(restaurant);
+        // find restaurant 
+        const targetRestaurant = await Restaurant.findById(restaurant).populate({
+          path: 'categories',
+          populate: {
+            path: 'foods',
+            populate: {
+              path: 'variations',
+              populate: {
+                path: 'addons'
+              }
+            }
+          }
+        });
+        
         if (!targetRestaurant) {
           throw new Error(`Restaurant with ID ${restaurant} not found`);
         }
-        
-        // Find the addon in the restaurant's addons array
+    
+        // delete addon form restaurant
         const addonIndex = targetRestaurant.addons.findIndex(
           addon => addon._id.toString() === id
         );
@@ -267,52 +258,47 @@ module.exports = {
         if (addonIndex === -1) {
           throw new Error(`Addon with ID ${id} not found in restaurant`);
         }
-        
-        // Remove the addon from the restaurant's addons array
+    
         targetRestaurant.addons.splice(addonIndex, 1);
         
-        // Also remove any references to the addon from variations
+        // delete ref addon from categories, foods, variations
         targetRestaurant.categories.forEach(category => {
-          if (!category.foods) return;
-          
-          category.foods.forEach(food => {
-            if (!food.variations) return;
-            
-            food.variations.forEach(variation => {
-              if (!variation.addons) return;
-              
-              // Filter out the addon ID from variation.addons
-              variation.addons = variation.addons.filter(addonId => {
-                const addonIdStr = addonId.toString ? addonId.toString() : addonId;
-                return addonIdStr !== id;
-              });
+          if (category.foods) {
+            category.foods.forEach(food => {
+              if (food.variations) {
+                food.variations.forEach(variation => {
+                  if (variation.addons) {
+                    // get addons not equal to id
+                    variation.addons = variation.addons.filter(addonId => addonId.toString() !== id);
+                  }
+                });
+              }
             });
-          });
+          }
         });
-
-        // Also delete the standalone Addon document if it exists
+    
+        // delete addon
         await Addon.findByIdAndDelete(id);
         console.log(`Standalone addon document deleted (if it existed)`);
-        
-        // Save the updated restaurant
+    
         await targetRestaurant.save();
         console.log(`Successfully deleted addon ${id} from restaurant ${restaurant}`);
-        
-        // Return the updated restaurant with formatted addons
+    
         return {
           _id: targetRestaurant._id.toString(),
           addons: targetRestaurant.addons.map(addon => ({
             _id: addon._id.toString(),
             title: addon.title || "Unnamed Addon",
             description: addon.description || "",
-            options: Array.isArray(addon.options) 
-              ? addon.options.map(opt => typeof opt === 'object' ? opt.toString() : opt) 
+            options: Array.isArray(addon.options)
+              ? addon.options.map(opt => typeof opt === 'object' ? opt.toString() : opt)
               : [],
             quantityMinimum: addon.quantityMinimum !== undefined ? addon.quantityMinimum : 0,
             quantityMaximum: addon.quantityMaximum !== undefined ? addon.quantityMaximum : 1,
             isActive: addon.isActive !== undefined ? addon.isActive : true
           }))
         };
+    
       } catch (error) {
         console.error('Error deleting addon:', error);
         throw new Error(`Failed to delete addon: ${error.message}`);

@@ -967,17 +967,24 @@ module.exports = {
           return [];
         }
 
-        const addons = parent.addons.map((addon) => ({
-          _id: addon._id || new mongoose.Types.ObjectId(),
+        const addons = await Addon.find({ '_id': { $in: parent.addons } });
+
+        const formattedAddons = addons.map((addon) => ({
+          _id: addon._id,
           title: addon.title,
           description: addon.description || "",
-          price: addon.price,
+          quantityMinimum: addon.quantityMinimum,
+          quantityMaximum: addon.quantityMaximum,
+          options: addon.options, 
           restaurant: parent._id,
-          isActive: addon.isActive !== undefined ? addon.isActive : true,
+          isActive: addon.isActive,
         }));
 
-        await setCache(cacheKey, addons, DEFAULT_TTL);
-        return addons;
+        console.log('Formatted Addons:', formattedAddons);
+        
+
+        await setCache(cacheKey, formattedAddons, DEFAULT_TTL);
+        return formattedAddons;
       } catch (error) {
         console.error(
           `Error fetching addons for restaurant ${parent._id}:`,
