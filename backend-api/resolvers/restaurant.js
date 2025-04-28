@@ -12,6 +12,7 @@ const User = require("../models/user");
 const Option = require("../models/option");
 const Review = require("../models/review");
 const Addon = require("../models/addon");
+const Category = require("../models/category");
 const {
   sendNotificationToCustomerWeb,
 } = require("../helpers/firebase-web-notifications");
@@ -1015,18 +1016,44 @@ module.exports = {
           return [];
         }
 
-        const categories = parent.categories.map((category) => ({
-          _id: category._id || new mongoose.Types.ObjectId(),
+        // find categories 
+        const categories = await Category.find({
+          '_id': { $in: parent.categories }
+        }).populate('foods subCategories');
+
+        // Map the categories to the desired structure
+        const formattedCategories = categories.map(category => ({
+          _id: category._id.toString(),
           title: category.title,
+          image: category.image || "",
           description: category.description || "",
-          foods: category.foods || [],
           restaurant: parent._id,
-          isActive: category.isActive !== undefined ? category.isActive : true,
-          subCategories: category.subCategories || [],
+          isActive: category.isActive,
+          foods: category.foods.map(food => ({
+            _id: food._id.toString(),
+            title: food.title,
+            description: food.description || "",
+            image: food.image || "",
+            price: food.price,
+            variations: food.variations || [],
+            addons: food.addons || [],
+            isOutOfStock: food.isOutOfStock || false,
+            isAvailable: food.isAvailable || true,
+            isActive: food.isActive || true
+          })),
+          subCategories: category.subCategories.map(subCategory => ({
+            _id: subCategory._id.toString(),
+            title: subCategory.title,
+            description: subCategory.description || "",
+            image: subCategory.image || "",
+            parentCategoryId: category._id.toString(),
+            isActive: subCategory.isActive,
+          })),
+          __typename: 'Category'
         }));
 
-        await setCache(cacheKey, categories, DEFAULT_TTL);
-        return categories;
+        await setCache(cacheKey, formattedCategories, DEFAULT_TTL);
+        return formattedCategories;
       } catch (error) {
         console.error(
           `Error fetching categories for restaurant ${parent._id}:`,

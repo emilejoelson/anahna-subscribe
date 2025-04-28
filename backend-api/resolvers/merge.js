@@ -534,7 +534,7 @@ const transformRestaurant = async (restaurant) => {
     const foodItems = (category.foods || []).map(food => {
       totalFoodsCount++;
       return {
-        _id: food._id?.toString() || new mongoose.Types.ObjectId().toString(),
+        _id: food._id?.toString(),
         title: food.title || 'Unnamed Food',
         description: food.description || '',
         image: food.image || '',
@@ -558,18 +558,18 @@ const transformRestaurant = async (restaurant) => {
     });
     
     return {
-      _id: category._id?.toString() || new mongoose.Types.ObjectId().toString(),
+      _id: category._id?.toString() ,
       title: category.title || '',
       description: category.description || '',
       image: category.image || '',
       isActive: category.isActive !== undefined ? category.isActive : true,
       foods: foodItems,
       subCategories: (category.subCategories || []).map(sub => ({
-        _id: sub._id?.toString() || new mongoose.Types.ObjectId().toString(),
+        _id: sub._id?.toString() ,
         title: sub.title || '',
         description: sub.description || '',
         isActive: sub.isActive !== undefined ? sub.isActive : true,
-        parentCategoryId: category._id?.toString() || new mongoose.Types.ObjectId().toString()
+        parentCategoryId: category._id?.toString() 
       })),
       createdAt: category.createdAt ? dateToString(category.createdAt) : dateToString(new Date()),
       updatedAt: category.updatedAt ? dateToString(category.updatedAt) : dateToString(new Date())

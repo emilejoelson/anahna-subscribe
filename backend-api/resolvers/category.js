@@ -158,121 +158,188 @@ module.exports = {
 
   Mutation: {
     createCategory: async (_, { category }, context) => {
-      console.log('Creating a new category with:', category);
       try {
+        console.log('Creating a new category with:', category);
+    
         // 1. Verify restaurant exists
-        const restaurant = await Restaurant.findById(category.restaurant);
+        const restaurant = await Restaurant.findById(category.restaurant).populate({
+          path: 'categories',
+          populate: {
+            path: 'foods',
+            populate: {
+              path: 'variations',
+              populate: {
+                path: 'addons'
+              }
+            }
+          }
+        });
         if (!restaurant) {
           throw new Error('Restaurant not found');
         }
-
-        // 2. Prepare category data with explicit timestamps as strings
-        const now = new Date().toISOString();
+    
+        // 2. Prepare initial category data
         const categoryData = {
           title: category.title.trim(),
           image: category.image || '',
           description: category.description || '',
-          subCategories: [],
           isActive: true,
-          createdAt: now,
-          updatedAt: now
+          restaurant: restaurant._id, 
+          subCategories: [] // Will be populated after
         };
-
+    
+        const newCategory = new Category(categoryData);
+    
         // 3. Handle subcategories if provided
         if (category.subCategories && Array.isArray(category.subCategories)) {
-          // Filter out empty subcategories
           const validSubCategories = category.subCategories.filter(sub => 
             sub && sub.title && sub.title.trim() !== ''
           );
-          
-          // Only add valid subcategories if any exist
+    
           if (validSubCategories.length > 0) {
-            categoryData.subCategories = validSubCategories.map((sub) => ({
-              title: sub.title.trim(),
-              description: sub.description || '',
-              isActive: sub.isActive !== false,
-              createdAt: now,
-              updatedAt: now
-            }));
+            const subCategoryIds = [];
+    
+            for (const sub of validSubCategories) {
+              const newSubCategory = new SubCategory({
+                title: sub.title.trim(),
+                description: sub.description || '',
+                parentCategoryId: newCategory._id // Link subcategory to parent category
+              });
+    
+              await newSubCategory.save();
+              subCategoryIds.push(newSubCategory._id);
+            }
+    
+            newCategory.subCategories = subCategoryIds;
           }
-          // We don't throw an error if no valid subcategories, just create the category without subcategories
         }
-
-        // 4. Add new category to restaurant
-        restaurant.categories.push(categoryData);
+    
+        // 4. Save the new category with updated subcategories
+        await newCategory.save();
+    
+        // 5. Add new category to restaurant's categories
+        restaurant.categories.push(newCategory._id);
         await restaurant.save();
-
+    
+        // 6. Return updated restaurant
         return transformRestaurant(restaurant);
+    
       } catch (error) {
         console.error('Error creating category:', error);
         throw error;
       }
-    },
-
+    },   
     editCategory: async (_, { category }, context) => {
-      console.log('Editing category:', category);
       try {
-        const restaurant = await Restaurant.findById(category.restaurant);
-        if (!restaurant) {
-          throw new Error('Restaurant not found');
-        }
-
-        const categoryToUpdate = restaurant.categories.id(category._id);
+        console.log('Editing category:', category);
+        // 1. find category
+        const categoryToUpdate = await Category.findById(category._id);
         if (!categoryToUpdate) {
           throw new Error('Category not found');
         }
-
-        // Mettre à jour les champs de base
-        categoryToUpdate.title = category.title;
+    
+        // 2. edit category details
+        categoryToUpdate.title = category.title.trim();
         if (category.image !== undefined) {
           categoryToUpdate.image = category.image;
         }
-
-        // Mettre à jour les sous-catégories si fournies
+        if (category.description !== undefined) {
+          categoryToUpdate.description = category.description.trim();
+        }
+    
+        // 3. subcategories
         if (category.subCategories && Array.isArray(category.subCategories)) {
-          categoryToUpdate.subCategories = category.subCategories.map((sub, index) => {
-            if (!sub || !sub.title || sub.title.trim() === '') {
-              throw new Error(`Sub-category at position ${index + 1} is missing a title`);
-            }
-            return {
+          // delete existing subcategories
+          await SubCategory.deleteMany({ parentCategoryId: categoryToUpdate._id });
+    
+          const validSubCategories = category.subCategories.filter(sub =>
+            sub && sub.title && sub.title.trim() !== ''
+          );
+    
+          const newSubCategoryIds = [];
+    
+          for (const sub of validSubCategories) {
+            const newSubCategory = new SubCategory({
               title: sub.title.trim(),
               description: sub.description || '',
-              isActive: sub.isActive !== false
-            };
-          });
+              parentCategoryId: categoryToUpdate._id
+            });
+    
+            await newSubCategory.save();
+            newSubCategoryIds.push(newSubCategory._id);
+          }
+    
+          // edit category subcategories
+          categoryToUpdate.subCategories = newSubCategoryIds;
         }
-
-        await restaurant.save();
+    
+        await categoryToUpdate.save();
+    
+        const restaurant = await Restaurant.findById(category.restaurant).populate({
+          path: 'categories',
+          populate: {
+            path: 'foods',
+            populate: {
+              path: 'variations',
+              populate: {
+                path: 'addons'
+              }
+            }
+          }
+        });
         return transformRestaurant(restaurant);
+        
       } catch (error) {
         console.error('Error editing category:', error);
         throw error;
       }
     },
-
     deleteCategory: async (_, { id, restaurant }, context) => {
-      console.log('Deleting category:', id, 'from restaurant:', restaurant);
       try {
-        const restaurantToUpdate = await Restaurant.findById(restaurant);
+        console.log('Deleting category:', id, 'from restaurant:', restaurant);
+        // 1. find restaurant
+        const restaurantToUpdate = await Restaurant.findById(restaurant).populate({
+          path: 'categories',
+          populate: {
+            path: 'foods',
+            populate: {
+              path: 'variations',
+              populate: {
+                path: 'addons'
+              }
+            }
+          }
+        });
         if (!restaurantToUpdate) {
           throw new Error('Restaurant not found');
         }
-
-        const categoryToDelete = restaurantToUpdate.categories.id(id);
+    
+        // 2. find category
+        const categoryToDelete = await Category.findById(id);
         if (!categoryToDelete) {
           throw new Error('Category not found');
         }
-
-        categoryToDelete.remove();
+    
+        // 3. delete subcategories
+        await SubCategory.deleteMany({ parentCategoryId: id });
+    
+        // 4. delete category
+        await Category.findByIdAndDelete(id);
+    
+        // 5. remove from restaurant categories
+        restaurantToUpdate.categories = restaurantToUpdate.categories.filter(
+          (categoryId) => !categoryId.equals(id)
+        );
+    
         await restaurantToUpdate.save();
-
+    
         return transformRestaurant(restaurantToUpdate);
+    
       } catch (error) {
         console.error('Error deleting category:', error);
         throw error;
       }
-    },
-
+    },    
     createSubCategories: async (_, { subCategories }) => {
       console.log("Creating subcategories:", subCategories);
       
