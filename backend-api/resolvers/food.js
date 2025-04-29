@@ -287,19 +287,5 @@ module.exports = {
         throw new Error('Failed to delete food item');
       }
     }    
-    // deleteFood: async (_, { id, restaurant: restId, categoryId }, context) => {
-    //   console.log('Deleting food item with ID:', id);
-    //   try {
-    //     const restaurant = await Restaurant.findOne({ _id: restId });
-    //     if (!restaurant) throw new Error('Restaurant not found');
-
-    //     restaurant.categories.id(categoryId).foods.id(id).remove();
-    //     const result = await restaurant.save();
-    //     return await transformRestaurant(result);
-    //   } catch (err) {
-    //     console.error('Error deleting food item:', err);
-    //     throw new Error('Failed to delete food item');
-    //   }
-    // }
   }
 };
