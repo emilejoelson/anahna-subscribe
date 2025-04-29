@@ -12,6 +12,7 @@ const Rider = require('../models/rider');
 const Earnings = require('../models/earnings');
 const Review = require('../models/review');
 const Order = require('../models/order');
+const Option = require('../models/option');
 const mongoose = require('mongoose');
 
 const { dateToString } = require('../helpers/date');
@@ -210,19 +211,45 @@ const transformOrder = async order => {
       throw new Error('Order is null or undefined');
     }
 
+    // Transformer les items
     const items = (order.items || []).map(item => {
       return {
-        ...item,
+        ...item._doc,
         variation: item.variation ? {
           ...item.variation,
           ...(item.variation._doc || {})
         } : null,
-        addons: (item.addons || []).map(addon => ({
-          ...addon,
-          ...(addon._doc || {})
-        }))
+        
+        // Transformer les addons de chaque item
+        addons: (item.addons || []).map(async addon => {
+          const addonData = {
+            ...addon,
+            ...(addon._doc || {}),
+            options: [] // Initialiser les options de l'addon
+          };
+
+          // Peupler les options choisies dans cet addon
+          if (item.options && item.options.length > 0) {
+            // Filtrer et peupler les options qui sont référencées dans `item.options`
+            const selectedOptions = await Option.find({
+              _id: { $in: item.options }
+            });
+
+            addonData.options = selectedOptions.map(option => ({
+              _id: option._id,
+              title: option.title,
+              description: option.description,
+              price: option.price
+            }));
+          }
+
+          return addonData;
+        })
       };
     });
+
+    // Attendre que toutes les promesses de transformation des addons soient résolues
+    const resolvedItems = await Promise.all(items);
 
     // Fetch rider data directly if it exists
     let riderData = null;
@@ -233,10 +260,11 @@ const transformOrder = async order => {
       }
     }
 
+    // Formater l'objet de commande
     const formattedOrder = {
       ...order._doc,
       _id: order.id,
-      items,
+      items: resolvedItems, // Remplacer les items transformés
       user: order.user ? user.bind(this, order.user) : null,
       restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
       rider: riderData,
@@ -256,6 +284,60 @@ const transformOrder = async order => {
     throw err;
   }
 };
+
+
+// const transformOrder = async order => {
+//   try {
+//     if (!order) {
+//       throw new Error('Order is null or undefined');
+//     }
+
+//     const items = (order.items || []).map(item => {
+//       return {
+//         ...item,
+//         variation: item.variation ? {
+//           ...item.variation,
+//           ...(item.variation._doc || {})
+//         } : null,
+//         addons: (item.addons || []).map(addon => ({
+//           ...addon,
+//           ...(addon._doc || {})
+//         }))
+//       };
+//     });
+
+//     // Fetch rider data directly if it exists
+//     let riderData = null;
+//     if (order.rider) {
+//       const riderDoc = await Rider.findById(order.rider);
+//       if (riderDoc) {
+//         riderData = await rider(order.rider);
+//       }
+//     }
+
+//     const formattedOrder = {
+//       ...order._doc,
+//       _id: order.id,
+//       items,
+//       user: order.user ? user.bind(this, order.user) : null,
+//       restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
+//       rider: riderData,
+//       orderStatus: order.orderStatus || 'PENDING',
+//       createdAt: order._doc.createdAt ? new Date(order._doc.createdAt).toISOString() : null,
+//       updatedAt: order._doc.updatedAt ? new Date(order._doc.updatedAt).toISOString() : null,
+//       acceptedAt: order._doc.acceptedAt ? new Date(order._doc.acceptedAt).toISOString() : null,
+//       pickedAt: order._doc.pickedAt ? new Date(order._doc.pickedAt).toISOString() : null,
+//       deliveredAt: order._doc.deliveredAt ? new Date(order._doc.deliveredAt).toISOString() : null,
+//       cancelledAt: order._doc.cancelledAt ? new Date(order._doc.cancelledAt).toISOString() : null,
+//       completionTime: order._doc.completionTime ? new Date(order._doc.completionTime).toISOString() : null
+//     };
+
+//     return formattedOrder;
+//   } catch (err) {
+//     console.error('Error transforming order:', err);
+//     throw err;
+//   }
+// };
 
 const populateReviewsDetail = async restaurantId => {
   const data = await Review.find({ restaurant: restaurantId })
