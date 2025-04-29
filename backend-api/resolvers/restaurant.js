@@ -23,6 +23,7 @@ const {
   transformOrder,
   transformMinimalRestaurantData,
   transformMinimalRestaurants,
+  transformRestaurantNew,
 } = require("./merge");
 const {
   order_status,
@@ -277,18 +278,25 @@ module.exports = {
         }
 
         const restaurants = await Restaurant.find(query)
-          .populate("reviewData")
-          .populate("addons")
-          .populate("options")
-          .populate({
-            path: "categories.foods",
+        .populate("reviewData")
+        .populate("addons")
+        .populate("options")
+        .populate({
+          path: "categories",
+          model: "Category",
+          populate: {
+            path: "foods",
             model: "Food",
             populate: {
-              path: "variations.addons",
-              model: "Addon",
-            },
-          });
-        console.log("restaurants", restaurants);
+              path: "variations",
+              model: "Variation",
+              populate: {
+                path: "addons",
+                model: "Addon"
+              }
+            }
+          }
+        });
           
         const offers = await Offer.find({
           restaurants: { $in: restaurants.map((r) => r._id.toString()) },
