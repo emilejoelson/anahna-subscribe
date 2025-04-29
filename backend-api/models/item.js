@@ -18,10 +18,6 @@ const itemSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Addon'
   }],
-  options: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Option'
-  }],
   specialInstructions: String,
   isActive: {
     type: Boolean,

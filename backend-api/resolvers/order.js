@@ -11,7 +11,6 @@ const Restaurant = require('../models/restaurant')
 const Configuration = require('../models/configuration')
 const Paypal = require('../models/paypal')
 const Stripe = require('../models/stripe')
-const Option = require('../models/option')
 const {
   sendNotificationToCustomerWeb,
 } = require("../helpers/firebase-web-notifications");
@@ -591,23 +590,6 @@ module.exports = {
           .sort({ createdAt: -1 })
           .skip(args.offset || 0)
           .limit(50)
-          .populate({
-            path: 'items',
-            populate: [
-              {
-                path: 'addons',
-                model: 'Addon',
-                populate: {
-                  path: 'options',
-                  model: 'Option'
-                }
-              },
-              {
-                path: 'variation',  // Ajouter la population pour les variations des items
-                model: 'Variation'
-              }
-            ]
-          });
         const filterOrders = orders.filter(order => order.restaurant)
         
         const transformedOrders = filterOrders.map(order => {
@@ -924,22 +906,6 @@ module.exports = {
       }
       try {
         const restaurant = await Restaurant.findById(args.restaurant)
-        .populate({
-          path: "categories",
-          model: "Category",
-          populate: {
-            path: "foods",
-            model: "Food",
-            populate: {
-              path: "variations",
-              model: "Variation",
-              populate: {
-                path: "addons",
-                model: "Addon"
-              }
-            }
-          }
-        });
         const location = new Point({
           type: "Point",
           coordinates: [+args.address.longitude, +args.address.latitude],
@@ -976,23 +942,21 @@ module.exports = {
           );
 
           const addonList = []
-          const allSelectedOptionRefs = []
-
           item.addons.forEach((data) => {
+            const selectedOptions = []
             data.options.forEach((option) => {
-              const optionDoc = availableOptions.find(op => op._id.toString() === option)
-              if (optionDoc) {
-                allSelectedOptionRefs.push(optionDoc._id)
-              }
+              selectedOptions.push(
+                availableOptions.find(op => op._id.toString() === option)
+              )
             })
-
             const adds = availableAddons.find(
               (addon) => addon._id.toString() === data._id.toString()
             );
 
-            if (adds) {
-              addonList.push(adds._id)
-            }
+            addonList.push({
+              ...adds._doc,
+              options: selectedOptions
+            })
           })
 
           const itemData = new Item({
@@ -1001,15 +965,14 @@ module.exports = {
             description: food.description,
             image: food.image,
             variation,
-            addons: addonList.map(a => a._id),
-            options: allSelectedOptionRefs,
+            addons: addonList,
             quantity: item.quantity,
             specialInstructions: item.specialInstructions,
           });
 
           const savedItem = await itemData.save()
+
           ItemsData.push(savedItem)
-          console.log('ItemsData', ItemsData._id)
         }
 
         const user = await User.findById(req.userId);
@@ -1048,27 +1011,22 @@ module.exports = {
 
         ItemsData.forEach(async item => {
           let itemPrice = item.variation.price
-          console.log('ItemsData', ItemsData)
-          // Si l'item a des addons
           if (item.addons && item.addons.length > 0) {
             const addonDetails = []
-            
-            // Recherche de tous les options à partir des références stockées dans `options` 
-            const allOptions = await Option.find({ _id: { $in: item.options } }) // Requête pour récupérer toutes les options par leurs références
-            allOptions.forEach(option => {
-              itemPrice += option.price  // Ajout du prix de l'option au prix de l'item
-              addonDetails.push(
-                `${option.title} ${configuration.currencySymbol}${option.price}`  // Détails de l'addon
-              )
+            item.addons.forEach(({ options }) => {
+              options.forEach(option => {
+                itemPrice = itemPrice + option.price
+                addonDetails.push(
+                  `${option.title}	${configuration.currencySymbol}${option.price}`
+                )
+              })
             })
           }
-        
-          // Ajout du prix total de l'item avec la quantité
           price += itemPrice * item.quantity
-          
-          return `${item.quantity} x ${item.title}${item.variation.title ? `(${item.variation.title})` : ''} ${configuration.currencySymbol}${item.variation.price}`
-        })        
-
+          return `${item.quantity} x ${item.title}${
+            item.variation.title ? `(${item.variation.title})` : ''
+          }	${configuration.currencySymbol}${item.variation.price}`
+        })
         let coupon = null
         if (args.couponCode) {
           coupon = await Coupon.findOne({ title: args.couponCode });
@@ -1080,7 +1038,7 @@ module.exports = {
           zone: zone._id,
           restaurant: args.restaurant,
           user: req.userId,
-          items: ItemsData.map(i => i._id),
+          items: ItemsData,
           deliveryAddress: {
             ...args.address,
             location: location,
@@ -1110,24 +1068,7 @@ module.exports = {
         let result = null
         if (args.paymentMethod === 'COD') {
           const order = new Order(orderObj)
-          const populatedOrder = await Order.populate(order, {
-            path: 'items',
-            populate: [
-              {
-                path: 'addons',
-                model: 'Addon',
-                populate: {
-                  path: 'options',
-                  model: 'Option'
-                }
-              },
-              {
-                path: 'variation', // Ajout de la population pour la variation
-                model: 'Variation'
-              }
-            ]
-          });
-          result = await populatedOrder.save()
+          result = await order.save()
 
           const placeOrder_template = await placeOrderTemplate([
             result.orderId,
@@ -1205,7 +1146,6 @@ module.exports = {
           throw new Error("Invalid Payment Method");
         }
         const orderResult = await transformOrder(result)
-        console.log(orderResult)
         return orderResult
       } catch (err) {
         throw err;
