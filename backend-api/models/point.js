@@ -6,11 +6,10 @@ const pointSchema = new Schema({
     type: String,
     enum: ['Point'],
     default: 'Point',
-    required: true
   },
   coordinates: {
     type: [Number],
-    required: true
+    default: [0.0, 0.0]
   }
 });
 

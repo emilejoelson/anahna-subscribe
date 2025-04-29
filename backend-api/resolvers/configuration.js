@@ -7,7 +7,7 @@ module.exports = {
         console.log('Fetching configuration');
         try {
           const configurations = await Configuration.findOne();
-          console.log('Configurations:', configurations);
+          // console.log('Configurations:', configurations);
           return {
             ...configurations._doc,
             _id: configurations.id,

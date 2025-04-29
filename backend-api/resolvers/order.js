@@ -1,15 +1,17 @@
-const path = require("path");
-const User = require("../models/user");
-const Rider = require("../models/rider");
-const Order = require("../models/order");
-const Item = require("../models/item");
-const Coupon = require("../models/coupon");
-const Point = require("../models/point");
-const Zone = require("../models/zone");
-const Restaurant = require("../models/restaurant");
-const Configuration = require("../models/configuration");
-const Paypal = require("../models/paypal");
-const Stripe = require("../models/stripe");
+
+const path = require('path')
+const User = require('../models/user')
+const Rider = require('../models/rider')
+const Order = require('../models/order')
+const Item = require('../models/item')
+const Coupon = require('../models/coupon')
+const Point = require('../models/point')
+const Zone = require('../models/zone')
+const Restaurant = require('../models/restaurant')
+const Configuration = require('../models/configuration')
+const Paypal = require('../models/paypal')
+const Stripe = require('../models/stripe')
+const Option = require('../models/option')
 const {
   sendNotificationToCustomerWeb,
 } = require("../helpers/firebase-web-notifications");
@@ -588,16 +590,33 @@ module.exports = {
         const orders = await Order.find({ user: req.userId })
           .sort({ createdAt: -1 })
           .skip(args.offset || 0)
-          .limit(50);
-        const filterOrders = orders.filter((order) => order.restaurant);
-
-        const transformedOrders = filterOrders.map((order) => {
-          return transformOrder(order);
-        });
-
-        await setCache(cacheKey, transformedOrders);
-
-        return transformedOrders;
+          .limit(50)
+          .populate({
+            path: 'items',
+            populate: [
+              {
+                path: 'addons',
+                model: 'Addon',
+                populate: {
+                  path: 'options',
+                  model: 'Option'
+                }
+              },
+              {
+                path: 'variation',  // Ajouter la population pour les variations des items
+                model: 'Variation'
+              }
+            ]
+          });
+        const filterOrders = orders.filter(order => order.restaurant)
+        
+        const transformedOrders = filterOrders.map(order => {
+          return transformOrder(order)
+        })
+        
+        await setCache(cacheKey, transformedOrders)
+        
+        return transformedOrders
       } catch (err) {
         throw err;
       }
@@ -904,7 +923,23 @@ module.exports = {
         throw new Error("Unauthenticated!");
       }
       try {
-        const restaurant = await Restaurant.findById(args.restaurant);
+        const restaurant = await Restaurant.findById(args.restaurant)
+        .populate({
+          path: "categories",
+          model: "Category",
+          populate: {
+            path: "foods",
+            model: "Food",
+            populate: {
+              path: "variations",
+              model: "Variation",
+              populate: {
+                path: "addons",
+                model: "Addon"
+              }
+            }
+          }
+        });
         const location = new Point({
           type: "Point",
           coordinates: [+args.address.longitude, +args.address.latitude],
@@ -940,23 +975,25 @@ module.exports = {
             (v) => v._id.toString() === item.variation
           );
 
-          const addonList = [];
+          const addonList = []
+          const allSelectedOptionRefs = []
+
           item.addons.forEach((data) => {
-            const selectedOptions = [];
             data.options.forEach((option) => {
-              selectedOptions.push(
-                availableOptions.find((op) => op._id.toString() === option)
-              );
-            });
+              const optionDoc = availableOptions.find(op => op._id.toString() === option)
+              if (optionDoc) {
+                allSelectedOptionRefs.push(optionDoc._id)
+              }
+            })
+
             const adds = availableAddons.find(
               (addon) => addon._id.toString() === data._id.toString()
             );
 
-            addonList.push({
-              ...adds._doc,
-              options: selectedOptions,
-            });
-          });
+            if (adds) {
+              addonList.push(adds._id)
+            }
+          })
 
           const itemData = new Item({
             food: item.food,
@@ -964,14 +1001,15 @@ module.exports = {
             description: food.description,
             image: food.image,
             variation,
-            addons: addonList,
+            addons: addonList.map(a => a._id),
+            options: allSelectedOptionRefs,
             quantity: item.quantity,
             specialInstructions: item.specialInstructions,
           });
 
-          const savedItem = await itemData.save();
-
-          ItemsData.push(savedItem);
+          const savedItem = await itemData.save()
+          ItemsData.push(savedItem)
+          console.log('ItemsData', ItemsData._id)
         }
 
         const user = await User.findById(req.userId);
@@ -1008,25 +1046,30 @@ module.exports = {
 
         let price = 0.0;
 
-        ItemsData.forEach(async (item) => {
-          let itemPrice = item.variation.price;
+        ItemsData.forEach(async item => {
+          let itemPrice = item.variation.price
+          console.log('ItemsData', ItemsData)
+          // Si l'item a des addons
           if (item.addons && item.addons.length > 0) {
-            const addonDetails = [];
-            item.addons.forEach(({ options }) => {
-              options.forEach((option) => {
-                itemPrice = itemPrice + option.price;
-                addonDetails.push(
-                  `${option.title}	${configuration.currencySymbol}${option.price}`
-                );
-              });
-            });
+            const addonDetails = []
+            
+            // Recherche de tous les options à partir des références stockées dans `options` 
+            const allOptions = await Option.find({ _id: { $in: item.options } }) // Requête pour récupérer toutes les options par leurs références
+            allOptions.forEach(option => {
+              itemPrice += option.price  // Ajout du prix de l'option au prix de l'item
+              addonDetails.push(
+                `${option.title} ${configuration.currencySymbol}${option.price}`  // Détails de l'addon
+              )
+            })
           }
-          price += itemPrice * item.quantity;
-          return `${item.quantity} x ${item.title}${
-            item.variation.title ? `(${item.variation.title})` : ""
-          }	${configuration.currencySymbol}${item.variation.price}`;
-        });
-        let coupon = null;
+        
+          // Ajout du prix total de l'item avec la quantité
+          price += itemPrice * item.quantity
+          
+          return `${item.quantity} x ${item.title}${item.variation.title ? `(${item.variation.title})` : ''} ${configuration.currencySymbol}${item.variation.price}`
+        })        
+
+        let coupon = null
         if (args.couponCode) {
           coupon = await Coupon.findOne({ title: args.couponCode });
           if (coupon) {
@@ -1037,7 +1080,7 @@ module.exports = {
           zone: zone._id,
           restaurant: args.restaurant,
           user: req.userId,
-          items: ItemsData,
+          items: ItemsData.map(i => i._id),
           deliveryAddress: {
             ...args.address,
             location: location,
@@ -1064,10 +1107,27 @@ module.exports = {
           instructions: args.instructions,
         };
 
-        let result = null;
-        if (args.paymentMethod === "COD") {
-          const order = new Order(orderObj);
-          result = await order.save();
+        let result = null
+        if (args.paymentMethod === 'COD') {
+          const order = new Order(orderObj)
+          const populatedOrder = await Order.populate(order, {
+            path: 'items',
+            populate: [
+              {
+                path: 'addons',
+                model: 'Addon',
+                populate: {
+                  path: 'options',
+                  model: 'Option'
+                }
+              },
+              {
+                path: 'variation', // Ajout de la population pour la variation
+                model: 'Variation'
+              }
+            ]
+          });
+          result = await populatedOrder.save()
 
           const placeOrder_template = await placeOrderTemplate([
             result.orderId,
@@ -1144,8 +1204,9 @@ module.exports = {
         } else {
           throw new Error("Invalid Payment Method");
         }
-        const orderResult = await transformOrder(result);
-        return orderResult;
+        const orderResult = await transformOrder(result)
+        console.log(orderResult)
+        return orderResult
       } catch (err) {
         throw err;
       }

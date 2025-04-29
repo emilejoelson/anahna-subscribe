@@ -6,7 +6,7 @@ const subCategorySchema = new Schema({
   title: {
     type: String,
     required: true,
-    maxLength: 15
+    // maxLength: 15
   },
   description: String,
   isActive: {

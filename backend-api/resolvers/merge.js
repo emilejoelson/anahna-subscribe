@@ -2,6 +2,8 @@ const Food = require('../models/food');
 const User = require('../models/user');
 const Restaurant = require('../models/restaurant');
 const Category = require('../models/category');
+const SubCategory = require('../models/subcategory');
+const Addon = require('../models/addon');
 const Owner = require('../models/owner');
 const Offer = require('../models/offer');
 const Section = require('../models/section');
@@ -10,6 +12,7 @@ const Rider = require('../models/rider');
 const Earnings = require('../models/earnings');
 const Review = require('../models/review');
 const Order = require('../models/order');
+const Option = require('../models/option');
 const mongoose = require('mongoose');
 
 const { dateToString } = require('../helpers/date');
@@ -208,19 +211,45 @@ const transformOrder = async order => {
       throw new Error('Order is null or undefined');
     }
 
+    // Transformer les items
     const items = (order.items || []).map(item => {
       return {
-        ...item,
+        ...item._doc,
         variation: item.variation ? {
           ...item.variation,
           ...(item.variation._doc || {})
         } : null,
-        addons: (item.addons || []).map(addon => ({
-          ...addon,
-          ...(addon._doc || {})
-        }))
+        
+        // Transformer les addons de chaque item
+        addons: (item.addons || []).map(async addon => {
+          const addonData = {
+            ...addon,
+            ...(addon._doc || {}),
+            options: [] // Initialiser les options de l'addon
+          };
+
+          // Peupler les options choisies dans cet addon
+          if (item.options && item.options.length > 0) {
+            // Filtrer et peupler les options qui sont référencées dans `item.options`
+            const selectedOptions = await Option.find({
+              _id: { $in: item.options }
+            });
+
+            addonData.options = selectedOptions.map(option => ({
+              _id: option._id,
+              title: option.title,
+              description: option.description,
+              price: option.price
+            }));
+          }
+
+          return addonData;
+        })
       };
     });
+
+    // Attendre que toutes les promesses de transformation des addons soient résolues
+    const resolvedItems = await Promise.all(items);
 
     // Fetch rider data directly if it exists
     let riderData = null;
@@ -231,10 +260,11 @@ const transformOrder = async order => {
       }
     }
 
+    // Formater l'objet de commande
     const formattedOrder = {
       ...order._doc,
       _id: order.id,
-      items,
+      items: resolvedItems, // Remplacer les items transformés
       user: order.user ? user.bind(this, order.user) : null,
       restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
       rider: riderData,
@@ -254,6 +284,60 @@ const transformOrder = async order => {
     throw err;
   }
 };
+
+
+// const transformOrder = async order => {
+//   try {
+//     if (!order) {
+//       throw new Error('Order is null or undefined');
+//     }
+
+//     const items = (order.items || []).map(item => {
+//       return {
+//         ...item,
+//         variation: item.variation ? {
+//           ...item.variation,
+//           ...(item.variation._doc || {})
+//         } : null,
+//         addons: (item.addons || []).map(addon => ({
+//           ...addon,
+//           ...(addon._doc || {})
+//         }))
+//       };
+//     });
+
+//     // Fetch rider data directly if it exists
+//     let riderData = null;
+//     if (order.rider) {
+//       const riderDoc = await Rider.findById(order.rider);
+//       if (riderDoc) {
+//         riderData = await rider(order.rider);
+//       }
+//     }
+
+//     const formattedOrder = {
+//       ...order._doc,
+//       _id: order.id,
+//       items,
+//       user: order.user ? user.bind(this, order.user) : null,
+//       restaurant: order.restaurant ? restaurant.bind(this, order.restaurant) : null,
+//       rider: riderData,
+//       orderStatus: order.orderStatus || 'PENDING',
+//       createdAt: order._doc.createdAt ? new Date(order._doc.createdAt).toISOString() : null,
+//       updatedAt: order._doc.updatedAt ? new Date(order._doc.updatedAt).toISOString() : null,
+//       acceptedAt: order._doc.acceptedAt ? new Date(order._doc.acceptedAt).toISOString() : null,
+//       pickedAt: order._doc.pickedAt ? new Date(order._doc.pickedAt).toISOString() : null,
+//       deliveredAt: order._doc.deliveredAt ? new Date(order._doc.deliveredAt).toISOString() : null,
+//       cancelledAt: order._doc.cancelledAt ? new Date(order._doc.cancelledAt).toISOString() : null,
+//       completionTime: order._doc.completionTime ? new Date(order._doc.completionTime).toISOString() : null
+//     };
+
+//     return formattedOrder;
+//   } catch (err) {
+//     console.error('Error transforming order:', err);
+//     throw err;
+//   }
+// };
 
 const populateReviewsDetail = async restaurantId => {
   const data = await Review.find({ restaurant: restaurantId })
@@ -318,7 +402,7 @@ const categoryFoods = async foods => {
       subCategory: foodObj.subCategory || '',
       // Directly transform variations here instead of binding
       variations: (food.variations || []).map(variation => {
-        const variationId = variation._id || new mongoose.Types.ObjectId();
+        const variationId = variation._id ;
         return {
           _id: variationId.toString(),
           title: variation.title || 'Default Variation', 
@@ -508,7 +592,6 @@ const transformRestaurants = async (restaurants) => {
  * @returns {Promise<Object>} - Promise resolving to a transformed restaurant object
  */
 const transformRestaurant = async (restaurant) => {
-  // Add a safety check to prevent returning null for _id
   if (!restaurant) {
     console.error('Attempted to transform null or undefined restaurant');
     return {
@@ -523,65 +606,58 @@ const transformRestaurant = async (restaurant) => {
       shopType: SHOP_TYPE.RESTAURANT
     };
   }
-  
-  // Handle case when restaurant might be a plain object without _doc property
+
   const restaurantData = restaurant._doc || restaurant;
-  
-  // Count all foods for logging
-  let totalFoodsCount = 0;
-  
+
   const formattedCategories = (restaurant.categories || []).map(category => {
     const foodItems = (category.foods || []).map(food => {
-      totalFoodsCount++;
       return {
-        _id: food._id?.toString() || new mongoose.Types.ObjectId().toString(),
+        _id: food._id.toString(),
         title: food.title || 'Unnamed Food',
         description: food.description || '',
         image: food.image || '',
         isActive: food.isActive !== undefined ? food.isActive : true,
         isOutOfStock: food.isOutOfStock !== undefined ? food.isOutOfStock : false,
         subCategory: food.subCategory || '',
-        variations: (food.variations || []).map(variation => {
-          const variationId = variation._id || new mongoose.Types.ObjectId();
-          return {
-            _id: variationId.toString(),
-            title: variation.title || 'Default Variation', 
-            price: variation.price || 0,
-            discounted: variation.discounted || null,
-            addons: variation.addons || [],
-            isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
-          };
-        }),
-        createdAt: food.createdAt ? dateToString(food.createdAt) : dateToString(new Date()),
-        updatedAt: food.updatedAt ? dateToString(food.updatedAt) : dateToString(new Date())
+        variations: (food.variations || []).map(variation => ({
+          _id: variation._id.toString(),
+          title: variation.title || 'Default Variation',
+          price: variation.price || 0,
+          discounted: variation.discounted || null,
+          addons: variation.addons?.map(addon => addon._id.toString()) || [],
+          isOutOfStock: variation.isOutOfStock !== undefined ? variation.isOutOfStock : false
+        })),
+        createdAt: dateToString(food.createdAt || new Date()),
+        updatedAt: dateToString(food.updatedAt || new Date())
       };
     });
-    
+
     return {
-      _id: category._id?.toString() || new mongoose.Types.ObjectId().toString(),
+      _id: category._id.toString(),
       title: category.title || '',
       description: category.description || '',
       image: category.image || '',
       isActive: category.isActive !== undefined ? category.isActive : true,
       foods: foodItems,
       subCategories: (category.subCategories || []).map(sub => ({
-        _id: sub._id?.toString() || new mongoose.Types.ObjectId().toString(),
+        _id: sub._id.toString(),
         title: sub.title || '',
         description: sub.description || '',
         isActive: sub.isActive !== undefined ? sub.isActive : true,
-        parentCategoryId: category._id?.toString() || new mongoose.Types.ObjectId().toString()
+        parentCategoryId: category._id.toString()
       })),
-      createdAt: category.createdAt ? dateToString(category.createdAt) : dateToString(new Date()),
-      updatedAt: category.updatedAt ? dateToString(category.updatedAt) : dateToString(new Date())
+      createdAt: dateToString(category.createdAt || new Date()),
+      updatedAt: dateToString(category.updatedAt || new Date())
     };
   });
-  
-  // IMPORTANT: Actually resolve these promises rather than storing function references
-  const options = await populateOptions(restaurant.options || []);
-  const addons = await populateAddons(restaurant.addons || []);
-  const restaurantId = restaurant.id || restaurant._id?.toString() || 'unknown';
-  const reviewData = await populateReviewsDetail(restaurantId);
-  
+
+  const restaurantId = restaurant._id.toString();
+  const [options, addons, reviewData] = await Promise.all([
+    populateOptions(restaurant.options || []),
+    populateAddons(restaurant.addons || []),
+    populateReviewsDetail(restaurantId)
+  ]);
+
   let owner = null;
   try {
     if (restaurant.owner) {
@@ -590,9 +666,8 @@ const transformRestaurant = async (restaurant) => {
   } catch (error) {
     console.error(`Error populating owner for restaurant ${restaurantId}:`, error);
   }
-  
-  // Create a clean object with all required fields
-  const result = {
+
+  return {
     _id: restaurantId,
     name: restaurantData.name || 'Unnamed Restaurant',
     description: restaurantData.description || '',
@@ -601,21 +676,114 @@ const transformRestaurant = async (restaurant) => {
     address: restaurantData.address || {},
     location: restaurantData.location || { coordinates: [0, 0] },
     categories: formattedCategories,
-    options: options,
-    addons: addons,
-    reviewData: reviewData,
+    options,
+    addons,
+    reviewData,
     zone: restaurantData.zone || null,
-    owner: owner,
+    owner,
     shopType: restaurantData.shopType || SHOP_TYPE.RESTAURANT,
     isActive: restaurantData.isActive !== undefined ? restaurantData.isActive : true,
     openingTimes: restaurantData.openingTimes || [],
     tags: restaurantData.tags || [],
     isCloned: restaurantData.isCloned || false,
-    createdAt: restaurantData.createdAt ? dateToString(restaurantData.createdAt) : dateToString(new Date()),
-    updatedAt: restaurantData.updatedAt ? dateToString(restaurantData.updatedAt) : dateToString(new Date())
+    createdAt: dateToString(restaurantData.createdAt || new Date()),
+    updatedAt: dateToString(restaurantData.updatedAt || new Date())
   };
-  
-  return result;
+};
+
+const transformRestaurantNew = (restaurant) => {
+  if (!restaurant) return null;
+
+  return {
+    _id: restaurant._id.toString(),
+    unique_restaurant_id: restaurant.unique_restaurant_id,
+    orderPrefix: restaurant.orderPrefix,
+    name: restaurant.name,
+    image: restaurant.image,
+    logo: restaurant.logo,
+    address: restaurant.address,
+    location: restaurant.location,
+    categories: restaurant.categories?.map(category => ({
+      _id: category._id.toString(),
+      title: category.title,
+      description: category.description,
+      image: category.image,
+      isActive: category.isActive,
+      createdAt: category.createdAt?.toISOString(),
+      updatedAt: category.updatedAt?.toISOString(),
+      subCategories: category.subCategories || [],
+      foods: category.foods?.map(food => ({
+        _id: food._id.toString(),
+        title: food.title,
+        description: food.description,
+        image: food.image,
+        isActive: food.isActive,
+        createdAt: food.createdAt?.toISOString(),
+        updatedAt: food.updatedAt?.toISOString(),
+        subCategory: food.subCategory,
+        isOutOfStock: food.isOutOfStock,
+        variations: food.variations?.map(variation => ({
+          _id: variation._id.toString(),
+          title: variation.title,
+          price: variation.price,
+          discounted: variation.discounted,
+          addons: variation.addons,
+          isOutOfStock: variation.isOutOfStock,
+        })) || [],
+      })) || [],
+    })) || [],
+    orderId: restaurant.orderId,
+    options: restaurant.options || [],
+    addons: restaurant.addons || [],
+    reviewData: restaurant.reviewData
+      ? {
+          total: restaurant.reviewData.total,
+          ratings: restaurant.reviewData.ratings,
+          reviews: restaurant.reviewData.reviews || [],
+        }
+      : null,
+    zone: restaurant.zone,
+    username: restaurant.username,
+    password: restaurant.password,
+    deliveryTime: restaurant.deliveryTime,
+    minimumOrder: restaurant.minimumOrder,
+    sections: restaurant.sections || [],
+    rating: parseFloat(restaurant.rating) || 0,
+    isActive: restaurant.isActive,
+    isAvailable: restaurant.isAvailable,
+    openingTimes: restaurant.openingTimes,
+    slug: restaurant.slug,
+    stripeDetailsSubmitted: restaurant.stripeDetailsSubmitted,
+    commissionRate: restaurant.commissionRate,
+    owner: restaurant.owner
+      ? {
+          _id: restaurant.owner._id?.toString(),
+          email: restaurant.owner.email,
+        }
+      : null,
+    deliveryBounds: restaurant.deliveryBounds,
+    tax: restaurant.tax,
+    notificationToken: restaurant.notificationToken,
+    enableNotification: restaurant.enableNotification === 'true',
+    shopType: restaurant.shopType,
+    cuisines: restaurant.cuisines,
+    keywords: restaurant.keywords,
+    tags: restaurant.tags,
+    reviewCount: restaurant.reviewCount,
+    reviewAverage: restaurant.reviewAverage,
+    restaurantUrl: restaurant.restaurantUrl,
+    phone: restaurant.phone,
+    salesTax: restaurant.salesTax,
+    deliveryInfo: restaurant.deliveryInfo,
+    boundType: restaurant.boundType,
+    city: restaurant.city,
+    postCode: restaurant.postCode,
+    circleBounds: restaurant.circleBounds,
+    bussinessDetails: restaurant.bussinessDetails,
+    currentWalletAmount: restaurant.currentWalletAmount,
+    totalWalletAmount: restaurant.totalWalletAmount,
+    withdrawnWalletAmount: restaurant.withdrawnWalletAmount,
+  };
 };
 
 const transformMinimalRestaurants = async restaurants => {
@@ -765,3 +933,4 @@ exports.transformEarnings = transformEarnings;
 exports.transformWithDrawRequest = transformWithDrawRequest;
 exports.transformMinimalRestaurantData = transformMinimalRestaurantData;
 exports.transformMinimalRestaurants = transformMinimalRestaurants;
+exports.transformRestaurantNew = transformRestaurantNew;

@@ -401,34 +401,45 @@ type ItemVariation {
   }
 
   type Order {
-  _id: ID!
-  orderId: String!
-  zone: Zone
-  restaurant: RestaurantDetail!
-  deliveryAddress: OrderAddress!
-  user: UserBasic!
-  paymentMethod: String
-  paidAmount: Float
-  orderAmount: Float
-  orderStatus: String!
-  status: Boolean
-  paymentStatus: String
-  reason: String
-  isActive: Boolean!
-  isPickedUp: Boolean
-  createdAt: String!
-  deliveryCharges: Float
-  tipping: Float
-  taxationAmount: Float
-  rider: RiderBasic
-  items: [Item]
-  statusHistory: [OrderStatusHistory]
-}
-type OrderStatusHistory {
-  status: String!
-  timestamp: String!
-  note: String
-}
+    _id: ID!
+    orderId: String!
+    zone: Zone
+    restaurant: RestaurantDetail!
+    deliveryAddress: OrderAddress!
+    user: UserSimple!
+    paymentMethod: String
+    orderStatus: String!
+    isPickedUp: Boolean!
+    status: Boolean
+    isActive: Boolean!
+    createdAt: String!
+    rider: RiderBasic
+    items: [Item]
+    orderAmount: Float
+    paymentStatus: String
+    preparationTime: String
+    statusHistory: [OrderStatusHistory!]
+    review: Review
+    paidAmount: Float
+    orderDate: String
+    expectedTime: String
+    deliveryCharges: Float
+    tipping: Float
+    taxationAmount: Float
+    completionTime: String
+    reason: String
+    cancelledAt: String
+    assignedAt: String
+    deliveredAt: String
+    acceptedAt: String
+    pickedAt: String
+  }
+
+  type OrderStatusHistory {
+    status: String!
+    timestamp: String!
+    note: String
+  }
 
   interface OrderStatusOperation {
     _id: String!
@@ -449,12 +460,19 @@ type UserBasic {
   email: String
 }
 
-type RiderBasic {
-  _id: ID!
-  name: String!
-  username: String!
-  available: Boolean!
-}
+  type UserSimple {
+    _id: ID!
+    name: String
+    phone: String
+    email: String
+  }
+
+  type RiderBasic {
+    _id: ID!
+    name: String!
+    username: String!
+    available: Boolean!
+  }
 
   type Point {
   coordinates: [Float!]
@@ -1523,6 +1541,16 @@ type ItemAddon {
     totalCardOrders: Int!
   }
 
+  input BussinessDetailsInput {
+    bankName: String
+    accountName: String
+    accountCode: String
+    accountNumber: Float
+    bussinessRegNo: Float
+    companyRegNo: Float
+    taxRate: Float
+  }
+
   type Query {
     staffs: [Staff]
     staff(id: ID!): Staff
@@ -1673,15 +1701,6 @@ type ItemAddon {
       ending_date: String!
     ): RestaurantDashboardStats!
   }
-  input BussinessDetailsInput {
-    bankName: String
-    accountName: String
-    accountCode: String
-    accountNumber: Float
-    bussinessRegNo: Float
-    companyRegNo: Float
-    taxRate: Float
-  }
   type Mutation {
     createStaff(staffInput: StaffInput): Staff
     editStaff(staffInput: StaffInput): Staff
@@ -1827,11 +1846,9 @@ type ItemAddon {
     updateStatus(id: String!, orderStatus: String!): OrderStatusUpdateResponse!
     updateStatusRider(id: String!, status: String!): Order!
     updatePaymentStatus(id: String, status: String): Order!
-    createOption(optionInput: CreateOptionInput): Restaurant!
     createOptions(optionInput: CreateOptionInput): OptionsResponse!
     editOption(optionInput: editOptionInput): Restaurant!
-    updateOption(optionInput: editOptionInput): Restaurant!
-    deleteOption(id: String!, restaurant: String!): Restaurant!
+    deleteOption(id: String!, restaurant: String!): OptionsResponse!
     createAddons(addonInput: AddonInput): Restaurant!
     editAddon(addonInput: editAddonInput): Restaurant!
     deleteAddon(id: String!, restaurant: String!): Restaurant!

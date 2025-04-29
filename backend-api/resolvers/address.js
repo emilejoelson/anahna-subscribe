@@ -21,9 +21,9 @@ module.exports = {
         const address = {
           location: {
             type: 'Point',
-            coordinates: [addressInput.lng, addressInput.lat]
+            coordinates: [addressInput.longitude, addressInput.latitude]
           },
-          deliveryAddress: addressInput.location,
+          deliveryAddress: addressInput.deliveryAddress,
           details: addressInput.details || '',
           label: addressInput.label || 'Home',
           selected: true
@@ -52,9 +52,9 @@ module.exports = {
         Object.assign(addressToUpdate, {
           location: {
             type: 'Point',
-            coordinates: [addressInput.lng, addressInput.lat]
+            coordinates: [addressInput.longitude, addressInput.latitude]
           },
-          deliveryAddress: addressInput.location,
+          deliveryAddress: addressInput.deliveryAddress,
           details: addressInput.details || addressToUpdate.details,
           label: addressInput.label || addressToUpdate.label
         });
