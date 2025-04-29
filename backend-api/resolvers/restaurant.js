@@ -40,51 +40,26 @@ const {
   sendNotificationToRider,
 } = require("../helpers/notifications");
 const bcrypt = require("bcryptjs");
-const {
-  getCache,
-  setCache,
-  deleteCache,
-  clearCachePattern,
-} = require("../helpers/redisCache");
-
-const RESTAURANTS_CACHE_KEY = "restaurants:all";
-const RESTAURANT_CACHE_KEY_PREFIX = "restaurant:";
-const RESTAURANT_BY_OWNER_CACHE_PREFIX = "restaurant:owner:";
-const RESTAURANT_DELIVERY_ZONE_PREFIX = "restaurant:delivery-zone:";
-const RESTAURANTS_PREVIEW_CACHE_KEY = "restaurants:preview:all";
-const RESTAURANTS_CLONED_CACHE_KEY = "restaurants:cloned:all";
-const NEARBY_RESTAURANTS_CACHE_PREFIX = "restaurants:nearby:";
-const NEARBY_RESTAURANTS_PREVIEW_CACHE_PREFIX = "restaurants:nearby:preview:";
-const SUBCATEGORIES_CACHE_PREFIX = "subcategories:";
-const DEFAULT_TTL = parseInt(process.env.REDIS_TTL) || 3600;
 
 module.exports = {
   Query: {
     restaurants: async () => {
       try {
-        const cachedRestaurants = await getCache(RESTAURANTS_CACHE_KEY);
-        if (cachedRestaurants) {
-          console.log("✅ CACHE HIT: Returning restaurants from Redis cache");
-          return cachedRestaurants;
-        }
-    
-        console.log("❌ CACHE MISS: Fetching restaurants from database");
+        console.log("Fetching restaurants from database");
         const restaurants = await Restaurant.find();
-        
+
         // Make sure to wait for the transformation to complete
         const transformedRestaurants = await transformRestaurants(restaurants);
-        console.log("Transformed restaurants count:", transformedRestaurants.length);
-    
+        console.log(
+          "Transformed restaurants count:",
+          transformedRestaurants.length
+        );
+
         // Verify that the first item has an _id to debug
         if (transformedRestaurants.length > 0) {
           console.log("First restaurant _id:", transformedRestaurants[0]._id);
         }
-        
-        await setCache(
-          RESTAURANTS_CACHE_KEY,
-          transformedRestaurants,
-          DEFAULT_TTL
-        );
+
         return transformedRestaurants;
       } catch (err) {
         console.error("Error in restaurants resolver:", err);
@@ -93,36 +68,24 @@ module.exports = {
     },
     getClonedRestaurants: async () => {
       try {
-        // Try to get data from cache first
-        const cachedCloned = await getCache(RESTAURANTS_CLONED_CACHE_KEY);
-        if (cachedCloned) {
-          console.log(
-            "✅ CACHE HIT: Returning cloned restaurants from Redis cache"
-          );
-          return cachedCloned;
-        }
-    
-        console.log("❌ CACHE MISS: Fetching cloned restaurants from database");
+        console.log("Fetching cloned restaurants from database");
         const restaurants = await Restaurant.find({ isCloned: true });
-        
+
         // Important: await the transformation process since transformRestaurant is async
         const transformedRestaurants = await Promise.all(
-          restaurants.map(restaurant => transformRestaurant(restaurant))
+          restaurants.map((restaurant) => transformRestaurant(restaurant))
         );
-        
+
         // Log some details for debugging
-        console.log(`Transformed ${transformedRestaurants.length} cloned restaurants`);
-        if (transformedRestaurants.length > 0) {
-          console.log(`First cloned restaurant _id: ${transformedRestaurants[0]._id}`);
-        }
-    
-        // Cache the results
-        await setCache(
-          RESTAURANTS_CLONED_CACHE_KEY,
-          transformedRestaurants,
-          DEFAULT_TTL
+        console.log(
+          `Transformed ${transformedRestaurants.length} cloned restaurants`
         );
-        
+        if (transformedRestaurants.length > 0) {
+          console.log(
+            `First cloned restaurant _id: ${transformedRestaurants[0]._id}`
+          );
+        }
+
         return transformedRestaurants;
       } catch (error) {
         console.error("Error in getClonedRestaurants resolver:", error);
@@ -144,19 +107,7 @@ module.exports = {
           throw new Error("Invalid request, restaurant id not provided");
         }
 
-        const cacheKey = `${RESTAURANT_CACHE_KEY_PREFIX}${
-          filters.slug || filters._id
-        }`;
-        const cachedRestaurant = await getCache(cacheKey);
-
-        if (cachedRestaurant) {
-          console.log(
-            `✅ CACHE HIT: Returning restaurant from Redis cache for key ${cacheKey}`
-          );
-          return cachedRestaurant;
-        }
-
-        console.log("❌ CACHE MISS: Finding restaurant with filters:", filters);
+        console.log("Finding restaurant with filters:", filters);
         const restaurant = await Restaurant.findOne(filters)
           .select("-password")
           .populate("owner")
@@ -203,7 +154,6 @@ module.exports = {
         };
 
         console.log("Found restaurant:", restaurant.name);
-        await setCache(cacheKey, transformedRestaurant, DEFAULT_TTL);
         return transformedRestaurant;
       } catch (e) {
         console.error("Error in restaurant query:", e);
@@ -215,21 +165,11 @@ module.exports = {
       console.log("restaurantByOwner");
       try {
         const id = args.id || req.userId;
-        const cacheKey = `${RESTAURANT_BY_OWNER_CACHE_PREFIX}${id}`;
 
-        const cachedOwner = await getCache(cacheKey);
-        if (cachedOwner) {
-          console.log(
-            `✅ CACHE HIT: Returning owner's restaurant from Redis cache for owner ${id}`
-          );
-          return cachedOwner;
-        }
-
-        console.log(`❌ CACHE MISS: Fetching owner ${id} from database`);
+        console.log(`Fetching owner ${id} from database`);
         const owner = await Owner.findById(id);
         const transformedOwner = transformOwner(owner);
 
-        await setCache(cacheKey, transformedOwner, DEFAULT_TTL);
         return transformedOwner;
       } catch (e) {
         console.error("Error in restaurantByOwner resolver:", e);
@@ -241,19 +181,8 @@ module.exports = {
       console.log("getRestaurantDeliveryZoneInfo");
       try {
         const id = args.id;
-        const cacheKey = `${RESTAURANT_DELIVERY_ZONE_PREFIX}${id}`;
 
-        const cachedZoneInfo = await getCache(cacheKey);
-        if (cachedZoneInfo) {
-          console.log(
-            `✅ CACHE HIT: Returning delivery zone info from Redis cache for restaurant ${id}`
-          );
-          return cachedZoneInfo;
-        }
-
-        console.log(
-          `❌ CACHE MISS: Fetching delivery zone info for restaurant ${id}`
-        );
+        console.log(`Fetching delivery zone info for restaurant ${id}`);
         const restaurant = await Restaurant.findById(id);
 
         const zoneInfo = {
@@ -266,7 +195,6 @@ module.exports = {
           postCode: restaurant.postCode,
         };
 
-        await setCache(cacheKey, zoneInfo, DEFAULT_TTL);
         return zoneInfo;
       } catch (e) {
         console.error("Error in getRestaurantDeliveryZoneInfo resolver:", e);
@@ -277,25 +205,10 @@ module.exports = {
     restaurantsPreview: async (_) => {
       console.log("restaurantsPreview");
       try {
-        const cachedPreview = await getCache(RESTAURANTS_PREVIEW_CACHE_KEY);
-        if (cachedPreview) {
-          console.log(
-            "✅ CACHE HIT: Returning restaurants preview from Redis cache"
-          );
-          return cachedPreview;
-        }
-
-        console.log(
-          "❌ CACHE MISS: Fetching restaurants preview from database"
-        );
+        console.log("Fetching restaurants preview from database");
         const restaurants = await Restaurant.find();
         const transformedRestaurants = transformMinimalRestaurants(restaurants);
 
-        await setCache(
-          RESTAURANTS_PREVIEW_CACHE_KEY,
-          transformedRestaurants,
-          DEFAULT_TTL
-        );
         return transformedRestaurants;
       } catch (e) {
         console.error("Error in restaurantsPreview resolver:", e);
@@ -306,19 +219,7 @@ module.exports = {
     restaurantPreview: async (_, args, { req }) => {
       console.log("restaurantPreview", args);
       try {
-        const cacheKey = `${RESTAURANT_CACHE_KEY_PREFIX}preview:${args.id}`;
-
-        const cachedPreview = await getCache(cacheKey);
-        if (cachedPreview) {
-          console.log(
-            `✅ CACHE HIT: Returning restaurant preview from Redis cache for restaurant ${args.id}`
-          );
-          return cachedPreview;
-        }
-
-        console.log(
-          `❌ CACHE MISS: Fetching restaurant preview for ${args.id}`
-        );
+        console.log(`Fetching restaurant preview for ${args.id}`);
         const restaurant = await Restaurant.findById(args.id);
         if (!restaurant) {
           throw new Error("Restaurant not found");
@@ -339,7 +240,6 @@ module.exports = {
           postCode: restaurant.postCode,
         };
 
-        await setCache(cacheKey, preview, DEFAULT_TTL);
         return preview;
       } catch (error) {
         console.error("Error in restaurantPreview:", error);
@@ -347,28 +247,14 @@ module.exports = {
       }
     },
 
-
-
     nearByRestaurants: async (_, { latitude, longitude, shopType }) => {
       try {
         if (!latitude || !longitude) {
           throw new Error("Latitude and Longitude are required.");
         }
 
-        const cacheKey = `${NEARBY_RESTAURANTS_CACHE_PREFIX}${latitude}_${longitude}_${
-          shopType || "all"
-        }`;
-
-        const cachedNearby = await getCache(cacheKey);
-        if (cachedNearby) {
-          console.log(
-            `✅ CACHE HIT: Returning nearby restaurants from Redis cache for location ${latitude},${longitude}`
-          );
-          return cachedNearby;
-        }
-
         console.log(
-          `❌ CACHE MISS: Fetching nearby restaurants for location ${latitude},${longitude}`
+          `Fetching nearby restaurants for location ${latitude},${longitude}`
         );
         const maxDistanceInMeters = 5000; // 5 km radius
 
@@ -417,7 +303,6 @@ module.exports = {
           sections,
         };
 
-        await setCache(cacheKey, result, DEFAULT_TTL);
         return result;
       } catch (error) {
         console.error("Error in nearByRestaurants:", error);
@@ -431,20 +316,8 @@ module.exports = {
           throw new Error("Latitude and Longitude are required.");
         }
 
-        const cacheKey = `${NEARBY_RESTAURANTS_PREVIEW_CACHE_PREFIX}${latitude}_${longitude}_${
-          shopType || "all"
-        }`;
-
-        const cachedNearbyPreview = await getCache(cacheKey);
-        if (cachedNearbyPreview) {
-          console.log(
-            `✅ CACHE HIT: Returning nearby restaurants preview from Redis cache for location ${latitude},${longitude}`
-          );
-          return cachedNearbyPreview;
-        }
-
         console.log(
-          `❌ CACHE MISS: Fetching nearby restaurants preview for location ${latitude},${longitude}`
+          `Fetching nearby restaurants preview for location ${latitude},${longitude}`
         );
         const maxDistanceInMeters = 5000; // 5 km radius
 
@@ -485,7 +358,6 @@ module.exports = {
           sections,
         };
 
-        await setCache(cacheKey, result, DEFAULT_TTL);
         return result;
       } catch (error) {
         console.error("Error in nearByRestaurantsPreview:", error);
@@ -495,19 +367,7 @@ module.exports = {
 
     subCategories: async (_, { categoryId }) => {
       try {
-        const cacheKey = `${SUBCATEGORIES_CACHE_PREFIX}${categoryId}`;
-
-        const cachedSubCategories = await getCache(cacheKey);
-        if (cachedSubCategories) {
-          console.log(
-            `✅ CACHE HIT: Returning subcategories from Redis cache for category ${categoryId}`
-          );
-          return cachedSubCategories;
-        }
-
-        console.log(
-          `❌ CACHE MISS: Fetching subcategories for category ${categoryId}`
-        );
+        console.log(`Fetching subcategories for category ${categoryId}`);
         const restaurant = await Restaurant.findOne({
           "categories._id": categoryId,
         });
@@ -530,7 +390,6 @@ module.exports = {
           parentCategoryId: categoryId,
         }));
 
-        await setCache(cacheKey, subCategories, DEFAULT_TTL);
         return subCategories;
       } catch (error) {
         console.error("Error fetching subCategories:", error);
@@ -584,10 +443,6 @@ module.exports = {
         owner.restaurants.push(result.id);
         await owner.save();
 
-        await clearCachePattern(`${RESTAURANT_BY_OWNER_CACHE_PREFIX}*`);
-        await deleteCache(RESTAURANTS_CACHE_KEY);
-        await deleteCache(RESTAURANTS_PREVIEW_CACHE_KEY);
-
         return {
           ...result._doc,
           _id: result.id,
@@ -617,13 +472,6 @@ module.exports = {
           throw new Error("Restaurant not found");
         }
 
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}${id}`);
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}preview:${id}`);
-        await deleteCache(RESTAURANTS_CACHE_KEY);
-        await deleteCache(RESTAURANTS_PREVIEW_CACHE_KEY);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_CACHE_PREFIX}*`);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_PREVIEW_CACHE_PREFIX}*`);
-
         return { _id: restaurant.id, isActive: restaurant.isActive };
       } catch (err) {
         throw new Error(`Could not delete restaurant: ${err.message}`);
@@ -639,16 +487,6 @@ module.exports = {
         await Owner.findByIdAndUpdate(restaurant.owner, {
           $pull: { restaurants: id },
         });
-
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}${id}`);
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}preview:${id}`);
-        await deleteCache(RESTAURANTS_CACHE_KEY);
-        await deleteCache(RESTAURANTS_PREVIEW_CACHE_KEY);
-        await deleteCache(
-          `${RESTAURANT_BY_OWNER_CACHE_PREFIX}${restaurant.owner}`
-        );
-        await clearCachePattern(`${NEARBY_RESTAURANTS_CACHE_PREFIX}*`);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_PREVIEW_CACHE_PREFIX}*`);
 
         return true;
       } catch (err) {
@@ -667,20 +505,6 @@ module.exports = {
         if (!restaurant) {
           throw new Error("Restaurant not found");
         }
-
-        await deleteCache(
-          `${RESTAURANT_CACHE_KEY_PREFIX}${restaurantInput._id}`
-        );
-        await deleteCache(
-          `${RESTAURANT_CACHE_KEY_PREFIX}preview:${restaurantInput._id}`
-        );
-        await deleteCache(RESTAURANTS_CACHE_KEY);
-        await deleteCache(RESTAURANTS_PREVIEW_CACHE_KEY);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_CACHE_PREFIX}*`);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_PREVIEW_CACHE_PREFIX}*`);
-        await deleteCache(
-          `${RESTAURANT_DELIVERY_ZONE_PREFIX}${restaurantInput._id}`
-        );
 
         return transformRestaurant(restaurant);
       } catch (err) {
@@ -722,11 +546,6 @@ module.exports = {
           $push: { restaurants: savedRestaurant._id },
         });
 
-        await deleteCache(RESTAURANTS_CACHE_KEY);
-        await deleteCache(RESTAURANTS_PREVIEW_CACHE_KEY);
-        await deleteCache(RESTAURANTS_CLONED_CACHE_KEY);
-        await deleteCache(`${RESTAURANT_BY_OWNER_CACHE_PREFIX}${owner}`);
-
         return transformRestaurant(savedRestaurant);
       } catch (error) {
         throw new Error(`Could not duplicate restaurant: ${error.message}`);
@@ -750,8 +569,6 @@ module.exports = {
         if (!updatedRestaurant) {
           throw new Error("Restaurant not found");
         }
-
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}${id}`);
 
         return {
           _id: updatedRestaurant._id.toString(),
@@ -830,12 +647,6 @@ module.exports = {
           return { success: false, message: "Restaurant not found" };
         }
 
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}${id}`);
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}preview:${id}`);
-        await deleteCache(`${RESTAURANT_DELIVERY_ZONE_PREFIX}${id}`);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_CACHE_PREFIX}*`);
-        await clearCachePattern(`${NEARBY_RESTAURANTS_PREVIEW_CACHE_PREFIX}*`);
-
         return {
           success: true,
           message: "Delivery bounds and location updated successfully",
@@ -912,8 +723,6 @@ module.exports = {
           throw new Error("Restaurant not found");
         }
 
-        await deleteCache(`${RESTAURANT_CACHE_KEY_PREFIX}${id}`);
-
         return {
           _id: updatedRestaurant._id.toString(),
           openingTimes: updatedRestaurant.openingTimes,
@@ -928,7 +737,10 @@ module.exports = {
   Restaurant: {
     options: async (parent) => {
       if (!parent.options || parent.options.length === 0) {
-        console.log(`No options found for restaurant ${parent._id}`, parent.options);
+        console.log(
+          `No options found for restaurant ${parent._id}`,
+          parent.options
+        );
         return [];
       }
 
@@ -949,26 +761,12 @@ module.exports = {
     addons: async (parent) => {
       console.log(`Getting addons for restaurant ${parent._id}`);
       try {
-        const cacheKey = `${RESTAURANT_CACHE_KEY_PREFIX}${parent._id}:addons`;
-
-        const cachedAddons = await getCache(cacheKey);
-        if (cachedAddons) {
-          console.log(
-            `✅ CACHE HIT: Returning addons from Redis cache for restaurant ${parent._id}`
-          );
-          return cachedAddons;
-        }
-
-        console.log(
-          `❌ CACHE MISS: Fetching addons for restaurant ${parent._id}`
-        );
-
         if (!parent.addons || parent.addons.length === 0) {
           console.log(`No addons found for restaurant ${parent._id}`);
           return [];
         }
 
-        const addons = await Addon.find({ '_id': { $in: parent.addons } });
+        const addons = await Addon.find({ _id: { $in: parent.addons } });
 
         const formattedAddons = addons.map((addon) => ({
           _id: addon._id,
@@ -976,15 +774,13 @@ module.exports = {
           description: addon.description || "",
           quantityMinimum: addon.quantityMinimum,
           quantityMaximum: addon.quantityMaximum,
-          options: addon.options, 
+          options: addon.options,
           restaurant: parent._id,
           isActive: addon.isActive,
         }));
 
-        console.log('Formatted Addons:', formattedAddons);
-        
+        console.log("Formatted Addons:", formattedAddons);
 
-        await setCache(cacheKey, formattedAddons, DEFAULT_TTL);
         return formattedAddons;
       } catch (error) {
         console.error(
@@ -997,73 +793,60 @@ module.exports = {
     categories: async (parent) => {
       console.log(`Getting categories for restaurant ${parent._id}`);
       try {
-        const cacheKey = `${RESTAURANT_CACHE_KEY_PREFIX}${parent._id}:categories`;
-
-        const cachedCategories = await getCache(cacheKey);
-        if (cachedCategories) {
-          console.log(
-            `✅ CACHE HIT: Returning categories from Redis cache for restaurant ${parent._id}`
-          );
-          return cachedCategories;
-        }
-
-        console.log(
-          `❌ CACHE MISS: Fetching categories for restaurant ${parent._id}`
-        );
-
         if (!parent.categories || parent.categories.length === 0) {
           console.log(`No categories found for restaurant ${parent._id}`);
           return [];
         }
 
-        // find categories 
+        // find categories
         const categories = await Category.find({
-          '_id': { $in: parent.categories }
-        }).populate({
-          path: 'foods', 
-          populate: {
-            path: 'variations', 
-            model: 'Variation',
-            populate: {
-              path: 'addons', 
-              model: 'Addon'
-            }
-          }
+          _id: { $in: parent.categories },
         })
-        .populate({
-          path: 'subCategories', 
-          model: 'SubCategory'
-        });
-        
-        
+          .populate({
+            path: "foods",
+            populate: {
+              path: "variations",
+              model: "Variation",
+              populate: {
+                path: "addons",
+                model: "Addon",
+              },
+            },
+          })
+          .populate({
+            path: "subCategories",
+            model: "SubCategory",
+          });
+
         // Map the categories to the desired structure
-        const formattedCategories = categories.map(category => ({
+        const formattedCategories = categories.map((category) => ({
           _id: category._id.toString(),
           title: category.title,
           image: category.image || "",
           description: category.description || "",
           restaurant: parent._id,
           isActive: category.isActive,
-          foods: category.foods.map(food => ({
+          foods: category.foods.map((food) => ({
             _id: food._id.toString(),
             title: food.title,
             description: food.description || "",
             image: food.image || "",
             price: food.price,
-            variations: food.variations.map(variation => ({
+            variations: food.variations.map((variation) => ({
               _id: variation._id.toString(),
               title: variation.title,
               price: variation.price,
               discounted: variation.discounted || 0,
-              addons: variation.addons?.map(addon => addon._id.toString()) || [],
+              addons:
+                variation.addons?.map((addon) => addon._id.toString()) || [],
               isOutOfStock: variation.isOutOfStock || false,
-              isActive: variation.isActive || true
-            })),  
+              isActive: variation.isActive || true,
+            })),
             isOutOfStock: food.isOutOfStock || false,
             isAvailable: food.isAvailable || true,
-            isActive: food.isActive || true
+            isActive: food.isActive || true,
           })),
-          subCategories: category.subCategories.map(subCategory => ({
+          subCategories: category.subCategories.map((subCategory) => ({
             _id: subCategory._id.toString(),
             title: subCategory.title,
             description: subCategory.description || "",
@@ -1073,8 +856,6 @@ module.exports = {
           })),
         }));
 
-        await setCache(cacheKey, formattedCategories, DEFAULT_TTL);
-        
         return formattedCategories;
       } catch (error) {
         console.error(
