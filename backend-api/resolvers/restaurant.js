@@ -1019,8 +1019,23 @@ module.exports = {
         // find categories 
         const categories = await Category.find({
           '_id': { $in: parent.categories }
-        }).populate('foods subCategories');
-
+        }).populate({
+          path: 'foods', 
+          populate: {
+            path: 'variations', 
+            model: 'Variation',
+            populate: {
+              path: 'addons', 
+              model: 'Addon'
+            }
+          }
+        })
+        .populate({
+          path: 'subCategories', 
+          model: 'SubCategory'
+        });
+        
+        
         // Map the categories to the desired structure
         const formattedCategories = categories.map(category => ({
           _id: category._id.toString(),
@@ -1035,8 +1050,15 @@ module.exports = {
             description: food.description || "",
             image: food.image || "",
             price: food.price,
-            variations: food.variations || [],
-            addons: food.addons || [],
+            variations: food.variations.map(variation => ({
+              _id: variation._id.toString(),
+              title: variation.title,
+              price: variation.price,
+              discounted: variation.discounted || 0,
+              addons: variation.addons?.map(addon => addon._id.toString()) || [],
+              isOutOfStock: variation.isOutOfStock || false,
+              isActive: variation.isActive || true
+            })),  
             isOutOfStock: food.isOutOfStock || false,
             isAvailable: food.isAvailable || true,
             isActive: food.isActive || true
@@ -1049,7 +1071,6 @@ module.exports = {
             parentCategoryId: category._id.toString(),
             isActive: subCategory.isActive,
           })),
-          __typename: 'Category'
         }));
 
         await setCache(cacheKey, formattedCategories, DEFAULT_TTL);
