@@ -83,6 +83,12 @@ const orderSchema = new Schema({
     default: false
   },
   status: String,
+  expectedTime: Date,
+  orderDate: String,
+  review: {
+    type: Schema.Types.ObjectId,
+    ref: 'Review'
+  }
 }, {
   timestamps: true
 });

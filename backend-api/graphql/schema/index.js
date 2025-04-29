@@ -410,7 +410,7 @@ const typeDefs = gql`
     zone: Zone
     restaurant: RestaurantDetail!
     deliveryAddress: OrderAddress!
-    user: UserBasic!
+    user: UserSimple!
     paymentMethod: String
     orderStatus: String!
     isPickedUp: Boolean!
@@ -423,6 +423,20 @@ const typeDefs = gql`
     paymentStatus: String
     preparationTime: String
     statusHistory: [OrderStatusHistory!]
+    review: Review
+    paidAmount: Float
+    orderDate: String
+    expectedTime: String
+    deliveryCharges: Float
+    tipping: Float
+    taxationAmount: Float
+    completionTime: String
+    reason: String
+    cancelledAt: String
+    assignedAt: String
+    deliveredAt: String
+    acceptedAt: String
+    pickedAt: String
   }
 
   type OrderStatusHistory {
@@ -446,6 +460,13 @@ const typeDefs = gql`
   type UserBasic {
     name: String
     phone: String
+  }
+
+  type UserSimple {
+    _id: ID!
+    name: String
+    phone: String
+    email: String
   }
 
   type RiderBasic {
