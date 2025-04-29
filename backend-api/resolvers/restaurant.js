@@ -288,7 +288,8 @@ module.exports = {
               model: "Addon",
             },
           });
-
+        console.log("restaurants", restaurants);
+          
         const offers = await Offer.find({
           restaurants: { $in: restaurants.map((r) => r._id.toString()) },
         });
@@ -584,84 +585,85 @@ module.exports = {
       { id, boundType, bounds, circleBounds, location, address, postCode, city }
     ) => {
       try {
-        let updateData = { boundType };
-
+        const updateData = {};
+    
         if (address) updateData.address = address;
         if (postCode) updateData.postCode = postCode;
         if (city) updateData.city = city;
-
-        function isValidPolygonCoordinates(bounds) {
-          return (
-            Array.isArray(bounds) &&
-            bounds.length > 0 &&
-            bounds.every((polygon) =>
-              polygon.every(
-                (point) =>
-                  Array.isArray(point) &&
-                  point.length === 2 &&
-                  point.every((coord) => typeof coord === "number")
-              )
+    
+        // Toujours stocker la localisation si elle est fournie
+        if (location && location.latitude && location.longitude) {
+          updateData.location = {
+            type: "Point",
+            coordinates: [location.longitude, location.latitude],
+          };
+        }
+    
+        // Vérifie la validité du format polygonal
+        const isValidPolygonCoordinates = (coords) =>
+          Array.isArray(coords) &&
+          coords.length > 0 &&
+          coords.every((polygon) =>
+            Array.isArray(polygon) &&
+            polygon.every(
+              (point) =>
+                Array.isArray(point) &&
+                point.length === 2 &&
+                point.every((coord) => typeof coord === "number")
             )
           );
-        }
-
-        console.log("updateData", updateData);
-
+    
         if (boundType === "polygon" && isValidPolygonCoordinates(bounds)) {
           updateData.boundType = "polygon";
           updateData.deliveryBounds = {
             type: "Polygon",
             coordinates: bounds,
           };
-        } else if (
-          boundType === "radius" &&
-          circleBounds?.radius &&
-          isValidPolygonCoordinates(bounds)
-        ) {
+          updateData.circleBounds = undefined;
+        } else if (boundType === "radius" && circleBounds?.radius && isValidPolygonCoordinates(bounds)) {
           updateData.boundType = "radius";
+          updateData.deliveryBounds = {
+            type: "Polygon",
+            coordinates: bounds,
+          };
           updateData.circleBounds = {
             radius: circleBounds.radius,
           };
-          updateData.deliveryBounds = {
-            coordinates: bounds,
-          };
-        } else if (
-          boundType === "point" &&
-          location &&
-          location.latitude &&
-          location.longitude
-        ) {
+        } else if (boundType === "point") {
           updateData.boundType = "point";
-          updateData.location = {
-            type: "Point",
-            coordinates: [location.longitude, location.latitude],
-          };
+          updateData.deliveryBounds = undefined;
+          updateData.circleBounds = undefined;
         }
-
+    
         const updatedRestaurant = await Restaurant.findByIdAndUpdate(
           id,
           updateData,
           { new: true }
         );
+    
         if (!updatedRestaurant) {
           return { success: false, message: "Restaurant not found" };
         }
-
+    
         return {
           success: true,
           message: "Delivery bounds and location updated successfully",
           data: {
             _id: updatedRestaurant._id,
             deliveryBounds: updatedRestaurant.deliveryBounds,
+            circleBounds: updatedRestaurant.circleBounds,
             location: updatedRestaurant.location,
+            boundType: updatedRestaurant.boundType,
+            address: updatedRestaurant.address,
+            city: updatedRestaurant.city,
+            postCode: updatedRestaurant.postCode,
           },
         };
       } catch (error) {
-        console.log(error);
-        throw error;
+        console.error("Error updating bounds and location:", error);
+        throw new Error("Failed to update delivery bounds and location");
       }
-    },
-
+    },  
     orderPickedUp: async (_, args, { req }) => {
       console.log("orderPickedUp");
       if (!req.restaurantId) {
