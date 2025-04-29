@@ -12,42 +12,29 @@ module.exports = {
         // 1. Trouver le restaurant
         const restaurantDoc = await Restaurant.findOne({
           _id: restaurant,
-          'categories._id': categoryId,
-          'categories.foods._id': id
+          categories: categoryId
         });
     
         if (!restaurantDoc) return false;
     
-        // 2. Trouver la catégorie et le plat
-        const category = restaurantDoc.categories.find(cat => cat._id.toString() === categoryId);
-        const food = category?.foods.find(fd => fd._id.toString() === id);
+        // 2. Vérifier que le food appartient à ce category
+        const categoryDoc = await Category.findOne({
+          _id: categoryId,
+          foods: id
+        });
     
-        if (!food) return false;
+        if (!categoryDoc) return false;
     
-        // 3. Inverser la valeur actuelle
-        const newOutOfStockValue = !food.isOutOfStock;
+        // 3. Récupérer le food pour lire son état actuel
+        const foodDoc = await Food.findById(id);
     
-        // 4. Mettre à jour dans Mongo
-        const updated = await Restaurant.updateOne(
-          {
-            _id: restaurant,
-            'categories._id': categoryId,
-            'categories.foods._id': id
-          },
-          {
-            $set: {
-              'categories.$[cat].foods.$[food].isOutOfStock': newOutOfStockValue
-            }
-          },
-          {
-            arrayFilters: [
-              { 'cat._id': categoryId },
-              { 'food._id': id }
-            ]
-          }
-        );
+        if (!foodDoc) return false;
+        
+        // 4. Mettre à jour le champ `isOutOfStock`
+        foodDoc.isOutOfStock = !foodDoc.isOutOfStock;
+        await foodDoc.save();
     
-        return updated.modifiedCount > 0;
+        return true;
       } catch (error) {
         console.error(error);
         return false;
