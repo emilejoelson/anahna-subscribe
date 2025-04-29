@@ -44,26 +44,29 @@ const typeDefs = gql`
     selected: Boolean
   }
 
-type OrderAddress {
-  location: Point
-  deliveryAddress: String!
-  details: String
-  label: String
-}
+  type OrderAddress {
+    location: Point
+    deliveryAddress: String!
+    details: String
+    label: String!
+    id: String
+  }
 
-type Item {
-  _id: ID!
-  title: String!
-  description: String!
-  image: String
-  quantity: Int!
-  variation: ItemVariation
-  addons: [ItemAddon]
-  specialInstructions: String
-  isActive: Boolean     # Removed ! to make it nullable
-  createdAt: String!
-  updatedAt: String!
-}
+  type Item {
+    _id: ID!
+    title: String!
+    description: String!
+    image: String
+    quantity: Int!
+    variation: ItemVariation!
+    addons: [ItemAddon!]
+    specialInstructions: String
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+
+    food: String!
+  }
 
   type Category {
     _id: ID!
@@ -247,12 +250,13 @@ type Item {
     addons: [CartAddon!]
   }
 
-type ItemVariation {
-  _id: ID
-  title: String
-  price: Float
-  discounted: Float
-}
+  type ItemVariation {
+    _id: ID!
+    title: String!
+    price: Float!
+    discounted: Float!
+  }
+
   type Food {
     _id: ID!
     title: String!
@@ -439,12 +443,10 @@ type ItemVariation {
     success: Boolean!
   }
 
-type UserBasic {
-  _id: ID!
-  name: String!
-  phone: String
-  email: String
-}
+  type UserBasic {
+    name: String
+    phone: String
+  }
 
   type RiderBasic {
     _id: ID!
@@ -454,9 +456,8 @@ type UserBasic {
   }
 
   type Point {
-  coordinates: [Float!]
-  type: String
-}
+    coordinates: [Float!]
+  }
 
   type MyOrders {
     userId: String!
@@ -468,18 +469,18 @@ type UserBasic {
     orders: [Order!]
   }
 
-type RestaurantDetail {
-  _id: ID!
-  name: String!
-  image: String!
-  address: String!
-  location: Point
-  slug: String
-  keywords: [String]
-  tags: [String]
-  reviewCount: Int
-  reviewAverage: Float
-}
+  type RestaurantDetail {
+    _id: ID!
+    name: String!
+    image: String!
+    address: String!
+    location: Point
+    slug: String
+    keywords: [String]
+    tags: [String]
+    reviewCount: Int
+    reviewAverage: Float
+  }
 
   type AuthData {
     userId: ID!
@@ -576,12 +577,13 @@ type RestaurantDetail {
     price: Float!
   }
 
-type ItemOption {
-  _id: ID
-  title: String
-  description: String
-  price: Float
-}
+  type ItemOption {
+    _id: String!
+    title: String!
+    description: String
+    price: Float!
+  }
+
   type Addon {
     _id: String!
     options: [String!]
@@ -600,14 +602,14 @@ type ItemOption {
     quantityMaximum: Int!
   }
 
-type ItemAddon {
-  _id: String!
-  options: [ItemOption]
-  description: String
-  title: String         # Removed ! to make it nullable
-  quantityMinimum: Int
-  quantityMaximum: Int
-}
+  type ItemAddon {
+    _id: String!
+    options: [ItemOption!]
+    title: String!
+    description: String
+    quantityMinimum: Int!
+    quantityMaximum: Int!
+  }
 
   type DashboardData {
     totalOrders: Int!
@@ -1550,11 +1552,11 @@ type ItemAddon {
     ): ActiveOrdersResponse!
     getClonedRestaurants: [Restaurant!]!
     lastOrderCreds: DemoCredentails
-  allOrdersWithoutPagination(
-    dateKeyword: String
-    starting_date: String
-    ending_date: String
-  ): [Order!]!
+    allOrdersWithoutPagination(
+      dateKeyword: String
+      starting_date: String
+      ending_date: String
+    ): [Order!]!
     ordersByRestId(
       restaurant: String!
       page: Int
