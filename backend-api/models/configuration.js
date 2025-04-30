@@ -199,6 +199,10 @@ const configurationSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  maxDistanceInMeters:{
+    type: Number,
+    default: 10000
+  }
 }, {
   timestamps: true
 });

@@ -231,6 +231,45 @@ module.exports = {
         console.error('Error in getRestaurantDashboardOrdersSalesStats:', error);
         throw new Error('Failed to fetch restaurant dashboard stats');
       }
+    },
+    getRestaurantDashboardSalesOrderCountDetailsByYear: async (_, { restaurant, year }) => {
+      try {
+        const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+        const endDate = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+        const result = await Order.aggregate([
+          {
+            $match: {
+              restaurant: restaurant,
+              isActive: true,
+              createdAt: { $gte: startDate, $lt: endDate },
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              salesAmount: { $sum: "$orderAmount" },
+              ordersCount: { $sum: 1 }
+            }
+          }
+        ]);
+
+        if (result.length === 0) {
+          return {
+            salesAmount: 0,
+            ordersCount: 0
+          };
+        }
+
+        return {
+          salesAmount: result[0].salesAmount,
+          ordersCount: result[0].ordersCount
+        };
+
+      } catch (err) {
+        console.error("Error in getRestaurantDashboardSalesOrderCountDetailsByYear:", err);
+        throw new Error("Unable to fetch dashboard data");
+      }
     }
   },
   Mutation: {},

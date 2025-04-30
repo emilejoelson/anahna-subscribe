@@ -1543,6 +1543,11 @@ const typeDefs = gql`
     totalCardOrders: Int!
   }
 
+  type RestaurantDashboardOrderStatsByYear {
+    salesAmount: Float
+    ordersCount: Int
+  }
+
   input BussinessDetailsInput {
     bankName: String
     accountName: String
@@ -1702,6 +1707,10 @@ const typeDefs = gql`
       starting_date: String!
       ending_date: String!
     ): RestaurantDashboardStats!
+    getRestaurantDashboardSalesOrderCountDetailsByYear(
+      restaurant: String!
+      year: Int!
+    ): RestaurantDashboardOrderStatsByYear!
   }
   type Mutation {
     createStaff(staffInput: StaffInput): Staff

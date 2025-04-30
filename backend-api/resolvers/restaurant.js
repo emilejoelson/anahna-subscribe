@@ -13,6 +13,7 @@ const Option = require("../models/option");
 const Review = require("../models/review");
 const Addon = require("../models/addon");
 const Category = require("../models/category");
+const Configuration = require("../models/configuration");
 const {
   sendNotificationToCustomerWeb,
 } = require("../helpers/firebase-web-notifications");
@@ -257,7 +258,10 @@ module.exports = {
         console.log(
           `Fetching nearby restaurants for location ${latitude},${longitude}`
         );
-        const maxDistanceInMeters = 5000; // 5 km radius
+        //get maxDistanceInMeters from configuration model
+
+        const config = await Configuration.findOne();
+        const maxDistanceInMeters = config?.maxDistanceInMeters; // .. km radius
 
         const query = {
           location: {

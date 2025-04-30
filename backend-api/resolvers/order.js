@@ -621,6 +621,11 @@ module.exports = {
         throw new Error('Unauthenticated!')
       }
       try {
+        const config = await Configuration.findOne();
+        const maxDistanceInMeters = config?.maxDistanceInMeters;
+        console.log(maxDistanceInMeters);
+        
+
         const restaurant = await Restaurant.findById(args.restaurant)
         .populate({
           path: "categories",
@@ -638,17 +643,33 @@ module.exports = {
             }
           }
         });
+        
         const location = new Point({
           type: 'Point',
           coordinates: [+args.address.longitude, +args.address.latitude]
         })
-        const checkZone = await Restaurant.findOne({
+        // 1. verify user location is near to restaurant
+        const isNear = await Restaurant.findOne({
           _id: args.restaurant,
-          deliveryBounds: { $geoIntersects: { $geometry: location } }
-        })
-        if (!checkZone && args.isPickedUp !== true) {
-          throw new Error("Sorry! we can't deliver to your address.")
+          location: {
+            $near: {
+              $geometry: location,
+              $maxDistance: maxDistanceInMeters
+            }
+          }
+        });
+        
+        if (!isNear && args.isPickedUp !== true) {
+          throw new Error("Sorry! we can't deliver to your address.,,");
         }
+        // Verify deliveryBounds (optionnelle si déjà couverte)
+        // const checkZone = await Restaurant.findOne({
+        //   _id: args.restaurant,
+        //   deliveryBounds: { $geoIntersects: { $geometry: location } }
+        // })
+        // if (!checkZone && args.isPickedUp !== true) {
+        //   throw new Error("Sorry! we can't deliver to your address.")
+        // }
         const zone = await Zone.findOne({
           isActive: true,
           location: {
@@ -703,7 +724,6 @@ module.exports = {
 
           const savedItem = await itemData.save()
           ItemsData.push(savedItem)
-          console.log('ItemsData', ItemsData._id)
         }
 
         const user = await User.findById(req.userId)
