@@ -37,10 +37,10 @@ const {
   publishToDispatcher,
   ORDER_STATUS_CHANGED,
   ASSIGN_RIDER,
-  SUBSCRIPTION_ORDER,
+ 
 } = require("../helpers/pubsub");
 
-const { PLACE_ORDER } = require("../constants/subscriptionEvents");
+const {  SUBSCRIPTION_ORDER, PLACE_ORDER } = require("../constants/subscriptionEvents");
 
 const { pubsub } = require("../config/pubsub");
 var DELIVERY_CHARGES = 0.0;
@@ -49,6 +49,9 @@ module.exports = {
   Subscription: {
     subscribePlaceOrder: {
       subscribe: () => pubsub.asyncIterator(PLACE_ORDER),
+    },
+    subscriptionOrder: {
+      subscribe: () => pubsub.asyncIterator(SUBSCRIPTION_ORDER),
     },
     orderStatusChanged: {
       subscribe: withFilter(
@@ -65,15 +68,6 @@ module.exports = {
         (payload, args) => {
           const riderId = payload.subscriptionAssignRider.userId.toString();
           return riderId === args.riderId;
-        }
-      ),
-    },
-    subscriptionOrder: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(SUBSCRIPTION_ORDER),
-        (payload, args) => {
-          const orderId = payload.subscriptionOrder._id.toString();
-          return orderId === args.id;
         }
       ),
     },
@@ -723,7 +717,7 @@ module.exports = {
           orderId: orderResult._id,
           orderData: orderResult,
         });
-
+        
         pubsub.publish(PLACE_ORDER, {
           subscribePlaceOrder: {
             userId: req.userId,
