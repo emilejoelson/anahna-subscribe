@@ -709,8 +709,7 @@ const typeDefs = gql`
   }
 
   type SubscriptionOrders {
-    restaurantId: String
-    userId: String
+    userId: String!
     order: Order!
     origin: String!
   }
