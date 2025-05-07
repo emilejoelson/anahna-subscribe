@@ -1,31 +1,32 @@
-const Rider = require('../models/rider');
-
+const Rider = require("../models/rider");
+const { RIDER_UPDATED } = require("../constants/subscriptionEvents");
+const { pubsub } = require("../config/pubsub");
 module.exports = {
   Query: {
     riders: async () => {
       try {
-        return await Rider.find().populate('zone');
+        return await Rider.find().populate("zone");
       } catch (error) {
         throw new Error(error);
       }
     },
     rider: async (_, { id }) => {
       try {
-        return await Rider.findById(id).populate('zone');
+        return await Rider.findById(id).populate("zone");
       } catch (error) {
         throw new Error(error);
       }
     },
     availableRiders: async () => {
       try {
-        return await Rider.find({ available: true }).populate('zone');
+        return await Rider.find({ available: true }).populate("zone");
       } catch (error) {
         throw new Error(error);
       }
     },
     ridersByZone: async (_, { id }) => {
       try {
-        return await Rider.find({ zone: id }).populate('zone');
+        return await Rider.find({ zone: id }).populate("zone");
       } catch (error) {
         throw new Error(error);
       }
@@ -39,7 +40,7 @@ module.exports = {
         // Check if username already exists
         const existingRider = await Rider.findOne({ username });
         if (existingRider) {
-          throw new Error('Username already exists');
+          throw new Error("Username already exists");
         }
 
         const rider = new Rider({
@@ -54,24 +55,35 @@ module.exports = {
         });
 
         const result = await rider.save();
-        return await Rider.findById(result._id).populate('zone');
+        return await Rider.findById(result._id).populate("zone");
       } catch (error) {
         throw new Error(error);
       }
     },
     editRider: async (_, { riderInput }) => {
-      const { _id, name, username, password, phone, zone, vehicleType, available } = riderInput;
+      const {
+        _id,
+        name,
+        username,
+        password,
+        phone,
+        zone,
+        vehicleType,
+        available,
+      } = riderInput;
 
       try {
-        // Check if modifying an existing username to one that already exists
-        const existingRider = await Rider.findOne({ username, _id: { $ne: _id } });
+        const existingRider = await Rider.findOne({
+          username,
+          _id: { $ne: _id },
+        });
         if (existingRider) {
-          throw new Error('Username already exists');
+          throw new Error("Username already exists");
         }
 
         const rider = await Rider.findById(_id);
         if (!rider) {
-          throw new Error('Rider not found');
+          throw new Error("Rider not found");
         }
 
         rider.name = name || rider.name;
@@ -83,7 +95,14 @@ module.exports = {
         rider.available = available !== undefined ? available : rider.available;
 
         await rider.save();
-        return await Rider.findById(_id).populate('zone');
+
+        const updatedRider = await Rider.findById(_id).populate("zone");
+
+        pubsub.publish(RIDER_UPDATED, {
+          riderUpdated: updatedRider,
+        });
+
+        return updatedRider;
       } catch (error) {
         throw new Error(error);
       }
@@ -92,7 +111,7 @@ module.exports = {
       try {
         const rider = await Rider.findById(id);
         if (!rider) {
-          throw new Error('Rider not found');
+          throw new Error("Rider not found");
         }
 
         await Rider.findByIdAndDelete(id);
@@ -105,15 +124,20 @@ module.exports = {
       try {
         const rider = await Rider.findById(id);
         if (!rider) {
-          throw new Error('Rider not found');
+          throw new Error("Rider not found");
         }
 
         rider.available = !rider.available;
         await rider.save();
-        return await Rider.findById(id).populate('zone');
+        return await Rider.findById(id).populate("zone");
       } catch (error) {
         throw new Error(error);
       }
+    },
+  },
+  Subscription: {
+    riderUpdated: {
+      subscribe: () => pubsub.asyncIterator(RIDER_UPDATED),
     },
   },
 };

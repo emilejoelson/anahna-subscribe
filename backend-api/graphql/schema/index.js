@@ -437,6 +437,7 @@ const typeDefs = gql`
     deliveredAt: String
     acceptedAt: String
     pickedAt: String
+    instructions: String
   }
 
   type OrderStatusHistory {
@@ -1949,10 +1950,11 @@ const typeDefs = gql`
   type Subscription {
     subscribePlaceOrder(restaurant: String!): SubscriptionOrders!
     orderStatusChanged(userId: String!): SubscriptionOrders!
-    subscriptionAssignRider(riderId: String!): SubscriptionOrders!
-    subscriptionRiderLocation(riderId: String!): Rider!
-    subscriptionZoneOrders(zoneId: String!): Subscription_Zone_Orders!
     subscriptionOrder(id: String!): Order!
+    riderUpdated: Rider!
+    subscriptionRiderLocation(riderId: String!): Rider!
+    subscriptionAssignRider(riderId: String!): SubscriptionOrders!
+    subscriptionZoneOrders(zoneId: String!): Subscription_Zone_Orders!
     subscriptionDispatcher: Order!
     subscriptionNewMessage(order: ID!): ChatMessageOutput!
   }

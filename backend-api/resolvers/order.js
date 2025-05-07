@@ -12,7 +12,7 @@ const Paypal = require("../models/paypal");
 const Stripe = require("../models/stripe");
 const Option = require("../models/option");
 const { orderQueue } = require("../queue/index");
-
+const Food = require("../models/food");
 const {
   sendNotificationToCustomerWeb,
 } = require("../helpers/firebase-web-notifications");
@@ -35,12 +35,14 @@ const {
   publishToDashboard,
   publishOrder,
   publishToDispatcher,
-  ORDER_STATUS_CHANGED,
   ASSIGN_RIDER,
- 
 } = require("../helpers/pubsub");
 
-const {  SUBSCRIPTION_ORDER, PLACE_ORDER } = require("../constants/subscriptionEvents");
+const {
+  ORDER_STATUS_CHANGED,
+  PLACE_ORDER,
+  EDIT_ORDER,
+} = require("../constants/subscriptionEvents");
 
 const { pubsub } = require("../config/pubsub");
 var DELIVERY_CHARGES = 0.0;
@@ -50,17 +52,12 @@ module.exports = {
     subscribePlaceOrder: {
       subscribe: () => pubsub.asyncIterator(PLACE_ORDER),
     },
-    subscriptionOrder: {
-      subscribe: () => pubsub.asyncIterator(SUBSCRIPTION_ORDER),
-    },
     orderStatusChanged: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(ORDER_STATUS_CHANGED),
-        (payload, args, context) => {
-          const userId = payload.orderStatusChanged.userId.toString();
-          return userId === args.userId;
-        }
-      ),
+      subscribe: () => pubsub.asyncIterator(ORDER_STATUS_CHANGED),
+    },
+
+    subscriptionOrder: {
+      subscribe: () => pubsub.asyncIterator(EDIT_ORDER),
     },
     subscriptionAssignRider: {
       subscribe: withFilter(
@@ -717,7 +714,7 @@ module.exports = {
           orderId: orderResult._id,
           orderData: orderResult,
         });
-        
+
         pubsub.publish(PLACE_ORDER, {
           subscribePlaceOrder: {
             userId: req.userId,
@@ -731,37 +728,28 @@ module.exports = {
         throw err;
       }
     },
-    editOrder: async (_, args, { req, res }) => {
-      if (!req.isAuth) {
-        throw new Error("Unauthenticated!");
-      }
-      try {
-        const items = args.orderInput.map(async function (item) {
-          const newItem = new Item({
-            ...item,
-          });
-          const result = await newItem.save();
-          return result._id;
-        });
-        const completed = await Promise.all(items);
-        const order = await Order.findOne({ _id: args._id, user: req.userId });
-        if (!order) {
-          throw new Error("order does not exist");
-        }
-        order.items = completed;
-        const result = await order.save();
 
-        const transformedOrder = transformOrder(result);
-
-        return transformedOrder;
-      } catch (err) {
-        throw err;
-      }
-    },
     updateOrderStatus: async (_, args, context) => {
       console.log("updateOrderStatus");
       try {
-        const order = await Order.findById(args.id);
+        const order = await Order.findById(args.id).populate({
+          path: "items",
+          populate: [
+            {
+              path: "addons",
+              model: "Addon",
+              populate: {
+                path: "options",
+                model: "Option",
+              },
+            },
+            {
+              path: "variation",
+              model: "Variation",
+            },
+          ],
+        });
+
         const restaurant = await Restaurant.findById(order.restaurant);
         if (args.status === "ACCEPTED") {
           order.completionTime = new Date(
@@ -770,11 +758,47 @@ module.exports = {
         }
         order.orderStatus = args.status;
         order.reason = args.reason;
-        const result = await order.save();
 
-        const transformedOrder = await transformOrder(result);
+        if (args.status === "ACCEPTED") {
+          order.acceptedAt = new Date();
+        } else if (args.status === "PICKED") {
+          order.pickedAt = new Date();
+        } else if (args.status === "DELIVERED") {
+          order.deliveredAt = new Date();
+        } else if (args.status === "CANCELLED") {
+          order.cancelledAt = new Date();
+        } else if (args.status === "ASSIGNED") {
+          order.assignedAt = new Date();
+        }
+
+        const result = await order.save();
+        const populatedOrder = await Order.findById(result._id).populate({
+          path: "items",
+          populate: [
+            {
+              path: "addons",
+              model: "Addon",
+              populate: {
+                path: "options",
+                model: "Option",
+              },
+            },
+            {
+              path: "variation",
+              model: "Variation",
+            },
+          ],
+        });
+        const transformedOrder = await transformOrder(populatedOrder);
+
         const user = await User.findById(order.user);
-        publishToUser(result.user.toString(), transformedOrder, "update");
+        pubsub.publish(ORDER_STATUS_CHANGED, {
+          orderStatusChanged: {
+            userId: result.user.toString(),
+            order: transformedOrder,
+            origin: "order_status_changed",
+          },
+        });
         publishOrder(transformedOrder);
         sendNotificationToUser(result.user, result);
         sendNotificationToCustomerWeb(
@@ -782,7 +806,71 @@ module.exports = {
           `Order status: ${result.orderStatus}`,
           `Order ID ${result.orderId}`
         );
+
         return transformOrder(result);
+      } catch (err) {
+        throw err;
+      }
+    },
+    editOrder: async (_, args, { req, res }) => {
+      if (!req.isAuth) {
+        throw new Error("Unauthenticated!");
+      }
+      try {
+        const items = args.orderInput.map(async function (item) {
+          // Récupérer les informations de l'aliment pour obtenir le titre
+          const foodItem = await Food.findById(item.food);
+          if (!foodItem) {
+            throw new Error(`Food with ID ${item.food} not found`);
+          }
+          
+          const newItem = new Item({
+            ...item,
+            title: foodItem.title, // Utiliser le titre de l'aliment
+            description: foodItem.description || "", // Potentiellement ajouter d'autres champs
+            image: foodItem.image || "",
+            isActive: true,
+          });
+          
+          const result = await newItem.save();
+          return result._id;
+        });
+        
+        // Le reste de votre code reste inchangé
+        const completed = await Promise.all(items);
+        const order = await Order.findOne({ _id: args._id, user: req.userId });
+        if (!order) {
+          throw new Error("order does not exist");
+        }
+    
+        order.items = completed;
+        const result = await order.save();
+    
+        const populatedOrder = await Order.findById(result._id).populate({
+          path: "items",
+          populate: [
+            {
+              path: "addons",
+              model: "Addon",
+              populate: {
+                path: "options",
+                model: "Option",
+              },
+            },
+            {
+              path: "variation",
+              model: "Variation",
+            },
+          ],
+        });
+    
+        const transformedOrder = await transformOrder(populatedOrder);
+    
+        pubsub.publish(EDIT_ORDER, {
+          subscriptionOrder: transformedOrder,
+        });
+    
+        return transformedOrder;
       } catch (err) {
         throw err;
       }

@@ -1,10 +1,9 @@
 // workers/orderWorker.js
 const { orderQueue } = require("../queue/index");
-const Order = require("../models/order"); // Removed curly braces as it might be default export
-const { pubsub } = require("../config/pubsub");
-const { ORDER_UPDATED, PLACE_ORDER } = require("../constants/subscriptionEvents");
+const Order = require("../models/order");
+const { pubsub } = require("../helpers/pubsub");
+const { ORDER_UPDATED, PLACE_ORDER } = require("../helpers/pubsub");
 
-// Fix job name to match what's used in your mutation (proccess_order not process-order)
 orderQueue.process("proccess_order", async (job) => {
   const { orderId, orderData } = job.data;
   console.log(`Processing order ${orderId} ...`);
@@ -16,7 +15,7 @@ orderQueue.process("proccess_order", async (job) => {
     // Update the order status
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      { orderStatus: "PROCESSING" }, // Match the field name in your schema
+      { orderStatus: "PENDING" }, // Match the field name in your schema
       { new: true }
     );
 
@@ -25,7 +24,7 @@ orderQueue.process("proccess_order", async (job) => {
       pubsub.publish(ORDER_UPDATED, {
         orderUpdated: updatedOrder,
       });
-      
+
       // Also publish to the PLACE_ORDER subscription if needed
       pubsub.publish(PLACE_ORDER, {
         subscribePlaceOrder: {
