@@ -2,45 +2,53 @@ import { useConfiguration } from '@/lib/hooks/useConfiguration';
 import {
   ApolloClient,
   ApolloLink,
-  HttpLink,
+  concat,
+  createHttpLink,
   InMemoryCache,
   NormalizedCacheObject,
+  Observable,
+  Operation,
   split,
 } from '@apollo/client';
+import { SubscriptionClient } from 'subscriptions-transport-ws';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
-import { createClient } from 'graphql-ws';
-import { onError } from '@apollo/client/link/error';
+import { WebSocketLink } from '@apollo/client/link/ws';
+import { onError } from '@apollo/client/link/error'; // Import onError utility
+
+
+// Utility imports
+import { Subscription } from 'zen-observable-ts';
 import { APP_NAME } from '../utils/constants';
+
 
 export const useSetupApollo = (): ApolloClient<NormalizedCacheObject> => {
   const { SERVER_URL, WS_SERVER_URL } = useConfiguration();
 
-  const httpLink = new HttpLink({
+
+  const cache = new InMemoryCache();
+
+
+  const httpLink = createHttpLink({
     uri: `${SERVER_URL}graphql`,
   });
 
-  const authMiddleware = new ApolloLink((operation, forward) => {
-    const data = localStorage.getItem(`user-${APP_NAME}`);
-    let token = '';
-    if (data) {
-      token = JSON.parse(data).token;
-    }
 
-    operation.setContext(({ headers = {} }) => ({
-      headers: {
-        ...headers,
-        authorization: token ? `Bearer ${token}` : '',
-      },
-    }));
+  // WebSocketLink with error handling
+  const wsLink = new WebSocketLink(
+    new SubscriptionClient(`${WS_SERVER_URL}graphql`, {
+      reconnect: true,
+      timeout: 30000,
+      lazy: true,
+    })
+  );
 
-    return forward(operation);
-  });
 
+  // Error Handling Link using ApolloLink's onError (for network errors)
   const errorLink = onError(({ networkError, graphQLErrors }) => {
     if (networkError) {
       console.error('Network Error:', networkError);
     }
+
 
     if (graphQLErrors) {
       graphQLErrors.forEach((error) =>
@@ -49,52 +57,66 @@ export const useSetupApollo = (): ApolloClient<NormalizedCacheObject> => {
     }
   });
 
-  const wsLink = new GraphQLWsLink(
-    createClient({
-      url: `${WS_SERVER_URL}graphql`,
-      connectionParams: () => {
-        const data = localStorage.getItem(`user-${APP_NAME}`);
-        let token = '';
-        if (data) {
-          token = JSON.parse(data).token;
-        }
 
-        return {
-          authorization: token ? `Bearer ${token}` : '',
-        };
+  const request = async (operation: Operation): Promise<void> => {
+    const data = localStorage.getItem(`user-${APP_NAME}`);
+    let token = '';
+    if (data) {
+      token = JSON.parse(data).token;
+    }
+
+
+    operation.setContext({
+      headers: {
+        authorization: token ? `Bearer ${token}` : '',
       },
-      retryAttempts: 5,
-      shouldRetry: () => true,
-    })
+    });
+  };
+
+
+  // Request Link
+  const requestLink = new ApolloLink(
+    (operation, forward) =>
+      new Observable((observer) => {
+        let handle: Subscription | undefined;
+        Promise.resolve(operation)
+          .then((oper) => request(oper))
+          .then(() => {
+            handle = forward(operation).subscribe({
+              next: observer.next.bind(observer),
+              error: observer.error.bind(observer),
+              complete: observer.complete.bind(observer),
+            });
+          })
+          .catch(observer.error.bind(observer));
+
+
+        return () => {
+          if (handle) handle.unsubscribe();
+        };
+      })
   );
 
-  const splitLink = split(
-    ({ query }) => {
-      const definition = getMainDefinition(query);
-      return (
-        definition.kind === 'OperationDefinition' &&
-        definition.operation === 'subscription'
-      );
-    },
-    wsLink,
-    ApolloLink.from([authMiddleware, httpLink])
-  );
+
+  // Terminating Link for split between HTTP and WebSocket
+  const terminatingLink = split(({ query }) => {
+    const definition = getMainDefinition(query);
+    return (
+      definition.kind === 'OperationDefinition' &&
+      definition.operation === 'subscription'
+    );
+  }, wsLink);
+
 
   const client = new ApolloClient({
-    link: ApolloLink.from([errorLink, splitLink]),
-    cache: new InMemoryCache(),
+    link: concat(
+      ApolloLink.from([errorLink, terminatingLink, requestLink]),
+      httpLink
+    ),
+    cache,
     connectToDevTools: true,
-    defaultOptions: {
-      watchQuery: {
-        fetchPolicy: 'network-only',
-        errorPolicy: 'all',
-      },
-      query: {
-        fetchPolicy: 'network-only',
-        errorPolicy: 'all',
-      },
-    },
   });
+
 
   return client;
 };

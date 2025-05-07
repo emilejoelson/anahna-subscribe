@@ -7,8 +7,8 @@ const { ApolloServer } = require("@apollo/server");
 const { expressMiddleware } = require("@apollo/server/express4");
 const schema = require("./schema");
 const { createServer } = require("http");
-const { WebSocketServer } = require("ws");
-const { useServer } = require("graphql-ws/lib/use/ws");
+const { SubscriptionServer } = require("subscriptions-transport-ws");
+const { execute, subscribe } = require("graphql");
 const {
   ApolloServerPluginDrainHttpServer,
 } = require("@apollo/server/plugin/drainHttpServer");
@@ -35,7 +35,13 @@ mongoose.set("strictQuery", true);
 const app = express();
 const httpServer = createServer(app);
 
-app.use(corsMiddleware);
+// Configure CORS to be more permissive for WebSocket connections
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(scriptCacheMiddleware);
 app.use(authMiddleware);
@@ -70,14 +76,42 @@ let firebaseDb = null;
     console.log("MongoDB Connection Error:", err);
   }
 
-  const wsServer = new WebSocketServer({
-    server: httpServer,
-    path: "/graphql",
-  });
-
-  const wsServerCleanup = useServer({ schema }, wsServer);
+  // Remove the graphql-ws implementation completely
+  // ONLY use subscriptions-transport-ws for compatibility with the frontend
+  let subscriptionServer;
 
   async function startApolloServer() {
+    // Create the subscription server before the Apollo Server
+    subscriptionServer = SubscriptionServer.create(
+      {
+        schema,
+        execute,
+        subscribe,
+        onConnect: (connectionParams, webSocket, context) => {
+          console.log("WebSocket connection established");
+          // Extract token from connection params for authentication
+          const token = connectionParams.authorization || "";
+          console.log("Authorization token:", token ? "Present" : "None");
+
+          return {
+            token,
+            mongoConnected: mongoose.connection.readyState === 1,
+            firebaseDb,
+          };
+        },
+        onDisconnect: () => {
+          console.log("WebSocket client disconnected");
+        },
+        keepAlive: 10000, // Send keep-alive messages every 10 seconds
+      },
+      {
+        server: httpServer,
+        path: "/graphql",
+      }
+    );
+
+    console.log("SubscriptionServer created successfully");
+
     const server = new ApolloServer({
       schema,
       context: ({ req }) => {
@@ -127,7 +161,7 @@ let firebaseDb = null;
           async serverWillStart() {
             return {
               async drainServer() {
-                await wsServerCleanup.dispose();
+                subscriptionServer.close();
               },
             };
           },
@@ -158,7 +192,10 @@ let firebaseDb = null;
 
     app.use(
       "/graphql",
-      cors(),
+      cors({
+        origin: "*", // Be more permissive with CORS for WebSocket connections
+        credentials: true,
+      }),
       bodyParser.json(),
       expressMiddleware(server, {
         context: async ({ req }) => ({ req }),
