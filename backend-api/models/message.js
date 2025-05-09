@@ -1,19 +1,25 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    refPath: 'senderModel'
-  },
-  senderModel: {
-    type: String,
-    required: true,
-    enum: ['Rider', 'Restaurant', 'Customer']
-  },
-  content: {
+  message: {  // Changed from 'content' to 'message' to match GraphQL
     type: String,
     required: true
+  },
+  user: {  // Changed from sender/senderModel to match GraphQL structure
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: 'user.model'
+    },
+    name: {
+      type: String,
+      required: true
+    },
+    model: {
+      type: String,
+      required: true,
+      enum: ['Rider', 'Restaurant', 'Customer']
+    }
   },
   order: {
     type: mongoose.Schema.Types.ObjectId,
@@ -22,6 +28,6 @@ const messageSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
-})
+});
 
-module.exports = mongoose.model('Message', messageSchema)
+module.exports = mongoose.model('Message', messageSchema);

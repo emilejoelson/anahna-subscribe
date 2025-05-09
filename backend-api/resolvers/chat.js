@@ -1,96 +1,92 @@
-const Order = require('../models/order');
-const Message = require('../models/message');
-const User = require('../models/user');
-const { sendNotification } = require('../helpers/notifications');
-const { transformMessage, transformOrder } = require('./merge');
-const { withFilter } = require('graphql-subscriptions');
-const { pubsub, EVENTS } = require('../helpers/pubsub');
+const Order = require("../models/order");
+const Message = require("../models/message");
+const User = require("../models/user");
+const { sendNotification } = require("../helpers/notifications");
+const { transformMessage, transformOrder } = require("./merge");
+const { withFilter } = require("graphql-subscriptions");
+const { EVENTS } = require("../helpers/pubsub");
+const { pubsub } = require("../config/pubsub");
+const { MESSAGE_SENT } = require("../constants/subscriptionEvents");
 
 const MessagingResolver = {
   Subscription: {
     subscriptionNewMessage: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(EVENTS.MESSAGE_SENT),
-        (payload, { order }, context) => {
-          const orderId = payload.subscriptionNewMessage.order;
-          return orderId === order;
-        }
-      )
-    }
+      subscribe: () => pubsub.asyncIterator([MESSAGE_SENT]),
+    },
   },
-
   Query: {
-    chat: async (_, { order: orderID }, { req }) => {
-      console.log('Fetching chat for order:', orderID);
+    chat: async (_, { order: orderId }, { req }) => {
       try {
-        if (!req.userId) throw new Error('Unauthenticated');
-        
-        const order = await Order.findById(orderID);
-        if (!order) throw new Error('Order not found');
-        
-        return order.chat.reverse().map(transformMessage);
-      } catch (error) {
-        console.error('Error fetching chat:', orderID, error);
-        throw error;
-      }
-    }
-  },
-
-  Mutation: {
-    sendChatMessage: async (_, { message, orderId }, { req }) => {
-      console.log('Sending chat message:', message, 'for order:', orderId);
-      try {
-        if (!req.userId) throw new Error('Unauthenticated');
-
+        if (!req.userId) throw new Error("Unauthenticated");
         const order = await Order.findById(orderId);
-        if (!order) throw new Error('Order not found');
+        if (!order) throw new Error("Order not found");
+        const messages = await Message.find({ order: orderId }).sort({
+          createdAt: -1,
+        });
+        return messages.map((message) => transformMessage(message));
+      } catch (error) {
+        console.error("Error fetching chat messages:", error);
+        throw new Error(error.message);
+      }
+    },
+  },
+  Mutation: {
+    sendChatMessage: async (_, { message: messageInput, orderId }, { req }) => {
+      try {
+        if (!req.userId) throw new Error("Unauthenticated");
+        const order = await Order.findById(orderId);
+        if (!order) throw new Error("Order not found");
 
-        const messageObj = new Message({ ...message });
+        const messageObj = new Message({
+          message: messageInput.message,
+          user: {
+            id: messageInput.user.id,
+            name: messageInput.user.name,
+            model: "Customer",
+          },
+          order: orderId,
+          createdAt: new Date(),
+        });
+
+        const savedMessage = await messageObj.save();
+
         await Order.updateOne(
           { _id: order._id },
-          { $push: { chat: messageObj } }
+          { $push: { chat: savedMessage._id } }
         );
 
-        const transformedOrder = transformOrder(order);
+        const transformedMessage = transformMessage(savedMessage);
 
-        if (order.user.toString() === req.userId) {
-          sendNotification(
-            order.rider,
-            transformedOrder,
-            message.message,
-            'chat'
-          );
-        } else if (order.rider.toString() === req.userId) {
-          sendNotification(
-            order.user,
-            transformedOrder,
-            message.message,
-            'chat'
-          );
+        const updatedMessages = await Message.find({ order: orderId }).sort({
+          createdAt: -1,
+        });
 
-          const user = await User.findById(order.user);
-          if (user && user.notificationTokenWeb) {
-            sendNotification(
-              user.notificationTokenWeb,
-              'New message: ',
-              message.message
-            );
-          }
-        }
+        const transformedMessages = updatedMessages.map((msg) =>
+          transformMessage(msg)
+        );
 
-        const transformedMessage = transformMessage(messageObj);
-        publishNewMessage({ ...transformedMessage, order: order.id });
+        pubsub.publish(MESSAGE_SENT, {
+          subscriptionNewMessage: {
+            ...transformedMessage,
+            allMessages: transformedMessages,
+          },
+        });
 
-        return { success: true, data: transformedMessage };
+        return {
+          success: true,
+          message: "Message sent successfully",
+          data: transformedMessage,
+          allMessages: transformedMessages,
+        };
       } catch (error) {
-        console.error('Error sending chat message:', error);
+        console.error("Error sending chat message:", error);
         return {
           success: false,
-          message: error.message
+          message: error.message,
         };
       }
-    }
-  }
+    },
+  },
 };
 
 module.exports = MessagingResolver;

@@ -1314,7 +1314,7 @@ const typeDefs = gql`
 
   type ChatMessageResponse {
     success: Boolean!
-    message: String
+    message: String!
     data: ChatMessageOutput
   }
 
@@ -1703,7 +1703,7 @@ const typeDefs = gql`
     getCountries: [Country!]!
     getCountryByIso(iso: String!): Country
     orderCount(restaurant: String!): Int!
-    chat(orderId: ID!): [ChatMessageOutput!]!
+    chat(order: ID!): [ChatMessageOutput!]!
     getDashboardOrdersByType: [OrdersByType!] # Removed the '!' to make it nullable
     transactionHistory(
       userType: UserTypeEnum

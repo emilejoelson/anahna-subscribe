@@ -957,12 +957,16 @@ const populateOwner = async (ownerId) => {
 
 const transformMessage = (message) => {
   return {
-    ...message._doc,
-    id: message.id,
-    message: message.message || "",
-    createdAt: dateToString(message._doc.createdAt),
+    id: message._id.toString(),
+    message: message.message,
+    user: {
+      id: message.user.id.toString(),
+      name: message.user.name
+    },
+    createdAt: message.createdAt.toISOString()
   };
 };
+
 
 const transformEarnings = async (earning) => {
   return {
