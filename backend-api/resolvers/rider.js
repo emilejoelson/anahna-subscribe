@@ -12,9 +12,20 @@ module.exports = {
     },
     rider: async (_, { id }) => {
       try {
-        return await Rider.findById(id).populate("zone");
+        const rider = await Rider.findById(id).populate("zone");
+        if (rider) {
+          return {
+            _id: rider._id,
+            location: {
+              coordinates: rider.location
+                ? rider.location.coordinates
+                : [0.0, 0.0],
+            },
+          };
+        }
+        return null;
       } catch (error) {
-        throw new Error(error);
+        throw new Error(error.message);
       }
     },
     availableRiders: async () => {

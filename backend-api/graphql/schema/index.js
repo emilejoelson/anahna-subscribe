@@ -281,6 +281,10 @@ const typeDefs = gql`
     updatedAt: String!
   }
 
+  type RiderByIdLocation {
+    _id: ID!
+    location: Point
+  }
   type Rider {
     _id: ID!
     name: String!
@@ -290,6 +294,7 @@ const typeDefs = gql`
     available: Boolean!
     assigned: Boolean!
     vehicleType: String!
+    location: Point
     zone: Zone!
     bussinessDetails: BusinessDetails
     licenseDetails: LicenseDetails
@@ -432,6 +437,7 @@ const typeDefs = gql`
     taxationAmount: Float
     completionTime: String
     reason: String
+    isRiderRinged: Boolean
     cancelledAt: String
     assignedAt: String
     deliveredAt: String
@@ -715,6 +721,10 @@ const typeDefs = gql`
     origin: String!
   }
 
+  type SubscriptionRiderAssignOrders {
+    order: Order!
+    origin: String!
+  }
   type Subscription_Zone_Orders {
     zoneId: String
     order: Order!
@@ -1632,7 +1642,7 @@ const typeDefs = gql`
     orderPaypal(id: String!): Order!
     orderStripe(id: String!): Order!
     riders: [Rider!]!
-    rider(id: String!): Rider
+    rider(id: String): RiderByIdLocation
     riderEarnings(id: String, offset: Int): [Earnings!]
     riderWithdrawRequests(id: String, offset: Int): [WithdrawRequest!]
     pageCount(restaurant: String!): Int
@@ -1950,10 +1960,10 @@ const typeDefs = gql`
   type Subscription {
     subscribePlaceOrder(restaurant: String!): SubscriptionOrders!
     orderStatusChanged(userId: String!): SubscriptionOrders!
+    subscriptionAssignRider(riderId: String!): SubscriptionRiderAssignOrders!
     subscriptionOrder(id: String!): Order!
     riderUpdated: Rider!
     subscriptionRiderLocation(riderId: String!): Rider!
-    subscriptionAssignRider(riderId: String!): SubscriptionOrders!
     subscriptionZoneOrders(zoneId: String!): Subscription_Zone_Orders!
     subscriptionDispatcher: Order!
     subscriptionNewMessage(order: ID!): ChatMessageOutput!

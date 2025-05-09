@@ -1,56 +1,81 @@
 /* eslint-disable no-tabs */
-const { AuthenticationError, UserInputError } = require('apollo-server-express');
-const Order = require('../models/order');
-const Rider = require('../models/rider');
-const Restaurant = require('../models/restaurant');
 const {
-  pubsub,
+  AuthenticationError,
+  UserInputError,
+} = require("apollo-server-express");
+const Order = require("../models/order");
+const Rider = require("../models/rider");
+const Restaurant = require("../models/restaurant");
+const {
   DISPATCH_ORDER,
   publishOrder,
   publishToAssignedRider,
   publishToZoneRiders,
-  publishToUser
-} = require('../helpers/pubsub');
-const { transformOrder, transformRider } = require('./merge');
+  publishToUser,
+} = require("../helpers/pubsub");
+const { pubsub } = require("../config/pubsub");
+const {
+  ORDER_STATUS_CHANGED,
+  RIDER_ASSIGNED,
+  SUBSCRIPTION_ORDER,
+} = require("../constants/subscriptionEvents");
+const { transformOrder, transformRider } = require("./merge");
 const {
   sendNotificationToUser,
   sendNotificationToZoneRiders,
-  sendNotificationToRider
-} = require('../helpers/notifications');
-const { order_status } = require('../helpers/enum');
-const { formatOrderDate } = require('../helpers/date');
+  sendNotificationToRider,
+} = require("../helpers/notifications");
+const { order_status } = require("../helpers/enum");
+const { formatOrderDate } = require("../helpers/date");
 
 // Valid order statuses
-const VALID_STATUSES = ['PENDING', 'ACCEPTED', 'ASSIGNED', 'PREPARING', 'PICKED', 'DELIVERED', 'CANCELLED'];
+const VALID_STATUSES = [
+  "PENDING",
+  "ACCEPTED",
+  "ASSIGNED",
+  "PREPARING",
+  "PICKED",
+  "DELIVERED",
+  "CANCELLED",
+];
 
 module.exports = {
   Subscription: {
     subscriptionDispatcher: {
-      subscribe: () => pubsub.asyncIterator(DISPATCH_ORDER)
-    }
+      subscribe: () => pubsub.asyncIterator(DISPATCH_ORDER),
+    },
+    orderStatusChanged: {
+      subscribe: () => pubsub.asyncIterator([ORDER_STATUS_CHANGED]),
+    },
+    subscriptionAssignRider: {
+      subscribe: () => pubsub.asyncIterator([RIDER_ASSIGNED]),
+    },
+    subscriptionOrder: {
+      subscribe: () => pubsub.asyncIterator([SUBSCRIPTION_ORDER]),
+    },
   },
   Query: {
     getActiveOrders: async (_, args, { req }) => {
-      console.log('Fetching active orders with arguments:', args);
+      console.log("Fetching active orders with arguments:", args);
       try {
         if (!req?.isAuth) {
-          console.log('Authentication check failed:', { 
+          console.log("Authentication check failed:", {
             reqExists: !!req,
-            authHeader: req?.get?.('Authorization'),
-            isAuth: req?.isAuth
+            authHeader: req?.get?.("Authorization"),
+            isAuth: req?.isAuth,
           });
-          throw new AuthenticationError('Unauthenticated');
+          throw new AuthenticationError("Unauthenticated");
         }
 
         const filters = {
-          orderStatus: { $in: ['PENDING', 'ACCEPTED', 'PICKED', 'ASSIGNED'] }
+          orderStatus: { $in: ["PENDING", "ACCEPTED", "PICKED", "ASSIGNED"] },
         };
 
         if (args.restaurantId) {
           filters.restaurant = args.restaurantId;
         }
         if (args.search) {
-          filters.orderId = new RegExp(args.search, 'i');
+          filters.orderId = new RegExp(args.search, "i");
         }
         if (args.actions && args.actions.length > 0) {
           filters.orderStatus = { $in: args.actions };
@@ -63,217 +88,268 @@ module.exports = {
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(args.rowsPerPage)
-          .populate('restaurant')
-          .populate('deliveryAddress')
-          .populate('user')
-          .populate('rider')
-          .populate('zone')
+          .populate("restaurant")
+          .populate("deliveryAddress")
+          .populate("user")
+          .populate("rider")
+          .populate("zone")
           .lean();
 
         return {
           totalCount,
-          orders: orders.map(order => formatOrderDate(order))
+          orders: orders.map((order) => formatOrderDate(order)),
         };
       } catch (err) {
-        console.error('Error fetching active orders:', err);
+        console.error("Error fetching active orders:", err);
         throw err;
       }
     },
     orderDetails: async (_, args, { req }) => {
-      console.log('Fetching order details with arguments:', args);
+      console.log("Fetching order details with arguments:", args);
       try {
         if (!req.isAuth) {
-          throw new AuthenticationError('Unauthenticated');
+          throw new AuthenticationError("Unauthenticated");
         }
         const order = await Order.findById(args.id);
-        if (!order) throw new Error('Order does not exist');
+        if (!order) throw new Error("Order does not exist");
         return transformOrder(order);
       } catch (err) {
-        console.error('Error fetching order details:', err);
-        throw new Error('Failed to fetch order details');
+        console.error("Error fetching order details:", err);
+        throw new Error("Failed to fetch order details");
       }
     },
     ridersByZone: async (_, args, { req }) => {
-      console.log('Fetching riders by zone with arguments:', args);
+      console.log("Fetching riders by zone with arguments:", args);
       try {
         if (!req.isAuth) {
-          throw new AuthenticationError('Unauthenticated');
+          throw new AuthenticationError("Unauthenticated");
         }
         const riders = await Rider.find({
           zone: args.id,
           isActive: true,
-          available: true
+          available: true,
         });
         return riders.map(transformRider);
       } catch (err) {
-        console.error('Error fetching riders by zone:', err);
-        throw new Error('Failed to fetch riders by zone');
+        console.error("Error fetching riders by zone:", err);
+        throw new Error("Failed to fetch riders by zone");
       }
-    }
+    },
   },
   Mutation: {
     updateStatus: async (_, args, { req }) => {
-      console.log('Updating status with arguments:', args.id, args.orderStatus);
+      console.log("Updating status with arguments:", args.id, args.orderStatus);
       try {
-        // Authentication check
         if (!req?.isAuth) {
-          throw new AuthenticationError('Unauthenticated');
+          throw new AuthenticationError("Unauthenticated");
         }
-
-        // Validate order status
-        if (!VALID_STATUSES.includes(args.orderStatus)) {
-          throw new UserInputError(`Invalid order status. Must be one of: ${VALID_STATUSES.join(', ')}`);
-        }
-
-        // Find and validate order
         const order = await Order.findById(args.id);
         if (!order) {
-          throw new UserInputError('Order not found');
+          throw new UserInputError("Order not found");
         }
 
-        // Find and validate restaurant
-        const restaurant = await Restaurant.findById(order.restaurant);
-        if (!restaurant) {
-          throw new UserInputError('Restaurant not found');
+        // Check if status is "ASSIGNED" which should only be set via assignRider
+        if (args.orderStatus === "ASSIGNED") {
+          throw new UserInputError(
+            "Cannot directly set status to ASSIGNED. Use assignRider mutation instead."
+          );
         }
 
-        // Update order timestamps based on status
-        const now = new Date();
-        
-        if (args.orderStatus === 'ACCEPTED') {
-          order.completionTime = new Date(now.getTime() + restaurant.deliveryTime * 60 * 1000);
-          order.acceptedAt = now;
-        }
-        if (args.orderStatus === 'PICKED') {
-          order.completionTime = new Date(now.getTime() + 15 * 60 * 1000);
-          order.pickedAt = now;
-        }
-        if (args.orderStatus === 'CANCELLED') {
-          order.cancelledAt = now;
-        }
-        if (args.orderStatus === 'DELIVERED') {
-          order.deliveredAt = now;
-        }
-        
-        // Update order status
+        // Set the order status
         order.orderStatus = args.orderStatus;
-        
+
+        // Set the appropriate date field based on the status
+        const currentDate = new Date();
+
+        switch (args.orderStatus) {
+          case "ACCEPTED":
+            order.acceptedAt = currentDate;
+            break;
+          case "PICKED":
+            order.pickedAt = currentDate;
+            order.isPickedUp = true; // Update the isPickedUp flag
+            break;
+          case "DELIVERED":
+            order.deliveredAt = currentDate;
+            order.completionTime = currentDate; // Also update completionTime
+            break;
+          case "CANCELLED":
+            order.cancelledAt = currentDate;
+            break;
+          default:
+            // No specific date field for PENDING status
+            break;
+        }
+
         try {
           const result = await order.save();
-          const transformedOrder = await transformOrder(result);
+          // Populate all required fields, especially items and their nested fields
+          const populatedOrder = await Order.findById(result._id).populate({
+            path: "items",
+            populate: [
+              {
+                path: "addons",
+                model: "Addon",
+                populate: {
+                  path: "options",
+                  model: "Option",
+                },
+              },
+              {
+                path: "variation",
+                model: "Variation",
+              },
+            ],
+          });
 
-          // Send notifications
-          await sendNotificationToUser(result.user, result);
-          publishOrder(transformedOrder);
-          
-          if (order.user) {
-            publishToUser(order.user.toString(), transformedOrder, 'update');
-          }
+          const transformedOrder = await transformOrder(populatedOrder);
+          const userId = order.user ? order.user.toString() : null;
 
-          if (!order.isPickedUp) {
-            if (args.orderStatus === 'ACCEPTED' && order.rider) {
-              await publishToAssignedRider(order.rider.toString(), transformedOrder, 'new');
-              await sendNotificationToRider(order.rider.toString(), transformedOrder);
-            }
-            if (args.orderStatus === 'ACCEPTED' && !order.rider && order.zone) {
-              await publishToZoneRiders(order.zone.toString(), transformedOrder, 'new');
-              await sendNotificationToZoneRiders(order.zone.toString(), transformedOrder);
-            }
-            if (args.orderStatus === 'CANCELLED' && order.rider) {
-              await publishToAssignedRider(order.rider.toString(), transformedOrder, 'remove');
-              await sendNotificationToRider(order.rider.toString(), transformedOrder);
-            }
-          }
+          console.log("Publishing ORDER_STATUS_CHANGED event:", {
+            userId,
+            orderId: transformedOrder._id,
+            orderStatus: transformedOrder.orderStatus,
+          });
+
+          pubsub.publish(ORDER_STATUS_CHANGED, {
+            orderStatusChanged: {
+              userId: userId,
+              order: transformedOrder,
+              origin: "order_status_changed",
+            },
+          });
+
+          pubsub.publish(SUBSCRIPTION_ORDER, {
+            subscriptionOrder: transformedOrder,
+          });
 
           return {
             _id: transformedOrder._id,
             orderStatus: transformedOrder.orderStatus,
-            success: true
+            success: true,
           };
         } catch (saveError) {
-          console.error('Error saving order:', saveError);
-          throw new Error('Failed to save order status update');
+          console.error("Error saving order:", saveError);
+          throw new Error("Failed to save order status update");
         }
       } catch (error) {
-        console.error('Error updating order status:', error);
+        console.error("Error updating order status:", error);
         return {
           _id: args.id,
           orderStatus: args.orderStatus,
-          success: false
+          success: false,
         };
       }
     },
 
     assignRider: async (_, args, { req }) => {
-      console.log('Assigning rider with arguments:', args.id, args.riderId);
+      console.log("Assigning rider with arguments:", args.id, args.riderId);
       try {
         if (!req.isAuth) {
-          throw new AuthenticationError('Unauthenticated');
+          throw new AuthenticationError("Unauthenticated");
         }
 
-        // Find and validate order and rider
         const order = await Order.findById(args.id);
-        if (!order) throw new Error('Order not found');
+        if (!order) throw new Error("Order not found");
 
         const rider = await Rider.findById(args.riderId);
-        if (!rider) throw new Error('Rider not found');
+        if (!rider) throw new Error("Rider not found");
 
-        // Check if rider is available
         if (!rider.available) {
-          throw new Error('Rider is not available');
+          throw new Error("Rider is not available");
         }
 
-        // If order already has a rider, notify them about removal
-        const currentTransformedOrder = await transformOrder(order);
-        if (order.rider) {
-          publishToAssignedRider(order.rider.toString(), currentTransformedOrder, 'remove');
-          sendNotificationToRider(order.rider.toString(), currentTransformedOrder);
-        }
-
-        // Update order with new rider and status
+        // Assign the rider to the order
         order.rider = args.riderId;
-        order.orderStatus = 'ASSIGNED';
+
+        // Set the status to ASSIGNED
+        order.orderStatus = "ASSIGNED";
         order.assignedAt = new Date();
 
-        // Save changes
-        const result = await order.save();
-        const transformedOrder = await transformOrder(result);
+        try {
+          const result = await order.save();
 
-        // Notify relevant parties
-        publishToAssignedRider(args.riderId, transformedOrder, 'new');
-        sendNotificationToRider(args.riderId, transformedOrder);
-        publishOrder(transformedOrder);
-        sendNotificationToUser(order.user.toString(), transformedOrder);
+          // Populate all required fields for consistent response formatting
+          const populatedOrder = await Order.findById(result._id).populate({
+            path: "items",
+            populate: [
+              {
+                path: "addons",
+                model: "Addon",
+                populate: {
+                  path: "options",
+                  model: "Option",
+                },
+              },
+              {
+                path: "variation",
+                model: "Variation",
+              },
+            ],
+          });
 
-        return transformedOrder;
+          const transformedOrder = await transformOrder(populatedOrder);
+          const userId = order.user ? order.user.toString() : null;
+
+          console.log(
+            "Publishing ORDER_STATUS_CHANGED event from assignRider:",
+            {
+              userId,
+              orderId: transformedOrder._id,
+              orderStatus: transformedOrder.orderStatus,
+            }
+          );
+
+          pubsub.publish(ORDER_STATUS_CHANGED, {
+            orderStatusChanged: {
+              userId: userId,
+              order: transformedOrder,
+              origin: "order_status_changed",
+            },
+          });
+
+          pubsub.publish(SUBSCRIPTION_ORDER, {
+            subscriptionOrder: transformedOrder,
+          });
+
+          pubsub.publish(RIDER_ASSIGNED, {
+            subscriptionAssignRider: {
+              order: transformedOrder,
+              origin: "rider_assigned",
+            },
+          });
+
+          return transformedOrder;
+        } catch (saveError) {
+          console.error("Error saving order:", saveError);
+          throw new Error("Failed to save order status update");
+        }
       } catch (error) {
-        console.error('Error assigning rider:', error);
+        console.error("Error assigning rider:", error);
         throw error; // Throw the actual error for better debugging
       }
     },
-
     notifyRiders: async (_, args, { req }) => {
-      console.log('Notifying riders with arguments:', args.id);
+      console.log("Notifying riders with arguments:", args.id);
       try {
         if (!req.isAuth) {
-          throw new AuthenticationError('Unauthenticated');
+          throw new AuthenticationError("Unauthenticated");
         }
         const order = await Order.findById(args.id);
-        if (!order) throw new Error('Order does not exist');
+        if (!order) throw new Error("Order does not exist");
 
         const transformedOrder = await transformOrder(order);
 
-        publishToZoneRiders(order.zone.toString(), transformedOrder, 'new');
+        publishToZoneRiders(order.zone.toString(), transformedOrder, "new");
         sendNotificationToZoneRiders(order.zone.toString(), transformedOrder);
         publishOrder(transformedOrder);
         sendNotificationToUser(order.user.toString(), transformedOrder);
 
         return true;
       } catch (err) {
-        console.error('Error notifying riders:', err);
-        throw new Error('Failed to notify riders');
+        console.error("Error notifying riders:", err);
+        throw new Error("Failed to notify riders");
       }
-    }
-    // remove rider
-  }
+    },
+  },
 };

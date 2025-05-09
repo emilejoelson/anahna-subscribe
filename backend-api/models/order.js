@@ -84,10 +84,15 @@ const orderSchema = new Schema(
     preparationTime: Date,
     completionTime: Date,
     acceptedAt: Date,
+    assignedAt : Date,
     pickedAt: Date,
     deliveredAt: Date,
     cancelledAt: Date,
     reason: String,
+    isRiderRinged: {
+      type: Boolean,
+      default: false,
+    },
     isPickedUp: {
       type: Boolean,
       default: false,

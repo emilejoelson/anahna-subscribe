@@ -33,16 +33,10 @@ const { withFilter } = require("graphql-subscriptions");
 const {
   publishToUser,
   publishToDashboard,
-  publishOrder,
   publishToDispatcher,
-  ASSIGN_RIDER,
 } = require("../helpers/pubsub");
 
-const {
-  ORDER_STATUS_CHANGED,
-  PLACE_ORDER,
-  EDIT_ORDER,
-} = require("../constants/subscriptionEvents");
+const { PLACE_ORDER } = require("../constants/subscriptionEvents");
 
 const { pubsub } = require("../config/pubsub");
 var DELIVERY_CHARGES = 0.0;
@@ -50,23 +44,7 @@ var DELIVERY_CHARGES = 0.0;
 module.exports = {
   Subscription: {
     subscribePlaceOrder: {
-      subscribe: () => pubsub.asyncIterator(PLACE_ORDER),
-    },
-    orderStatusChanged: {
-      subscribe: () => pubsub.asyncIterator(ORDER_STATUS_CHANGED),
-    },
-
-    subscriptionOrder: {
-      subscribe: () => pubsub.asyncIterator(EDIT_ORDER),
-    },
-    subscriptionAssignRider: {
-      subscribe: withFilter(
-        () => pubsub.asyncIterator(ASSIGN_RIDER),
-        (payload, args) => {
-          const riderId = payload.subscriptionAssignRider.userId.toString();
-          return riderId === args.riderId;
-        }
-      ),
+      subscribe: () => pubsub.asyncIterator([PLACE_ORDER]),
     },
   },
   Query: {
@@ -792,14 +770,6 @@ module.exports = {
         const transformedOrder = await transformOrder(populatedOrder);
 
         const user = await User.findById(order.user);
-        pubsub.publish(ORDER_STATUS_CHANGED, {
-          orderStatusChanged: {
-            userId: result.user.toString(),
-            order: transformedOrder,
-            origin: "order_status_changed",
-          },
-        });
-        publishOrder(transformedOrder);
         sendNotificationToUser(result.user, result);
         sendNotificationToCustomerWeb(
           user.notificationTokenWeb,
@@ -823,7 +793,7 @@ module.exports = {
           if (!foodItem) {
             throw new Error(`Food with ID ${item.food} not found`);
           }
-          
+
           const newItem = new Item({
             ...item,
             title: foodItem.title, // Utiliser le titre de l'aliment
@@ -831,21 +801,21 @@ module.exports = {
             image: foodItem.image || "",
             isActive: true,
           });
-          
+
           const result = await newItem.save();
           return result._id;
         });
-        
+
         // Le reste de votre code reste inchangé
         const completed = await Promise.all(items);
         const order = await Order.findOne({ _id: args._id, user: req.userId });
         if (!order) {
           throw new Error("order does not exist");
         }
-    
+
         order.items = completed;
         const result = await order.save();
-    
+
         const populatedOrder = await Order.findById(result._id).populate({
           path: "items",
           populate: [
@@ -863,13 +833,9 @@ module.exports = {
             },
           ],
         });
-    
+
         const transformedOrder = await transformOrder(populatedOrder);
-    
-        pubsub.publish(EDIT_ORDER, {
-          subscriptionOrder: transformedOrder,
-        });
-    
+
         return transformedOrder;
       } catch (err) {
         throw err;
@@ -909,7 +875,6 @@ module.exports = {
       const result = await order.save();
 
       const transformedOrder = await transformOrder(result);
-      publishOrder(transformedOrder);
 
       return transformedOrder;
     },

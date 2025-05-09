@@ -153,15 +153,7 @@ router.get('/paypal-transaction-complete', async(req, res) => {
     await paypalOrder.save()
     await user.save()
     const transformedOrder = await transformOrder(result)
-    const orderStatusChanged = {
-      userId: user.id,
-      order: transformedOrder,
-      origin: 'new'
-    }
-    pubsub.publish(ORDER_STATUS_CHANGED, {
-      orderStatusChanged: orderStatusChanged
-    })
-
+   
     pubsub.publish(PLACE_ORDER, {
       subscribePlaceOrder: { origin: 'new', order: transformedOrder }
     })
@@ -423,14 +415,7 @@ router.get('/success', async(req, res) => {
         ])
         await user.save()
         const transformedOrder = await transformOrder(result)
-        const orderStatusChanged = {
-          userId: user.id,
-          order: transformedOrder,
-          origin: 'new'
-        }
-        pubsub.publish(ORDER_STATUS_CHANGED, {
-          orderStatusChanged: orderStatusChanged
-        })
+  
         publishToDashboard(
           result.restaurant.toString(),
           transformedOrder,
